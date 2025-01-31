@@ -11,7 +11,7 @@ class SalesOverview extends BaseWidget
     protected function getCards(): array
     {
         return [
-            Card::make('今日の売上', '¥' . number_format(Orders::whereDate('order_date', now()->toDateString())->sum('total_price'))),
+            Card::make('今日の売上', '¥' . number_format(Orders::whereDate('created_at', now()->toDateString())->sum('total_price'))),
             Card::make('総売上', '¥' . number_format(Orders::sum('total_price'))),
         ];
     }
