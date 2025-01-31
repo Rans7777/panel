@@ -138,15 +138,15 @@ class OrderPage extends Page
 
                 // 在庫を減少させる
                 $product->reduceStock($item['quantity']);
-            }
 
-            // 注文を保存
-            Orders::create([
-                'name' => $item['name'],
-                'quantity' => $item['quantity'],
-                'image' => $item['image'] ?? null,
-                'total_price' => $this->totalPrice,
-            ]);
+                // 注文を保存
+                Orders::create([
+                    'name' => $item['name'],
+                    'quantity' => $item['quantity'],
+                    'image' => $item['image'] ?? null,
+                    'total_price' => $item['price'] * $item['quantity'],
+                ]);
+            }
         });
 
         // カート内を空にする
