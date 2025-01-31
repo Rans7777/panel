@@ -92,8 +92,8 @@
                             <span class="text-gray-600 dark:text-gray-400">お預かり金額</span>
                             <input
                                 type="number"
-                                wire:model="paymentAmount"
-                                wire:input="calculateChange"
+                                wire:model.debounce.100ms="paymentAmount"
+                                wire:change="calculateChange"
                                 inputmode="numeric"
                                 min="0"
                                 class="
