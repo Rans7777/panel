@@ -31,4 +31,4 @@ jobs:
         run: composer require --dev "larastan/larastan:^3.0"
 
       - name: Run Larastan
-        run: vendor/bin/phpstan analyse -c phpstan.neon --error-format=github
+        run: vendor/bin/phpstan analyse -c phpstan.neon --error-format=github --memory-limit=1G
