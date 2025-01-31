@@ -30,7 +30,6 @@ class OrderPage extends Page
     {
         $product = Product::findOrFail($productId);
 
-        // 在庫が0の場合は通知を表示
         if ($product->stock <= 0) {
             Notification::make()
                 ->title('在庫がありません: ' . $product->name)
@@ -59,6 +58,7 @@ class OrderPage extends Page
         $this->updateCartSession();
     }
 
+    // カート内の指定した商品の数量を更新
     public function updateQuantity(int $index, int $quantity): void
     {
         if ($quantity <= 0) {
@@ -71,6 +71,7 @@ class OrderPage extends Page
         $this->updateCartSession();
     }
 
+    // カートから指定した商品を削除
     public function removeFromCart(int $index): void
     {
         unset($this->cart[$index]);
@@ -79,6 +80,7 @@ class OrderPage extends Page
         $this->updateCartSession();
     }
 
+    // カート内の商品の合計金額を計算
     public function calculateTotalPrice(): void
     {
         $this->totalPrice = collect($this->cart)->sum(function ($item) {
@@ -117,7 +119,6 @@ class OrderPage extends Page
             return;
         }
         
-        // カート内の確認
         if (empty($this->cart)) {
             Notification::make()
                 ->title('カートが空です。')

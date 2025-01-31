@@ -16,13 +16,12 @@ class Product extends Model
         'image',
     ];
 
-    // Order モデルとのリレーション
-    function orders()
+    public function orders()
     {
         return $this->hasMany(Orders::class);
     }
 
-    function reduceStock(int $quantity): void
+    public function reduceStock(int $quantity): void
     {
         if ($this->stock < $quantity) {
             throw new \Exception('在庫が不足しています。');
