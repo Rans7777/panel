@@ -22,6 +22,7 @@ class OrderPage extends Page
     public function mount(): void
     {
         $this->cart = session('cart', []);
+        $this->syncCartWithDatabase();
         $this->calculateTotalPrice();
     }
 
@@ -50,6 +51,7 @@ class OrderPage extends Page
         $this->cart[] = [
             'id' => $product->id,
             'name' => $product->name,
+            'image' => $product->image,
             'price' => $product->price,
             'quantity' => 1,
         ];
@@ -80,8 +82,22 @@ class OrderPage extends Page
         $this->updateCartSession();
     }
 
+    // カート内の商品情報を最新の状態に同期する
+    private function syncCartWithDatabase(): void
+    {
+        foreach ($this->cart as $index => $item) {
+            $product = Product::find($item['id']);
+            if ($product) {
+                $this->cart[$index]['name'] = $product->name;
+                $this->cart[$index]['image'] = $product->image;
+                $this->cart[$index]['price'] = $product->price;
+            }
+        }
+        $this->updateCartSession();
+    }
+
     // カート内の商品の合計金額を計算
-    public function calculateTotalPrice(): void
+    private function calculateTotalPrice(): void
     {
         $this->totalPrice = collect($this->cart)->sum(function ($item) {
             return $item['price'] * (int)$item['quantity'];
@@ -89,7 +105,7 @@ class OrderPage extends Page
     }
 
     // セッションにカートデータを保存
-    public function updateCartSession(): void
+    private function updateCartSession(): void
     {
         session(['cart' => $this->cart]);
     }
@@ -111,6 +127,8 @@ class OrderPage extends Page
     // 注文を確定
     public function confirmOrder(): void
     {
+        $this->syncCartWithDatabase();
+
         if ($this->paymentAmount < $this->totalPrice) {
             Notification::make()
                 ->title('支払い金額が不足しています。')
@@ -127,6 +145,19 @@ class OrderPage extends Page
             return;
         }
         
+        // 注文数量が在庫よりも上回っているか検証する
+        foreach ($this->cart as $item) {
+            $product = Product::find($item['id']);
+            if ($product && $product->stock < $item['quantity']) {
+                $this->showPaymentPopup = false;
+                Notification::make()
+                    ->title('注文の数量が在庫を超えています： ' . $product->name)
+                    ->danger()
+                    ->send();
+                return;
+            }
+        }
+        
         // トランザクション内で処理
         DB::transaction(function () {
             foreach ($this->cart as $item) {
@@ -138,7 +169,7 @@ class OrderPage extends Page
                 }
 
                 // 在庫を減少させる
-                $product->reduceStock($item['quantity']);
+                $product->decrement('stock', $item['quantity']);
 
                 // 注文を保存
                 Orders::create([
