@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\OrderResource\Pages;
+namespace App\Filament\Resources\OrdersResource\Pages;
 
 use App\Filament\Resources\OrdersResource;
 use Filament\Resources\Pages\CreateRecord;

@@ -1,7 +1,7 @@
 <?php
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\OrderResource\Pages;
+use App\Filament\Resources\OrdersResource\Pages;
 use App\Models\Orders;
 use Filament\Forms;
 use Filament\Resources\Resource;
