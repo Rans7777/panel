@@ -47,7 +47,7 @@ class ProductResource extends Resource
     public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
     {
         return $table->columns([
-            Tables\Columns\ImageColumn::make('image')->label('商品画像')->size(50),
+            Tables\Columns\ImageColumn::make('image')->label('商品画像')->size(50)->placeholder('No image'),
             Tables\Columns\TextColumn::make('name')->label('商品名')->sortable()->searchable(),
             Tables\Columns\TextColumn::make('price')->label('価格')->sortable(),
             Tables\Columns\TextColumn::make('stock')->label('在庫数')->sortable(),
