@@ -10,14 +10,14 @@ class Login extends BaseLogin
 {
     protected static string $view = 'filament.pages.auth.login';
 
-    public string $email = '';
+    public string $name = '';
     public string $password = '';
     public bool $remember = false;
 
     public function authenticate(): ?\Filament\Http\Responses\Auth\Contracts\LoginResponse
     {        
         if (Auth::guard(config('filament.auth.guard'))->attempt([
-            'email'    => $this->email,
+            'name'     => $this->name,
             'password' => $this->password,
         ], $this->remember)) {            
             $url = session()->pull('url.intended', Filament::getUrl());
@@ -25,7 +25,7 @@ class Login extends BaseLogin
             return null;
         }
 
-        $this->addError('email', 'ログイン情報が正しくありません。');
+        $this->addError('name', 'ログイン情報が正しくありません。');
         return null;
     }
 }

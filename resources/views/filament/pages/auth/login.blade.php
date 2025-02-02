@@ -38,7 +38,7 @@
             font-weight: bold;
         }
 
-        input[type="email"], input[type="password"] {
+        input[type="text"], input[type="password"] {
             width: 100%;
             padding: 12px;
             margin-top: 4px;
@@ -49,7 +49,7 @@
             color: #374151;
         }
 
-        input[type="email"]:focus, input[type="password"]:focus {
+        input[type="text"]:focus, input[type="password"]:focus {
             border-color: #3b82f6;
             outline: none;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
@@ -109,13 +109,13 @@
             color: #f87171;
         }
 
-        .dark input[type="email"], .dark input[type="password"] {
+        .dark input[type="text"], .dark input[type="password"] {
             background-color: #374151;
             color: #f3f4f6;
             border-color: #4b5563;
         }
 
-        .dark input[type="email"]:focus, .dark input[type="password"]:focus {
+        .dark input[type="text"]:focus, .dark input[type="password"]:focus {
             box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.3);
         }
 
@@ -143,16 +143,16 @@
         <h1 class="mb-6 text-2xl font-bold">ログイン</h1>
         <form wire:submit.prevent="authenticate">
             <div class="form-group">
-                <label for="email" class="text-gray-900 dark:text-gray-200">
-                    メールアドレス<span class="required">*</span>
+                <label for="name" class="text-gray-900 dark:text-gray-200">
+                    ユーザー名<span class="required">*</span>
                 </label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    wire:model.lazy="email" 
-                    placeholder="メールアドレスを入力してください"
+                <input
+                    type="text"
+                    id="name"
+                    wire:model.lazy="name"
+                    placeholder="ユーザー名を入力してください"
                     class="bg-gray-50 dark:bg-gray-600 dark:text-white">
-                @error('email')
+                @error('name')
                     <p class="error">{{ $message }}</p>
                 @enderror
             </div>
@@ -162,17 +162,17 @@
                     パスワード<span class="required">*</span>
                 </label>
                 <input 
-                    type="password" 
-                    id="password" 
-                    wire:model.lazy="password" 
+                    type="password"
+                    id="password"
+                    wire:model.lazy="password"
                     placeholder="パスワードを入力してください"
                     class="bg-gray-50 dark:bg-gray-600 dark:text-white">
             </div>
 
             <div class="remember-group">
                 <input 
-                    id="remember" 
-                    type="checkbox" 
+                    id="remember"
+                    type="checkbox"
                     wire:model.lazy="remember"
                     class="rounded border-gray-300 shadow-sm focus:ring focus:ring-orange-500">
                 <label for="remember">Remember me</label>
