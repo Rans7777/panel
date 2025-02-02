@@ -137,5 +137,6 @@ return [
         Illuminate\Translation\TranslationServiceProvider::class,
         Illuminate\View\ViewServiceProvider::class,
         Illuminate\Validation\ValidationServiceProvider::class,
+        Illuminate\Foundation\Providers\ArtisanServiceProvider::class,
     ],
 ];
