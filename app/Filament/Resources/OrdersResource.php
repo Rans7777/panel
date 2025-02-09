@@ -157,7 +157,7 @@ class OrdersResource extends Resource
                     );
                 }),
 
-            Tables\Filters\Filter::make('order_date')
+            Tables\Filters\Filter::make('created_at')
                 ->form([
                     Forms\Components\DatePicker::make('from')
                         ->label('開始日'),
@@ -168,11 +168,11 @@ class OrdersResource extends Resource
                     return $query
                         ->when(
                             $data['from'],
-                            fn ($query) => $query->whereDate('order_date', '>=', $data['from']),
+                            fn ($query) => $query->whereDate('created_at', '>=', $data['from']),
                         )
                         ->when(
                             $data['until'],
-                            fn ($query) => $query->whereDate('order_date', '<=', $data['until']),
+                            fn ($query) => $query->whereDate('created_at', '<=', $data['until']),
                         );
                 })
         ])
