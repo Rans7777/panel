@@ -5,17 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Orders extends Model
+class ProductOption extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'quantity', 'image', 'total_price', 'options'];
+    protected $table = 'product_options';
 
-    protected $casts = [
-        'options' => 'array',
+    protected $fillable = [
+        'option_name', 'price',
     ];
 
-    function product()
+    public function product()
     {
         return $this->belongsTo(Product::class);
     }

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrdersResource\Pages;
@@ -35,6 +36,43 @@ class OrdersResource extends Resource
             Forms\Components\DatePicker::make('order_date')
                 ->label('注文日')
                 ->required(),
+
+            Forms\Components\Textarea::make('options')
+                ->label('購入オプション')
+                ->disabled()
+                ->rows(5)
+                ->afterStateHydrated(function (\Filament\Forms\Components\Field $component, $state) {
+                    if (is_string($state)) {
+                        $decoded = json_decode($state, true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            $state = $decoded;
+                        }
+                    }
+
+                    if (is_array($state)) {
+                        if (array_is_list($state)) {
+                            $state = collect($state)
+                                ->map(function ($item) {
+                                    if (is_array($item) && isset($item['option_name'], $item['price'])) {
+                                        return sprintf('%s: %s', $item['option_name'], $item['price']);
+                                    }
+                                    return '';
+                                })
+                                ->filter()
+                                ->implode(', ');
+                        } else {
+                            $state = collect($state)
+                                ->map(function ($value, $key) {
+                                    if (is_array($value)) {
+                                        $value = $value['price'] ?? json_encode($value);
+                                    }
+                                    return sprintf('%s: %s', $key, $value);
+                                })
+                                ->implode(', ');
+                        }
+                    }
+                    $component->state($state);
+                }),
         ]);
     }
 
@@ -63,6 +101,42 @@ class OrdersResource extends Resource
             ->label('合計金額')
             ->sortable()
             ->money('JPY'),
+
+        // 購入オプション表示用のカラム
+        Tables\Columns\TextColumn::make('options')
+            ->label('購入オプション')
+            ->formatStateUsing(function ($state) {
+                $shorten = function($text, $limit = 20) {
+                    return (mb_strlen($text) > $limit) ? mb_substr($text, 0, $limit) . '…' : $text;
+                };
+
+                if (is_string($state)) {
+                    $decoded = json_decode($state, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $state = $decoded;
+                    }
+                }
+
+                if (is_array($state)) {
+                    if (array_is_list($state)) {
+                        return collect($state)
+                            ->map(function ($item) use ($shorten) {
+                                return (is_array($item) && isset($item['option_name']))
+                                    ? $shorten($item['option_name'])
+                                    : '';
+                            })
+                            ->filter()
+                            ->implode(', ');
+                    } else {
+                        return collect($state)
+                            ->map(function ($value, $key) use ($shorten) {
+                                return $shorten($key);
+                            })
+                            ->implode(', ');
+                    }
+                }
+                return $state;
+            }),
 
         // 注文日カラム
         Tables\Columns\TextColumn::make('created_at')

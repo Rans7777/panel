@@ -6,14 +6,19 @@
         }
     </style>
 
+    <!-- 商品一覧・カート・支払い画面 -->
     <div class="space-y-6">
         <h1 class="text-2xl font-bold mb-4">注文ページ</h1>
 
+        @php
+            $products = \App\Models\Product::where('stock', '>', 0)->get();
+        @endphp
+
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            @foreach (\App\Models\Product::all() as $product)
+            @forelse ($products as $product)
                 <div>
                     <button type="button"
-                        wire:click="addToCart({{ $product->id }})"
+                        wire:click="handleProductClick({{ $product->id }})"
                         class="product-button w-full border rounded-lg p-4 text-center transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 hover:bg-gray-800 hover:text-white"
                         x-on:mousedown="$el.classList.add('pressed-active')"
                         x-on:mouseup="$el.classList.remove('pressed-active')"
@@ -32,7 +37,9 @@
                         </div>
                     </button>
                 </div>
-            @endforeach
+            @empty
+                <p class="col-span-full text-center">利用可能な商品はありません。</p>
+            @endforelse
         </div>
 
         {{-- カート --}}
@@ -48,16 +55,30 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($cart as $index => $item)
+                @forelse ($cart as $index => $item)
                     <tr>
-                        <td class="border p-2 break-words">{{ $item['name'] }}</td>
+                        <td class="border p-2 break-words">
+                            {{ $item['name'] }}
+                            @if(isset($item['options']))
+                                <div class="mt-1 text-sm text-gray-500">
+                                    オプション:
+                                    <ul>
+                                        @foreach ($item['options'] as $option)
+                                            <li>
+                                                {{ $option['option_name'] }} (追加料金: ¥{{ number_format($option['price']) }})
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+                        </td>
                         <td class="border p-2">¥{{ number_format($item['price']) }}</td>
                         <td class="border p-2">
                             <input type="number" min="1" 
                                 wire:model.live="cart.{{ $index }}.quantity" 
                                 wire:change="updateQuantity({{ $index }}, $event.target.value)" 
                                 value="{{ $item['quantity'] }}" 
-                                class="w-16 border rounded text-center p-1 {{ config('filament.dark_mode') ? 'bg-gray-800 text-white' : 'bg-white text-black' }}"
+                                class="w-16 border rounded text-center p-1 bg-white text-black dark:bg-gray-800 dark:text-white"
                             >
                         </td>
                         <td class="border p-2">¥{{ number_format($item['price'] * (int)$item['quantity']) }}</td>
@@ -79,7 +100,7 @@
             合計金額: ¥{{ number_format($totalPrice) }}
         </div>
 
-        {{-- 確定ボタン --}}
+        {{-- 注文確定ボタン --}}
         <div class="mt-6 text-right">
             <x-filament::button
                 color="success"
@@ -92,18 +113,10 @@
         {{-- 支払いポップアップ --}}
         @if ($showPaymentPopup)
             <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-                <div
-                    class="
-                        w-1/3 p-6 rounded-lg shadow-lg
-                        bg-white text-black
-                        dark:bg-gray-900 dark:text-white
-                        space-y-4
-                    "
-                >
-                <h2 class="text-xl font-bold">支払い情報</h2>
-
-                <div class="space-y-2">
-                    <div>金額: ¥{{ number_format($totalPrice) }}</div>
+                <div class="w-1/3 p-6 rounded-lg shadow-lg bg-white text-black dark:bg-gray-900 dark:text-white space-y-4">
+                    <h2 class="text-xl font-bold">支払い情報</h2>
+                    <div class="space-y-2">
+                        <div>金額: ¥{{ number_format($totalPrice) }}</div>
                         <label class="block">
                             <span class="text-gray-600 dark:text-gray-400">お預かり金額</span>
                             <input
@@ -112,45 +125,78 @@
                                 wire:change="calculateChange"
                                 inputmode="numeric"
                                 min="0"
-                                class="
-                                    mt-1 block w-full p-2 rounded border-gray-300
-                                    focus:ring focus:ring-blue-500 focus:ring-opacity-50
-                                    bg-white text-black
-                                    dark:bg-gray-800 dark:text-white
-                                "
+                                class="mt-1 block w-full p-2 rounded border-gray-300 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-black dark:bg-gray-800 dark:text-white"
                             >
                         </label>
-                    <div>おつり: ¥{{ number_format($changeAmount) }}</div>
-                </div>
-
-                <div class="flex justify-between space-x-4">
-                    <button type="button"
-                        wire:click="$set('showPaymentPopup', false)"
-                        class="border border-red-500 text-red-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hover:bg-red-500 hover:text-white"
-                        x-on:mousedown="$el.classList.add('pressed-active')"
-                        x-on:mouseup="$el.classList.remove('pressed-active')"
-                        x-on:mouseleave="$el.classList.remove('pressed-active')"
-                        x-on:touchstart="$el.classList.add('pressed-active')"
-                        x-on:touchend="$el.classList.remove('pressed-active')"
-                        x-on:touchcancel="$el.classList.remove('pressed-active')"
-                    >
-                        キャンセル
-                    </button>
-                    <button type="button"
-                        wire:click="confirmOrder"
-                        class="border border-green-500 text-green-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hover:bg-green-500 hover:text-white"
-                        x-on:mousedown="$el.classList.add('pressed-active')"
-                        x-on:mouseup="$el.classList.remove('pressed-active')"
-                        x-on:mouseleave="$el.classList.remove('pressed-active')"
-                        x-on:touchstart="$el.classList.add('pressed-active')"
-                        x-on:touchend="$el.classList.remove('pressed-active')"
-                        x-on:touchcancel="$el.classList.remove('pressed-active')"
-                    >
-                        注文確定
-                    </button>
-                </div>
+                        <div>おつり: ¥{{ number_format($changeAmount) }}</div>
+                    </div>
+                    <div class="flex justify-between space-x-4">
+                        <button type="button"
+                            wire:click="$set('showPaymentPopup', false)"
+                            class="border border-red-500 text-red-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hover:bg-red-500 hover:text-white"
+                            x-on:mousedown="$el.classList.add('pressed-active')"
+                            x-on:mouseup="$el.classList.remove('pressed-active')"
+                            x-on:mouseleave="$el.classList.remove('pressed-active')"
+                            x-on:touchstart="$el.classList.add('pressed-active')"
+                            x-on:touchend="$el.classList.remove('pressed-active')"
+                            x-on:touchcancel="$el.classList.remove('pressed-active')"
+                        >
+                            キャンセル
+                        </button>
+                        <button type="button"
+                            wire:click="confirmOrder"
+                            class="border border-green-500 text-green-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hover:bg-green-500 hover:text-white"
+                            x-on:mousedown="$el.classList.add('pressed-active')"
+                            x-on:mouseup="$el.classList.remove('pressed-active')"
+                            x-on:mouseleave="$el.classList.remove('pressed-active')"
+                            x-on:touchstart="$el.classList.add('pressed-active')"
+                            x-on:touchend="$el.classList.remove('pressed-active')"
+                            x-on:touchcancel="$el.classList.remove('pressed-active')"
+                        >
+                            注文確定
+                        </button>
+                    </div>
                 </div>
             </div>
         @endif
+
+        {{-- オプション選択用ポップアップ --}}
+        @if ($showOptionsPopup)
+            <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                <div class="w-1/3 p-6 rounded-lg shadow-lg bg-white text-black dark:bg-gray-900 dark:text-white space-y-4">
+                    <h2 class="text-xl font-bold">オプション選択</h2>
+                    <div class="space-y-2">
+                        <p>この商品には複数のオプションが用意されています。必要なオプションを選択してください。</p>
+                        @if (!empty($selectedProductOptions))
+                            <ul class="space-y-2">
+                                @foreach ($selectedProductOptions as $option)
+                                    <li>
+                                        <label class="block">
+                                            <input type="checkbox" name="option" wire:model="selectedOptionIds" value="{{ $option['id'] }}">
+                                            {{ $option['option_name'] }} (追加料金: ¥{{ number_format($option['price']) }})
+                                        </label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                    <div class="flex justify-between space-x-4">
+                        <button type="button"
+                            wire:click="cancelOptionSelection"
+                            class="border border-red-500 text-red-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hover:bg-red-500 hover:text-white"
+                        >
+                            キャンセル
+                        </button>
+                        <button type="button"
+                            wire:click="confirmOptionSelection"
+                            class="border border-green-500 text-green-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hover:bg-green-500 hover:text-white"
+                        >
+                            確定する
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
     </div>
 </x-filament::page>

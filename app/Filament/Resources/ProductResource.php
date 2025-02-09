@@ -41,6 +41,28 @@ class ProductResource extends Resource
                 ->imageEditor()
                 ->nullable()
                 ->disk('public'),
+
+            Forms\Components\Repeater::make('options')
+                ->relationship('options')
+                ->label('オプション')
+                ->collapsible()
+                ->itemLabel(fn (?array $state = null): string => $state
+                    ? (($state['option_name'] ?? 'オプション') . ' - ' . ($state['price'] ?? ''))
+                    : 'オプション'
+                )
+                ->schema([
+                    Forms\Components\TextInput::make('option_name')
+                        ->label('オプション名')
+                        ->required()
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('price')
+                        ->label('値段')
+                        ->numeric()
+                        ->required(),
+                ])
+                ->columns(2)
+                ->minItems(0)
+                ->createItemButtonLabel('オプションを追加'),
         ]);
     }
 
