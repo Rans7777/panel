@@ -46,6 +46,7 @@ class ProductResource extends Resource
                 ->relationship('options')
                 ->label('オプション')
                 ->collapsible()
+                ->collapsed()
                 ->itemLabel(fn (?array $state = null): string => $state
                     ? (($state['option_name'] ?? 'オプション') . ' - ' . ($state['price'] ?? ''))
                     : 'オプション'
@@ -53,9 +54,11 @@ class ProductResource extends Resource
                 ->schema([
                     Forms\Components\TextInput::make('option_name')
                         ->label('オプション名')
+                        ->required()
                         ->maxLength(255),
                     Forms\Components\TextInput::make('price')
                         ->label('値段')
+                        ->required()
                         ->numeric(),
                 ])
                 ->columns(2)
