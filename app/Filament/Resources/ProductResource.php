@@ -53,12 +53,10 @@ class ProductResource extends Resource
                 ->schema([
                     Forms\Components\TextInput::make('option_name')
                         ->label('オプション名')
-                        ->required()
                         ->maxLength(255),
                     Forms\Components\TextInput::make('price')
                         ->label('値段')
-                        ->numeric()
-                        ->required(),
+                        ->numeric(),
                 ])
                 ->columns(2)
                 ->minItems(0)
