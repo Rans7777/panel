@@ -186,7 +186,7 @@ class OrderPage extends Page
     public function handleProductClick(int $productId): void
     {
         $product = Product::findOrFail($productId);
-        if (method_exists($product, 'options') && $product->options()->count() > 0) {
+        if ($product->options()->count() > 0) {
             $this->selectedProductId = $product->id;
             $this->selectedProductOptions = $product->options()->get()->toArray();
             $this->showOptionsPopup = true;
