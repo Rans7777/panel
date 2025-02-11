@@ -13,6 +13,7 @@ class OrderPage extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
     protected static string $view = 'filament.pages.order-page';
+    protected static ?string $navigationLabel = '注文ページ';
     protected static ?string $title = null;
 
     public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable

@@ -9,6 +9,12 @@ use Filament\Resources\Pages\EditRecord;
 class EditOrder extends EditRecord
 {
     protected static string $resource = OrdersResource::class;
+    protected static ?string $title = '注文の編集';
+
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
 
     protected function getHeaderActions(): array
     {

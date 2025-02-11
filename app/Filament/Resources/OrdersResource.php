@@ -11,7 +11,7 @@ use Filament\Tables;
 class OrdersResource extends Resource
 {
     protected static ?string $model = Orders::class;
-
+    protected static ?string $navigationLabel = '注文履歴';
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     public static function form(Forms\Form $form): Forms\Form

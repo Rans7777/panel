@@ -13,7 +13,7 @@ use Filament\Tables\Actions\DeleteAction;
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
-
+    protected static ?string $navigationLabel = '商品管理';
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     public static function form(\Filament\Forms\Form $form): \Filament\Forms\Form

@@ -8,6 +8,12 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateUser extends CreateRecord
 {
     protected static string $resource = UserResource::class;
+    protected static ?string $title = 'ユーザー追加';
+
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
 
     protected function getRedirectUrl(): string
     {
