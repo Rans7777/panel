@@ -22,15 +22,25 @@ class SalesOverview extends BaseWidget
             $arrow = '<span style="color: #808080;">→</span>';
         }
 
-        return [
+        $cards = [
             Card::make(
                 '今日の売上',
                 new HtmlString('¥' . number_format($todayTotal) . '&ensp;' . $arrow)
             ),
-            Card::make(
-                '総売上', 
-                new HtmlString('¥' . number_format(Orders::sum('total_price')))
-            ),
         ];
+
+        if ($yesterdayTotal > 0) {
+            $cards[] = Card::make(
+                '昨日の売上',
+                new HtmlString('¥' . number_format($yesterdayTotal))
+            );
+        }
+
+        $cards[] = Card::make(
+            '総売上',
+            new HtmlString('¥' . number_format(Orders::sum('total_price')))
+        );
+
+        return $cards;
     }
 }
