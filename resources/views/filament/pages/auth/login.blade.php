@@ -158,7 +158,7 @@
                     <p class="error">{{ $message }}</p>
                 @enderror
             </div>
-    
+
             <div class="form-group">
                 <label for="password" class="dark:text-gray-200">
                     パスワード<span class="required">*</span>
@@ -170,7 +170,7 @@
                     placeholder="パスワードを入力してください"
                     class="bg-gray-50 dark:bg-gray-600 dark:text-white">
             </div>
-    
+
             <div class="remember-group">
                 <input 
                     id="remember"
