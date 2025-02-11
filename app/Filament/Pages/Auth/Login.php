@@ -19,7 +19,7 @@ class Login extends BaseLogin
         if (Auth::guard(config('filament.auth.guard'))->attempt([
             'name'     => $this->name,
             'password' => $this->password,
-        ], $this->remember)) {            
+        ], $this->remember)) {
             $url = session()->pull('url.intended', Filament::getUrl());
             $this->redirect($url);
             return null;
