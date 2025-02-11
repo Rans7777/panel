@@ -19,7 +19,7 @@ class Login extends BaseLogin
     public function authenticate(): ?\Filament\Http\Responses\Auth\Contracts\LoginResponse
     {
         if (config('services.turnstile.secret') && config('services.turnstile.sitekey')) {
-            $response = Http::withOptions(['verify' => false])->asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+            $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
                 'secret'   => config('services.turnstile.secret'),
                 'response' => $this->turnstileToken,
                 'remoteip' => request()->ip(),
