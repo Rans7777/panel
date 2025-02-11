@@ -18,6 +18,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use IbrahimBougaoua\FilaSortable\FilaSortablePlugin;
+use Leandrocfe\FilamentApexCharts\FilamentApexChartsPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -58,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
             ->plugins([
                 FilaSortablePlugin::make(),
                 \Hasnayeen\Themes\ThemesPlugin::make(),
+                FilamentApexChartsPlugin::make(),
             ])
             ->middleware([
                 \Hasnayeen\Themes\Http\Middleware\SetTheme::class,

@@ -12,6 +12,7 @@
         "ibrahimbougaoua/filasortable": "^1.0",
         "laravel/framework": "^11.31",
         "laravel/tinker": "^2.9",
+        "leandrocfe/filament-apex-charts": "^3.1",
         "tapp/filament-country-code-field": "^1.0",
         "tapp/filament-timezone-field": "3.0"
     },
