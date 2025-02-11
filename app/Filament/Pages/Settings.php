@@ -7,6 +7,7 @@ use Filament\Pages\Page;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Filament\Notifications\Notification;
+use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
 
 class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -59,7 +60,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
             Forms\Components\TextInput::make('APP_DEBUG')
                 ->label('APP_DEBUG')
                 ->required(),
-            Forms\Components\TextInput::make('APP_TIMEZONE')
+            TimezoneSelect::make('APP_TIMEZONE')
                 ->label('APP_TIMEZONE')
                 ->required(),
             Forms\Components\TextInput::make('APP_URL')
