@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Filament\Notifications\Notification;
 use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
+use Tapp\FilamentCountryCodeField\Forms\Components\CountryCodeSelect;
 
 class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -38,6 +39,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
             'APP_NAME'           => config('app.name', ''),
             'APP_DEBUG'          => config('app.debug', ''),
             'APP_TIMEZONE'       => config('app.timezone', ''),
+            'APP_LOCALE'         => config('app.locale', ''),
             'APP_URL'            => config('app.url', ''),
             'LOG_LEVEL'          => config('logging.level', ''),
             'DB_CONNECTION'      => config('database.default', ''),
@@ -62,6 +64,9 @@ class Settings extends Page implements Forms\Contracts\HasForms
                 ->required(),
             TimezoneSelect::make('APP_TIMEZONE')
                 ->label('APP_TIMEZONE')
+                ->required(),
+            CountryCodeSelect::make('APP_LOCALE')
+                ->label('APP_LOCALE')
                 ->required(),
             Forms\Components\TextInput::make('APP_URL')
                 ->label('APP_URL')
