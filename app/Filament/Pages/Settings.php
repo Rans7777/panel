@@ -6,6 +6,7 @@ use Filament\Forms;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
+use Filament\Notifications\Notification;
 
 class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -118,7 +119,10 @@ class Settings extends Page implements Forms\Contracts\HasForms
         $envFilePath = base_path('.env');
 
         if (!File::exists($envFilePath)) {
-            $this->notify('error', '.env ファイルが存在しません');
+            Notification::make()
+                ->title('.env ファイルが存在しません')
+                ->danger()
+                ->send();
             return;
         }
 
@@ -155,12 +159,18 @@ class Settings extends Page implements Forms\Contracts\HasForms
             File::put($envFilePath, $newEnvContent);
         } catch (\Exception $e) {
             \Log::error('Failed to update .env file: ' . $e->getMessage());
-            $this->notify('error', '.env ファイルの更新に失敗しました');
+            Notification::make()
+                ->title('.env ファイルの更新に失敗しました')
+                ->danger()
+                ->send();
             return;
         }
 
         Artisan::call('config:clear');
-        $this->notify('success', '.env が更新されました');
+        Notification::make()
+            ->title('.env が更新されました')
+            ->success()
+            ->send();
     }
 
     protected function getActions(): array
