@@ -13,7 +13,7 @@ class MakeUserCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'make:user';
+    protected $signature = 'make:user {username?} {password?}';
 
     /**
      * The console command description.
@@ -29,8 +29,8 @@ class MakeUserCommand extends Command
      */
     public function handle()
     {
-        $username = $this->ask('ユーザー名を入力してください');
-        $password = $this->secret('パスワードを入力してください');
+        $username = $this->argument('username') ?: $this->ask('ユーザー名を入力してください');
+        $password = $this->argument('password') ?: $this->secret('パスワードを入力してください');
 
         if (!$this->confirm('この情報でユーザーを作成してよろしいですか？')) {
             $this->info('ユーザー作成をキャンセルしました。');

@@ -22,12 +22,26 @@ class UserResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
-                    ->unique(User::class, 'name'),
+                    ->unique(ignoreRecord: true)
+                    ->label('ユーザー名'),
 
                 Forms\Components\TextInput::make('password')
                     ->password()
-                    ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->dehydrateStateUsing(fn ($state) => bcrypt($state))
+                    ->required(fn ($livewire) => !isset($livewire->record) || auth()->id() !== $livewire->record->id)
+                    ->label('パスワード'),
+
+                Forms\Components\Toggle::make('is_active')
+                    ->label('有効')
+                    ->default(true)
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, $livewire) {
+                        if (isset($livewire->record)) {
+                            $livewire->record->update(['is_active' => $state]);
+                        }
+                    }),
             ]);
     }
 
@@ -37,13 +51,28 @@ class UserResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')->sortable(),
                 Tables\Columns\TextColumn::make('name')->sortable()->searchable(),
+                Tables\Columns\BooleanColumn::make('is_active')->label('有効'),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('toggleActive')
+                    ->label(fn ($record) => $record->is_active ? '無効化' : '有効化')
+                    ->action(function ($record) {
+                        $record->update(['is_active' => !$record->is_active]);
+                    })
+                    ->color(fn ($record) => $record->is_active ? 'warning' : 'success'),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
+                Tables\Actions\BulkAction::make('disable')
+                    ->label('選択を一括無効化')
+                    ->action(function (\Illuminate\Support\Collection $records) {
+                        foreach ($records as $record) {
+                            $record->update(['is_active' => false]);
+                        }
+                    })
+                    ->requiresConfirmation(),
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }

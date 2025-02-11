@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Filament\Pages\Auth\Login as BaseLogin;
 use Filament\Facades\Filament;
+use App\Models\User;
 
 class Login extends BaseLogin
 {
@@ -24,12 +25,18 @@ class Login extends BaseLogin
                 'response' => $this->turnstileToken,
                 'remoteip' => request()->ip(),
             ]);
-            
+
             $result = $response->json();
             if (!isset($result['success']) || !$result['success']) {
                 $this->addError('turnstileToken', 'Cloudflare Turnstile 認証に失敗しました。');
                 return null;
             }
+        }
+
+        $user = User::where('name', $this->name)->first();
+        if ($user && !$user->is_active) {
+            $this->addError('name', 'このアカウントは無効です。');
+            return null;
         }
 
         if (Auth::guard(config('filament.auth.guard'))->attempt([
