@@ -33,19 +33,19 @@ class Settings extends Page implements Forms\Contracts\HasForms
     public function mount()
     {
         $this->form->fill([
-            'APP_NAME'           => env('APP_NAME', ''),
-            'APP_DEBUG'          => env('APP_DEBUG', ''),
-            'APP_TIMEZONE'       => env('APP_TIMEZONE', ''),
-            'APP_URL'            => env('APP_URL', ''),
-            'LOG_LEVEL'          => env('LOG_LEVEL', ''),
-            'DB_CONNECTION'      => env('DB_CONNECTION', ''),
-            'DB_HOST'            => env('DB_HOST', ''),
-            'DB_PORT'            => env('DB_PORT', ''),
-            'DB_DATABASE'        => env('DB_DATABASE', ''),
-            'DB_USERNAME'        => env('DB_USERNAME', ''),
-            'DB_PASSWORD'        => env('DB_PASSWORD', ''),
-            'TURNSTILE_SITEKEY'  => env('TURNSTILE_SITEKEY', ''),
-            'TURNSTILE_SECRET'   => env('TURNSTILE_SECRET', ''),
+            'APP_NAME'           => config('app.name', ''),
+            'APP_DEBUG'          => config('app.debug', ''),
+            'APP_TIMEZONE'       => config('app.timezone', ''),
+            'APP_URL'            => config('app.url', ''),
+            'LOG_LEVEL'          => config('logging.level', ''),
+            'DB_CONNECTION'      => config('database.default', ''),
+            'DB_HOST'            => config('database.connections.mysql.host', ''),
+            'DB_PORT'            => config('database.connections.mysql.port', ''),
+            'DB_DATABASE'        => config('database.connections.mysql.database', ''),
+            'DB_USERNAME'        => config('database.connections.mysql.username', ''),
+            'DB_PASSWORD'        => config('database.connections.mysql.password', ''),
+            'TURNSTILE_SITEKEY'  => config('services.turnstile.sitekey', ''),
+            'TURNSTILE_SECRET'   => config('services.turnstile.secret', ''),
         ]);
     }
 
