@@ -13,13 +13,25 @@ return new class extends Migration
     public function up(): void
     {
         if (DB::connection()->getDriverName() === 'sqlite') {
+            if (Schema::hasTable('users_temp')) {
+                Schema::drop('users_temp');
+            }
+
+            $hasPassword = Schema::hasColumn('users', 'password');
+            
             Schema::create('users_temp', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
+                $table->string('password');
                 $table->timestamps();
             });
-
-            DB::statement('INSERT INTO users_temp (id, name, created_at, updated_at) SELECT id, name, created_at, updated_at FROM users');
+            
+            if ($hasPassword) {
+                DB::statement('INSERT INTO users_temp (id, name, password, created_at, updated_at) SELECT id, name, password, created_at, updated_at FROM users');
+            } else {
+                DB::statement('INSERT INTO users_temp (id, name, password, created_at, updated_at) SELECT id, name, "", created_at, updated_at FROM users');
+            }
+            
             Schema::drop('users');
             Schema::rename('users_temp', 'users');
         } else {
@@ -35,9 +47,23 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('email')->unique();
-            $table->string('email_verified_at')->nullable();
-        });
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            if (!Schema::hasColumn('users', 'email')) {
+                Schema::table('users', function (Blueprint $table) {
+                    $table->string('email')->unique()->nullable();
+                });
+            }
+
+            if (!Schema::hasColumn('users', 'email_verified_at')) {
+                Schema::table('users', function (Blueprint $table) {
+                    $table->string('email_verified_at')->nullable();
+                });
+            }
+        } else {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('email')->unique();
+                $table->string('email_verified_at')->nullable();
+            });
+        }
     }
 };
