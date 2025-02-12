@@ -39,7 +39,7 @@ class SalesOverview extends BaseWidget
                 ->color($percentageChange >= 0 ? 'success' : 'danger')
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor($percentageChange >= 0 ? 'success' : 'danger'),
-            
+
             Card::make('総売上', new HtmlString('¥' . number_format(Orders::sum('total_price'))))
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor('primary'),
