@@ -19,6 +19,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use IbrahimBougaoua\FilaSortable\FilaSortablePlugin;
 use Leandrocfe\FilamentApexCharts\FilamentApexChartsPlugin;
+use Hasnayeen\Themes\ThemesPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -58,7 +59,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->plugins([
                 FilaSortablePlugin::make(),
-                \Hasnayeen\Themes\ThemesPlugin::make(),
+                ThemesPlugin::make(),
                 FilamentApexChartsPlugin::make(),
             ])
             ->middleware([
