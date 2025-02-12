@@ -19,9 +19,13 @@ class OrdersResource extends Resource
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form->schema([
-            Forms\Components\Select::make('product_id')
+            Forms\Components\Select::make('id')
                 ->label('商品名')
                 ->relationship('product', 'name')
+                ->required(),
+
+            Flatpickr::make('created_at')
+                ->label('注文日')
                 ->required(),
 
             Quantity::make('quantity')
