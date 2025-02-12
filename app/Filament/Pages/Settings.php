@@ -19,6 +19,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
     protected static string $view = 'filament.pages.settings';
     protected static ?string $title = '環境設定';
     protected static ?string $navigationGroup = 'ユーザー管理';
+    protected ?array $data = [];
 
     public $APP_NAME;
     public $APP_DEBUG;

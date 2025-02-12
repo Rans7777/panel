@@ -194,7 +194,7 @@
                         </div>
                         <input type="hidden" wire:model="turnstileToken">
                         @error('turnstileToken')
-                            <p class="error">{{ $message }}</p>
+                            <p class="error">{{ $errors->first('turnstileToken') }}</p>
                         @enderror
                     </div>
                 </div>

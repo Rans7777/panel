@@ -78,7 +78,22 @@ class ProductResource extends Resource
             Tables\Columns\ImageColumn::make('image')->label('商品画像')->size(50)->placeholder('No image'),
             Tables\Columns\TextColumn::make('name')->label('商品名')->sortable()->searchable(),
             Tables\Columns\TextColumn::make('price')->label('価格')->sortable(),
-            Tables\Columns\TextColumn::make('stock')->label('在庫数')->sortable(),
+            Tables\Columns\BadgeColumn::make('stock_status')
+                ->label('在庫ステータス')
+                ->getStateUsing(function ($record): string {
+                    if ($record->stock <= 0) {
+                        return '在庫切れ (0)';
+                    }
+                    if ($record->stock <= 5) {
+                        return "残りわずか ({$record->stock})";
+                    }
+                    return "在庫あり ({$record->stock})";
+                })
+                ->colors([
+                    'danger' => fn ($state): bool => str_contains($state, '在庫切れ'),
+                    'warning' => fn ($state): bool => str_contains($state, '残りわずか'),
+                    'success' => fn ($state): bool => str_contains($state, '在庫あり'),
+                ]),
             Tables\Columns\TextColumn::make('created_at')->label('登録日')->dateTime(),
         ])
         ->actions([

@@ -9,6 +9,7 @@ use Illuminate\Support\HtmlString;
 
 class SalesOverview extends BaseWidget
 {
+    protected static ?int $sort = 1;
     protected static ?string $pollingInterval = '10s';
 
     protected function getCards(): array
@@ -16,11 +17,17 @@ class SalesOverview extends BaseWidget
         $todayTotal = Orders::whereDate('created_at', now()->toDateString())->sum('total_price');
         $yesterdayTotal = Orders::whereDate('created_at', now()->subDay()->toDateString())->sum('total_price');
 
-        $percentageChange = $yesterdayTotal ? (($todayTotal - $yesterdayTotal) / $yesterdayTotal) * 100 : 0;
+        $percentageChange = 0;
+        if ($yesterdayTotal > 0) {
+            $percentageChange = (($todayTotal - $yesterdayTotal) / $yesterdayTotal) * 100;
+        } elseif ($todayTotal > 0) {
+            $percentageChange = 100;
+        }
+
         $trend = collect(range(6, 0))->map(function ($day) {
             return [
-                'date' => now()->subDays($day)->toDateString(),
-                'total' => Orders::whereDate('created_at', now()->subDays($day)->toDateString())
+                'date' => now()->subDays((int)$day)->toDateString(),
+                'total' => Orders::whereDate('created_at', now()->subDays((int)$day)->toDateString())
                     ->sum('total_price')
             ];
         })->values();
@@ -34,6 +41,8 @@ class SalesOverview extends BaseWidget
                 ->chartColor($percentageChange >= 0 ? 'success' : 'danger'),
             
             Card::make('総売上', new HtmlString('¥' . number_format(Orders::sum('total_price'))))
+                ->chart($trend->pluck('total')->toArray())
+                ->chartColor('primary'),
         ];
 
         if ($yesterdayTotal > 0) {

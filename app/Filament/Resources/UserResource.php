@@ -10,6 +10,7 @@ use Filament\Tables;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Rawilk\FilamentPasswordInput\Password;
+use Wallo\FilamentSelectify\Components\ToggleButton;
 
 class UserResource extends Resource
 {
@@ -36,15 +37,13 @@ class UserResource extends Resource
                     ->required(fn ($livewire) => !isset($livewire->record) || auth()->id() !== $livewire->record->id)
                     ->label('パスワード'),
 
-                Forms\Components\Toggle::make('is_active')
-                    ->label('有効')
-                    ->default(true)
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, $livewire) {
-                        if (isset($livewire->record)) {
-                            $livewire->record->update(['is_active' => $state]);
-                        }
-                    }),
+                ToggleButton::make('is_active')
+                    ->label('アカウントの状態')
+                    ->offColor('danger')
+                    ->onColor('primary')
+                    ->offLabel('無効')
+                    ->onLabel('有効')
+                    ->default(true),
             ]);
     }
 

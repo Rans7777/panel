@@ -9,6 +9,7 @@ use Filament\Forms\Components\Grid;
 
 class OrdersOverTime extends ApexChartWidget
 {
+    protected static ?int $sort = 2;
     protected static ?string $heading = '時間別注文数';
     protected static ?int $contentHeight = 300;
     protected static ?string $pollingInterval = '10s';
@@ -52,12 +53,12 @@ class OrdersOverTime extends ApexChartWidget
             'today' => now()->startOfDay(),
             'week' => now()->subWeek(),
             'month' => now()->subMonth(),
-            'custom' => $this->form->getState()['startDate'] ?? now()->subDays(7),
+            'custom' => $this->form['startDate'] ?? now()->subDays(7),
             default => now()->subDay(),
         };
 
         $endDate = match ($filter) {
-            'custom' => $this->form->getState()['endDate'] ?? now(),
+            'custom' => $this->form['endDate'] ?? now(),
             default => now(),
         };
 
