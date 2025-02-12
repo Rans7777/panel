@@ -6,6 +6,7 @@ use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
 use App\Models\Orders;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
+use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
 
 class OrdersOverTime extends ApexChartWidget
 {
@@ -28,12 +29,12 @@ class OrdersOverTime extends ApexChartWidget
     {
         return [
             Grid::make(2)->schema([
-                DatePicker::make('startDate')
+                Flatpickr::make('startDate')
                     ->label('開始日')
                     ->default(now()->subDays(7))
                     ->reactive(),
 
-                DatePicker::make('endDate')
+                Flatpickr::make('endDate')
                     ->label('終了日')
                     ->default(now())
                     ->reactive(),
@@ -47,18 +48,18 @@ class OrdersOverTime extends ApexChartWidget
         $isMySQL = $driver === 'mysql';
 
         $filter = $this->filter ?? 'today';
+        $formData = $this->form->getState();
 
-        // フィルターに基づいて開始日を決定
         $startDate = match ($filter) {
             'today' => now()->startOfDay(),
             'week' => now()->subWeek(),
             'month' => now()->subMonth(),
-            'custom' => $this->form['startDate'] ?? now()->subDays(7),
+            'custom' => $formData['startDate'] ?? now()->subDays(7),
             default => now()->subDay(),
         };
 
         $endDate = match ($filter) {
-            'custom' => $this->form['endDate'] ?? now(),
+            'custom' => $formData['endDate'] ?? now(),
             default => now(),
         };
 

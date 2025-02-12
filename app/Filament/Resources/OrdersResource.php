@@ -8,6 +8,7 @@ use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use LaraZeus\Quantity\Components\Quantity;
+use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
 
 class OrdersResource extends Resource
 {
@@ -33,10 +34,6 @@ class OrdersResource extends Resource
                 ->label('合計金額')
                 ->default(0)
                 ->minValue(0)
-                ->required(),
-
-            Forms\Components\DatePicker::make('order_date')
-                ->label('注文日')
                 ->required(),
 
             Forms\Components\Textarea::make('options')
@@ -161,9 +158,9 @@ class OrdersResource extends Resource
 
             Tables\Filters\Filter::make('created_at')
                 ->form([
-                    Forms\Components\DatePicker::make('from')
+                    Flatpickr::make('from')
                         ->label('開始日'),
-                    Forms\Components\DatePicker::make('until')
+                    Flatpickr::make('until')
                         ->label('終了日'),
                 ])
                 ->query(function ($query, array $data): mixed {

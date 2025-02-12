@@ -9,7 +9,7 @@
         "php": "^8.2",
         "andrewdwallo/filament-selectify": "^2.0",
         "awcodes/filament-gravatar": "^2.0",
-        "awcodes/shout": "^2.0",
+        "coolsam/flatpickr": "^3.1",
         "filament/filament": "3.2.135",
         "hasnayeen/themes": "^3.0",
         "ibrahimbougaoua/filasortable": "^1.0",
