@@ -20,6 +20,8 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use IbrahimBougaoua\FilaSortable\FilaSortablePlugin;
 use Leandrocfe\FilamentApexCharts\FilamentApexChartsPlugin;
 use Hasnayeen\Themes\ThemesPlugin;
+use Awcodes\FilamentGravatar\GravatarProvider;
+use Awcodes\FilamentGravatar\GravatarPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -61,12 +63,14 @@ class AdminPanelProvider extends PanelProvider
                 FilaSortablePlugin::make(),
                 ThemesPlugin::make(),
                 FilamentApexChartsPlugin::make(),
+                GravatarPlugin::make(),
             ])
             ->middleware([
                 \Hasnayeen\Themes\Http\Middleware\SetTheme::class,
             ])
             ->tenantMiddleware([
                 \Hasnayeen\Themes\Http\Middleware\SetTheme::class,
-            ]);
+            ])
+            ->defaultAvatarProvider(GravatarProvider::class);
     }
 }

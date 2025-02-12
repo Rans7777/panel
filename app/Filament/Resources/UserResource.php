@@ -11,6 +11,7 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Rawilk\FilamentPasswordInput\Password;
 use Wallo\FilamentSelectify\Components\ToggleButton;
+use Awcodes\FilamentGravatar\Gravatar;
 
 class UserResource extends Resource
 {
@@ -27,6 +28,11 @@ class UserResource extends Resource
                     ->required()
                     ->unique(ignoreRecord: true)
                     ->label('ユーザー名'),
+
+                Forms\Components\TextInput::make('email')
+                    ->email()
+                    ->unique(ignoreRecord: true)
+                    ->label('メールアドレス'),
 
                 Password::make('password')
                     ->regeneratePassword()
@@ -51,7 +57,10 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')->sortable(),
+                Tables\Columns\ImageColumn::make('gravatar')
+                    ->label('Avatar')
+                    ->circular()
+                    ->getStateUsing(fn ($record) => Gravatar::get($record->email, 100)),
                 Tables\Columns\TextColumn::make('name')->sortable()->searchable(),
                 Tables\Columns\BooleanColumn::make('is_active')->label('有効'),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
