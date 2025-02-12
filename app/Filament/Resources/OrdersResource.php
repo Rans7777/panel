@@ -7,6 +7,7 @@ use App\Models\Orders;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use LaraZeus\Quantity\Components\Quantity;
 
 class OrdersResource extends Resource
 {
@@ -22,15 +23,16 @@ class OrdersResource extends Resource
                 ->relationship('product', 'name')
                 ->required(),
 
-            Forms\Components\TextInput::make('quantity')
+            Quantity::make('quantity')
                 ->label('個数')
-                ->numeric()
-                ->minValue(1)
+                ->default(0)
+                ->minValue(0)
                 ->required(),
 
-            Forms\Components\TextInput::make('total_price')
+            Quantity::make('total_price')
                 ->label('合計金額')
-                ->numeric()
+                ->default(0)
+                ->minValue(0)
                 ->required(),
 
             Forms\Components\DatePicker::make('order_date')

@@ -9,6 +9,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
+use LaraZeus\Quantity\Components\Quantity;
 
 class ProductResource extends Resource
 {
@@ -24,14 +25,16 @@ class ProductResource extends Resource
                 ->required()
                 ->maxLength(255),
 
-            Forms\Components\TextInput::make('price')
+            Quantity::make('price')
                 ->label('価格')
-                ->numeric()
+                ->default(0)
+                ->minValue(0)
                 ->required(),
 
-            Forms\Components\TextInput::make('stock')
+            Quantity::make('stock')
                 ->label('在庫数')
-                ->numeric()
+                ->default(0)
+                ->minValue(0)
                 ->required(),
 
             Forms\Components\FileUpload::make('image')
@@ -40,7 +43,8 @@ class ProductResource extends Resource
                 ->directory('products')
                 ->imageEditor()
                 ->nullable()
-                ->disk('public'),
+                ->disk('public')
+                ->optimize('webp'),
 
             Forms\Components\Repeater::make('options')
                 ->relationship('options')
@@ -56,9 +60,10 @@ class ProductResource extends Resource
                         ->label('オプション名')
                         ->required()
                         ->maxLength(255),
-                    Forms\Components\TextInput::make('price')
+                    Quantity::make('price')
                         ->label('値段')
-                        ->required()
+                        ->default(0)
+                        ->minValue(0)
                         ->numeric(),
                 ])
                 ->columns(2)

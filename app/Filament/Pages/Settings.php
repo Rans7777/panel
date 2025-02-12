@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Artisan;
 use Filament\Notifications\Notification;
 use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
-use Tapp\FilamentCountryCodeField\Forms\Components\CountryCodeSelect;
+use Parfaitementweb\FilamentCountryField\Forms\Components\Country;
+use Rawilk\FilamentPasswordInput\Password;
 
 class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -22,6 +23,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
     public $APP_NAME;
     public $APP_DEBUG;
     public $APP_TIMEZONE;
+    public $APP_LOCALE;
     public $APP_URL;
     public $LOG_LEVEL;
     public $DB_CONNECTION;
@@ -33,7 +35,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
     public $TURNSTILE_SITEKEY;
     public $TURNSTILE_SECRET;
 
-    public function mount()
+    public function mount(): void
     {
         $this->form->fill([
             'APP_NAME'           => config('app.name', ''),
@@ -65,7 +67,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
             TimezoneSelect::make('APP_TIMEZONE')
                 ->label('APP_TIMEZONE')
                 ->required(),
-            CountryCodeSelect::make('APP_LOCALE')
+            Country::make('APP_LOCALE')
                 ->label('APP_LOCALE')
                 ->required(),
             Forms\Components\TextInput::make('APP_URL')
@@ -107,14 +109,13 @@ class Settings extends Page implements Forms\Contracts\HasForms
                 ->label('DB_USERNAME')
                 ->required()
                 ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-            Forms\Components\TextInput::make('DB_PASSWORD')
+            Password::make('DB_PASSWORD')
                 ->label('DB_PASSWORD')
-                ->password()
                 ->required()
                 ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-            Forms\Components\TextInput::make('TURNSTILE_SITEKEY')
+            Password::make('TURNSTILE_SITEKEY')
                 ->label('TURNSTILE_SITEKEY'),
-            Forms\Components\TextInput::make('TURNSTILE_SECRET')
+            Password::make('TURNSTILE_SECRET')
                 ->label('TURNSTILE_SECRET'),
         ];
     }

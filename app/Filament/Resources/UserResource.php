@@ -9,6 +9,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Rawilk\FilamentPasswordInput\Password;
 
 class UserResource extends Resource
 {
@@ -26,8 +27,9 @@ class UserResource extends Resource
                     ->unique(ignoreRecord: true)
                     ->label('ユーザー名'),
 
-                Forms\Components\TextInput::make('password')
-                    ->password()
+                Password::make('password')
+                    ->regeneratePassword()
+                    ->newPasswordLength(14)
                     ->maxLength(255)
                     ->dehydrated(fn ($state) => filled($state))
                     ->dehydrateStateUsing(fn ($state) => bcrypt($state))
