@@ -13,7 +13,7 @@ class MakeUserCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'make:user {username?} {password?} {role?}';
+    protected $signature = 'make:user {username?} {password?} {role?} {skip_confirmation?}';
 
     /**
      * The console command description.
@@ -39,7 +39,8 @@ class MakeUserCommand extends Command
         $password = $this->argument('password') ?: $this->secret('パスワードを入力してください');
         $role = $this->argument('role') ?: $this->ask('付与するロールを入力してください');
 
-        if (!$this->confirm('この情報でユーザーを作成してよろしいですか？ [ユーザー名: ' . $username . ', ロール: ' . $role . ']')) {
+        $skipConfirmation = $this->argument('skip_confirmation') === 'yes';
+        if (!$skipConfirmation && !$this->confirm('この情報でユーザーを作成してよろしいですか？ [ユーザー名: ' . $username . ', ロール: ' . $role . ']')) {
             $this->info('ユーザー作成をキャンセルしました。');
             return 0;
         }
