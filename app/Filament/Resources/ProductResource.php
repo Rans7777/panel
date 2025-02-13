@@ -24,64 +24,82 @@ final class ProductResource extends Resource
     public static function form(\Filament\Forms\Form $form): \Filament\Forms\Form
     {
         return $form->schema([
-            Forms\Components\TextInput::make('name')
-                ->label('商品名')
-                ->required()
-                ->maxLength(255),
-
-            Quantity::make('price')
-                ->label('価格')
-                ->default(0)
-                ->minValue(0)
-                ->required(),
-
-            Quantity::make('stock')
-                ->label('在庫数')
-                ->default(0)
-                ->minValue(0)
-                ->required(),
-
-            Forms\Components\FileUpload::make('image')
-                ->label('商品画像')
-                ->image()
-                ->directory('products')
-                ->imageEditor()
-                ->nullable()
-                ->disk('public')
-                ->optimize('webp'),
-
-            Forms\Components\Repeater::make('options')
-                ->relationship('options')
-                ->label('オプション')
-                ->collapsible()
-                ->collapsed()
-                ->itemLabel(fn (?array $state = null): string => $state
-                    ? (($state['option_name'] ?? 'オプション').' - '.($state['price'] ?? ''))
-                    : 'オプション'
-                )
+            Forms\Components\Card::make()
                 ->schema([
-                    Forms\Components\TextInput::make('option_name')
-                        ->label('オプション名')
+                    Forms\Components\TextInput::make('name')
+                        ->label('商品名')
                         ->required()
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->columnSpan(2),
+
                     Quantity::make('price')
-                        ->label('値段')
+                        ->label('価格')
                         ->default(0)
                         ->minValue(0)
-                        ->numeric(),
+                        ->required(),
+
+                    Quantity::make('stock')
+                        ->label('在庫数')
+                        ->default(0)
+                        ->minValue(0)
+                        ->required(),
+
+                    Forms\Components\FileUpload::make('image')
+                        ->label('商品画像')
+                        ->image()
+                        ->directory('products')
+                        ->imageEditor()
+                        ->nullable()
+                        ->disk('public')
+                        ->optimize('webp'),
+
+                    Forms\Components\Repeater::make('options')
+                        ->relationship('options')
+                        ->default([])
+                        ->label('オプション')
+                        ->collapsible()
+                        ->collapsed()
+                        ->itemLabel(fn (?array $state = null): string => $state
+                            ? (($state['option_name'] ?? 'オプション') . ' - ' . ($state['price'] ?? ''))
+                            : 'オプション'
+                        )
+                        ->schema([
+                            Forms\Components\TextInput::make('option_name')
+                                ->label('オプション名')
+                                ->required()
+                                ->maxLength(255),
+                            Quantity::make('price')
+                                ->label('値段')
+                                ->default(0)
+                                ->minValue(0)
+                                ->numeric(),
+                        ])
+                        ->columns(2)
+                        ->minItems(0)
+                        ->createItemButtonLabel('オプションを追加'),
                 ])
                 ->columns(2)
-                ->minItems(0)
-                ->createItemButtonLabel('オプションを追加'),
+                ->columnSpan('full'),
         ]);
     }
 
     public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
     {
         return $table->columns([
-            Tables\Columns\ImageColumn::make('image')->label('商品画像')->size(50)->placeholder('No image'),
-            Tables\Columns\TextColumn::make('name')->label('商品名')->sortable()->searchable(),
-            Tables\Columns\TextColumn::make('price')->label('価格')->sortable(),
+            Tables\Columns\ImageColumn::make('image')
+                ->label('商品画像')
+                ->size(50)
+                ->rounded()
+                ->placeholder('No image'),
+            Tables\Columns\TextColumn::make('name')
+                ->label('商品名')
+                ->sortable()
+                ->searchable()
+                ->extraAttributes(['class' => 'font-semibold text-lg text-gray-800']),
+            Tables\Columns\TextColumn::make('price')
+                ->label('価格')
+                ->sortable()
+                ->extraAttributes(['class' => 'text-lg text-gray-700']),
             Tables\Columns\BadgeColumn::make('stock_status')
                 ->label('在庫ステータス')
                 ->getStateUsing(function ($record): string {
@@ -91,7 +109,6 @@ final class ProductResource extends Resource
                     if ($record->stock <= 5) {
                         return "残りわずか ({$record->stock})";
                     }
-
                     return "在庫あり ({$record->stock})";
                 })
                 ->colors([
@@ -99,7 +116,10 @@ final class ProductResource extends Resource
                     'warning' => fn ($state): bool => str_contains($state, '残りわずか'),
                     'success' => fn ($state): bool => str_contains($state, '在庫あり'),
                 ]),
-            Tables\Columns\TextColumn::make('created_at')->label('登録日')->dateTime(),
+            Tables\Columns\TextColumn::make('created_at')
+                ->label('登録日')
+                ->dateTime()
+                ->extraAttributes(['class' => 'text-sm text-gray-500']),
         ])
             ->actions([
                 EditAction::make(),
@@ -108,6 +128,14 @@ final class ProductResource extends Resource
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
+    }
+
+    /**
+     * 各テーブル行にホバー時のエフェクトを付与するためのクラスを設定しています。
+     */
+    public static function getTableRecordClasses($record): ?string
+    {
+        return 'hover:bg-gray-50 transition-colors';
     }
 
     public static function getRelations(): array
