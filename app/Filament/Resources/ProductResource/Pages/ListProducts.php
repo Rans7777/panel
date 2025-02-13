@@ -11,6 +11,14 @@ class ListProducts extends ListRecords
     protected static string $resource = ProductResource::class;
     protected static ?string $title = '商品一覧';
 
+    public function mount(): void
+    {
+        if (!auth()->user()->hasRole('admin')) {
+            abort(403, '管理者権限が必要です。');
+        }
+        parent::mount();
+    }
+
     public function getBreadcrumbs(): array
     {
         return [];

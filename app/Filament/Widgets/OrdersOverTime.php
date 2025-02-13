@@ -15,6 +15,11 @@ class OrdersOverTime extends ApexChartWidget
     protected static ?int $contentHeight = 300;
     protected static ?string $pollingInterval = '10s';
 
+    public static function canView(): bool
+    {
+        return auth()->check() && auth()->user()->hasRole('admin');
+    }
+
     protected function getFilters(): ?array
     {
         return [

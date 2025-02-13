@@ -51,6 +51,12 @@ class UserResource extends Resource
                     ->offLabel('無効')
                     ->onLabel('有効')
                     ->default(true),
+
+                Forms\Components\Select::make('roles')
+                    ->multiple()
+                    ->relationship('roles', 'name')
+                    ->preload()
+                    ->label('ロール'),
             ]);
     }
 
@@ -96,5 +102,10 @@ class UserResource extends Resource
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && auth()->user()->hasRole('admin');
     }
 }

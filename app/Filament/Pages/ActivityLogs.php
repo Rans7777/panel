@@ -17,6 +17,13 @@ class ActivityLogs extends Page implements HasTable
     protected static ?int $navigationSort = 3;
     protected static string $view = 'filament.pages.activity-logs';
 
+    public function mount(): void
+    {
+        if (!auth()->user()->hasRole('admin')) {
+            abort(403, '管理者権限が必要です。');
+        }
+    }
+
     protected function getTableQuery()
     {
         return Activity::query()->orderBy('created_at', 'desc');
@@ -48,5 +55,10 @@ class ActivityLogs extends Page implements HasTable
         return array_merge(parent::getViewData(), [
             'table' => $this->table,
         ]);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && auth()->user()->hasRole('admin');
     }
 }

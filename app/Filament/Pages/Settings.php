@@ -42,6 +42,9 @@ class Settings extends Page implements Forms\Contracts\HasForms
 
     public function mount(): void
     {
+        if (!auth()->user()->hasRole('admin')) {
+            abort(403, '管理者権限が必要です。');
+        }
         $this->form->fill([
             'APP_NAME'           => config('app.name', ''),
             'APP_DEBUG'          => config('app.debug', ''),
@@ -210,5 +213,10 @@ class Settings extends Page implements Forms\Contracts\HasForms
                 ->label('保存')
                 ->action('updateEnv'),
         ];
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->check() && auth()->user()->hasRole('admin');
     }
 }

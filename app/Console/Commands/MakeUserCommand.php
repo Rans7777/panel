@@ -13,7 +13,7 @@ class MakeUserCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'make:user {username?} {password?}';
+    protected $signature = 'make:user {username?} {password?} {role?}';
 
     /**
      * The console command description.
@@ -31,17 +31,20 @@ class MakeUserCommand extends Command
     {
         $username = $this->argument('username') ?: $this->ask('ユーザー名を入力してください');
         $password = $this->argument('password') ?: $this->secret('パスワードを入力してください');
+        $role = $this->argument('role') ?: $this->ask('付与するロールを入力してください');
 
-        if (!$this->confirm('この情報でユーザーを作成してよろしいですか？')) {
+        if (!$this->confirm('この情報でユーザーを作成してよろしいですか？ [ユーザー名: ' . $username . ', ロール: ' . $role . ']')) {
             $this->info('ユーザー作成をキャンセルしました。');
             return 0;
         }
 
         try {
-            User::create([
+            $user = User::create([
                 'name' => $username,
                 'password' => Hash::make($password),
             ]);
+
+            $user->assignRole($role);
 
             $this->info('ユーザーが正常に作成されました！');
         } catch (\Exception $e) {
