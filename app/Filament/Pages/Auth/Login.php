@@ -1,21 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Pages\Auth;
 
+use App\Models\LoginAttempt;
+use App\Models\User;
+use Filament\Facades\Filament;
+use Filament\Pages\Auth\Login as BaseLogin;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Filament\Pages\Auth\Login as BaseLogin;
-use Filament\Facades\Filament;
-use App\Models\User;
-use App\Models\LoginAttempt;
 
-class Login extends BaseLogin
+final class Login extends BaseLogin
 {
     protected static string $view = 'filament.pages.auth.login';
 
     public string $name = '';
+
     public string $password = '';
+
     public bool $remember = false;
+
     public string $turnstileToken = '';
 
     public function authenticate(): ?\Filament\Http\Responses\Auth\Contracts\LoginResponse
@@ -24,8 +29,8 @@ class Login extends BaseLogin
 
         $loginAttempt = LoginAttempt::where('ip_address', $ipAddress)->first();
 
-        $attemptLimit = (int)config('auth.attempt_limit', 5);
-        $blockTime = (int)config('auth.block_time', 60);
+        $attemptLimit = (int) config('auth.attempt_limit', 5);
+        $blockTime = (int) config('auth.block_time', 60);
 
         if ($loginAttempt && $loginAttempt->attempts >= $attemptLimit) {
             $lastAttemptTime = $loginAttempt->last_attempt_at;
@@ -35,6 +40,7 @@ class Login extends BaseLogin
                     ->withProperties(['ip_address' => $ipAddress])
                     ->log("IPアドレス '{$ipAddress}' からのログインが試行制限に達したためブロックされました");
                 $this->addError('name', 'このIPアドレスからのログインはブロックされています。');
+
                 return null;
             } else {
                 $loginAttempt->attempts = 0;
@@ -45,7 +51,7 @@ class Login extends BaseLogin
 
         if (config('services.turnstile.secret') && config('services.turnstile.sitekey')) {
             $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-                'secret'   => config('services.turnstile.secret'),
+                'secret' => config('services.turnstile.secret'),
                 'response' => $this->turnstileToken,
                 'remoteip' => request()->ip(),
             ]);
@@ -53,6 +59,7 @@ class Login extends BaseLogin
             $result = $response->json();
             if (!isset($result['success']) || !$result['success']) {
                 $this->addError('turnstileToken', 'Cloudflare Turnstile 認証に失敗しました。');
+
                 return null;
             }
         }
@@ -60,11 +67,12 @@ class Login extends BaseLogin
         $user = User::where('name', $this->name)->first();
         if ($user && !$user->is_active) {
             $this->addError('name', 'このアカウントは無効です。');
+
             return null;
         }
 
         if (Auth::guard(config('filament.auth.guard'))->attempt([
-            'name'     => $this->name,
+            'name' => $this->name,
             'password' => $this->password,
         ], $this->remember)) {
             if ($loginAttempt) {
@@ -78,6 +86,7 @@ class Login extends BaseLogin
 
             $url = session()->pull('url.intended', Filament::getUrl());
             $this->redirect($url);
+
             return null;
         }
 
@@ -99,6 +108,7 @@ class Login extends BaseLogin
             ->log("ユーザー '{$this->name}' がログインに失敗しました");
 
         $this->addError('name', 'ログイン情報が正しくありません。');
+
         return null;
     }
 }

@@ -1,16 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\OrdersResource\Pages;
 
 use App\Filament\Resources\OrdersResource;
-use Filament\Resources\Pages\CreateRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 
-class CreateOrder extends CreateRecord
+final class CreateOrder extends CreateRecord
 {
     protected static string $resource = OrdersResource::class;
+
     protected static ?string $title = '注文追加';
 
     public function mount(): void

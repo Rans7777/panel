@@ -1,24 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Pages;
 
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Tables;
 use Filament\Tables\Contracts\HasTable;
-use Spatie\Activitylog\Models\Activity;
-use Filament\Notifications\Notification;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
+use Spatie\Activitylog\Models\Activity;
 
-class ActivityLogs extends Page implements HasTable
+final class ActivityLogs extends Page implements HasTable
 {
     use Tables\Concerns\InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-clock';
+
     protected static ?string $title = 'アクティビティログ';
+
     protected static ?string $navigationLabel = 'アクティビティログ';
+
     protected static ?string $navigationGroup = '管理';
+
     protected static ?int $navigationSort = 3;
+
     protected static string $view = 'filament.pages.activity-logs';
 
     public function mount(): void

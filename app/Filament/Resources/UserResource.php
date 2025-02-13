@@ -1,24 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources;
 
-use App\Models\User;
 use App\Filament\Resources\UserResource\Pages;
+use App\Models\User;
+use Awcodes\FilamentGravatar\Gravatar;
 use Filament\Forms;
+use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Rawilk\FilamentPasswordInput\Password;
 use Wallo\FilamentSelectify\Components\ToggleButton;
-use Awcodes\FilamentGravatar\Gravatar;
 
-class UserResource extends Resource
+final class UserResource extends Resource
 {
     protected static ?string $model = User::class;
+
     protected static ?string $navigationLabel = 'ユーザー管理';
+
     protected static ?string $navigationIcon = 'heroicon-o-users';
+
     protected static ?string $navigationGroup = '管理';
+
     protected static ?int $navigationSort = 1;
 
     public static function form(Form $form): Form

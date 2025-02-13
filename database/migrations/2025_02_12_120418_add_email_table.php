@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 // 2025_02_02_045203_delete_email_tableでemailは削除されますが、再追加します
-return new class extends Migration
+return new class() extends Migration
 {
     /**
      * Run the migrations.

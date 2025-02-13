@@ -1,17 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Widgets;
 
-use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
 use App\Models\Orders;
-use Filament\Forms\Components\Grid;
 use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
+use Filament\Forms\Components\Grid;
+use Leandrocfe\FilamentApexCharts\Widgets\ApexChartWidget;
 
-class OrdersOverTime extends ApexChartWidget
+final class OrdersOverTime extends ApexChartWidget
 {
     protected static ?int $sort = 2;
+
     protected static ?string $heading = '時間別注文数';
+
     protected static ?int $contentHeight = 300;
+
     protected static ?string $pollingInterval = '10s';
 
     public static function canView(): bool

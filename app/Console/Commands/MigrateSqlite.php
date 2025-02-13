@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-class MigrateSqlite extends Command
+final class MigrateSqlite extends Command
 {
     /**
      * The name and signature of the console command.
@@ -34,20 +37,22 @@ class MigrateSqlite extends Command
         config(['database.connections.sqlite.database' => $sqlitePath]);
 
         if (!config('database.connections.mysql')) {
-            $this->error("MySQL接続情報が見つかりません。");
+            $this->error('MySQL接続情報が見つかりません。');
+
             return 1;
         }
 
-        $this->info("MySQL → SQLite マイグレーションを開始します。");
+        $this->info('MySQL → SQLite マイグレーションを開始します。');
 
         $mysql = DB::connection('mysql');
         $sqlite = DB::connection('sqlite');
 
         $dbName = $mysql->getDatabaseName();
 
-        $tablesResults = $mysql->select("SHOW TABLES");
+        $tablesResults = $mysql->select('SHOW TABLES');
         if (empty($tablesResults)) {
-            $this->error("MySQLデータベースにテーブルが見つかりません。");
+            $this->error('MySQLデータベースにテーブルが見つかりません。');
+
             return 1;
         }
         $tableKey = "Tables_in_{$dbName}";
@@ -59,6 +64,7 @@ class MigrateSqlite extends Command
             $createResult = $mysql->select("SHOW CREATE TABLE {$tableName}");
             if (empty($createResult)) {
                 $this->error("テーブル [{$tableName}] のCREATE文を取得できませんでした。");
+
                 continue;
             }
             $createSql = $createResult[0]->{'Create Table'};
@@ -73,23 +79,22 @@ class MigrateSqlite extends Command
                 $rows = $mysql->table($tableName)->get();
                 if (count($rows) > 0) {
                     foreach ($rows as $row) {
-                        $rowArray = (array)$row;
+                        $rowArray = (array) $row;
                         $sqlite->table($tableName)->insert($rowArray);
                     }
                 }
 
                 $sqlite->commit();
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $sqlite->rollBack();
-                $this->error("テーブル [{$tableName}] の移行中にエラーが発生しました: " . $e->getMessage());
+                $this->error("テーブル [{$tableName}] の移行中にエラーが発生しました: ".$e->getMessage());
             }
         }
 
-        $this->info("全テーブルのマイグレーションが完了しました。");
+        $this->info('全テーブルのマイグレーションが完了しました。');
     }
 
     /**
-     *
      * @param string $mysqlSql
      * @return string
      */
@@ -100,11 +105,11 @@ class MigrateSqlite extends Command
         $sql = preg_replace_callback(
             '/(\w+)\s+int\s*\(\d+\)\s+NOT NULL\s*AUTOINCREMENT/i',
             function ($matches) {
-                return $matches[1] . ' INTEGER PRIMARY KEY AUTOINCREMENT';
+                return $matches[1].' INTEGER PRIMARY KEY AUTOINCREMENT';
             },
             $sql
         );
-        if (stripos($sql, 'INTEGER PRIMARY KEY') !== false) {
+        if (mb_stripos($sql, 'INTEGER PRIMARY KEY') !== false) {
             $sql = preg_replace('/,\s*PRIMARY KEY\s*\([^)]*\)/i', '', $sql);
         }
         $sql = preg_replace('/\)\s*ENGINE=.*$/i', ')', $sql);
@@ -117,6 +122,7 @@ class MigrateSqlite extends Command
         $sql = preg_replace('/\bdecimal\(\d+,\d+\)/i', 'NUMERIC', $sql);
         $sql = preg_replace('/DEFAULT NULL/i', '', $sql);
         $sql = preg_replace('/,\s*KEY\s+\w+\s*\([^)]+\)/i', '', $sql);
+
         return $sql;
     }
 }

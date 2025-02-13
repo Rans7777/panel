@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-class MigrateMysql extends Command
+final class MigrateMysql extends Command
 {
     /**
      * The name and signature of the console command.
@@ -32,12 +35,13 @@ class MigrateMysql extends Command
 
         if (!file_exists($sqlitePath)) {
             $this->error("SQLiteデータベースファイルが存在しません: {$sqlitePath}");
+
             return 1;
         }
 
         config(['database.connections.sqlite.database' => $sqlitePath]);
 
-        $this->info("SQLite → MySQL マイグレーションを開始します。");
+        $this->info('SQLite → MySQL マイグレーションを開始します。');
 
         $sqliteTables = DB::connection('sqlite')->select("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';");
 
@@ -48,6 +52,7 @@ class MigrateMysql extends Command
             $result = DB::connection('sqlite')->select("SELECT sql FROM sqlite_master WHERE type='table' AND name = ?;", [$tableName]);
             if (empty($result) || empty($result[0]->sql)) {
                 $this->error("テーブル [{$tableName}] のCREATE文が見つかりませんでした。");
+
                 continue;
             }
 
@@ -71,8 +76,9 @@ class MigrateMysql extends Command
             try {
                 DB::connection('mysql')->statement("DROP TABLE IF EXISTS `{$tableName}`;");
                 DB::connection('mysql')->statement($createTableSql);
-            } catch (\Exception $e) {
-                $this->error("MySQL側でテーブル [{$tableName}] 作成時にエラー: " . $e->getMessage());
+            } catch (Exception $e) {
+                $this->error("MySQL側でテーブル [{$tableName}] 作成時にエラー: ".$e->getMessage());
+
                 continue;
             }
 
@@ -88,12 +94,13 @@ class MigrateMysql extends Command
                         DB::connection('mysql')->table($tableName)->insert($chunk);
                     }
                 }
-            } catch (\Exception $e) {
-                $this->error("テーブル [{$tableName}] のデータ移行時にエラー: " . $e->getMessage());
+            } catch (Exception $e) {
+                $this->error("テーブル [{$tableName}] のデータ移行時にエラー: ".$e->getMessage());
             }
         }
 
-        $this->info("全テーブルのマイグレーションが完了しました。");
+        $this->info('全テーブルのマイグレーションが完了しました。');
+
         return 0;
     }
 }

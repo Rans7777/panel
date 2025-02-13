@@ -1,17 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Filament\Resources\ProductResource;
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 
-class EditProduct extends EditRecord
+final class EditProduct extends EditRecord
 {
     protected static string $resource = ProductResource::class;
+
     protected static ?string $title = '商品の編集';
 
     public function mount(int|string $record): void

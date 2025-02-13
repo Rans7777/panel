@@ -1,17 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 
-class EditUser extends EditRecord
+final class EditUser extends EditRecord
 {
     protected static string $resource = UserResource::class;
+
     protected static ?string $title = 'ユーザーの編集';
 
     public function mount(int|string $record): void

@@ -1,17 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\OrdersResource\Pages;
 
 use App\Filament\Resources\OrdersResource;
 use Filament\Actions;
-use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 
-class EditOrder extends EditRecord
+final class EditOrder extends EditRecord
 {
     protected static string $resource = OrdersResource::class;
+
     protected static ?string $title = '注文の編集';
 
     public function mount(int|string $record): void

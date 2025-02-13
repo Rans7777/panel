@@ -1,12 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\User;
+use Exception;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
-class MakeUserCommand extends Command
+final class MakeUserCommand extends Command
 {
     /**
      * The name and signature of the console command.
@@ -33,6 +36,7 @@ class MakeUserCommand extends Command
 
         if (User::where('name', $username)->exists()) {
             $this->error("ユーザー名 \"{$username}\" は既に存在します。");
+
             return 0;
         }
 
@@ -40,8 +44,9 @@ class MakeUserCommand extends Command
         $role = $this->argument('role') ?: $this->ask('付与するロールを入力してください');
 
         $skipConfirmation = $this->argument('skip_confirmation') === 'yes';
-        if (!$skipConfirmation && !$this->confirm('この情報でユーザーを作成してよろしいですか？ [ユーザー名: ' . $username . ', ロール: ' . $role . ']')) {
+        if (!$skipConfirmation && !$this->confirm('この情報でユーザーを作成してよろしいですか？ [ユーザー名: '.$username.', ロール: '.$role.']')) {
             $this->info('ユーザー作成をキャンセルしました。');
+
             return 0;
         }
 
@@ -54,8 +59,8 @@ class MakeUserCommand extends Command
             $user->assignRole($role);
 
             $this->info('ユーザーが正常に作成されました！');
-        } catch (\Exception $e) {
-            $this->error('ユーザー作成中にエラーが発生しました: ' . $e->getMessage());
+        } catch (Exception $e) {
+            $this->error('ユーザー作成中にエラーが発生しました: '.$e->getMessage());
         }
 
         return 0;

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     /**
      * Run the migrations.
@@ -18,20 +20,20 @@ return new class extends Migration
             }
 
             $hasPassword = Schema::hasColumn('users', 'password');
-            
+
             Schema::create('users_temp', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
                 $table->string('password');
                 $table->timestamps();
             });
-            
+
             if ($hasPassword) {
                 DB::statement('INSERT INTO users_temp (id, name, password, created_at, updated_at) SELECT id, name, password, created_at, updated_at FROM users');
             } else {
                 DB::statement('INSERT INTO users_temp (id, name, password, created_at, updated_at) SELECT id, name, "", created_at, updated_at FROM users');
             }
-            
+
             Schema::drop('users');
             Schema::rename('users_temp', 'users');
         } else {

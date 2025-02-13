@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
-class MakeEnv extends Command
+final class MakeEnv extends Command
 {
     /**
      * The name and signature of the console command.
@@ -30,11 +32,13 @@ class MakeEnv extends Command
     {
         if (File::exists(base_path('.env'))) {
             $this->info('.env ファイルは既に存在します。');
+
             return 0;
         }
 
         if (!File::exists(base_path('.env.example'))) {
             $this->error('.env.example ファイルが見つかりません。');
+
             return 1;
         }
 

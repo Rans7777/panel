@@ -1,45 +1,69 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Pages;
 
+use Exception;
 use Filament\Forms;
-use Filament\Pages\Page;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Artisan;
 use Filament\Notifications\Notification;
-use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
-use Parfaitementweb\FilamentCountryField\Forms\Components\Country;
-use Rawilk\FilamentPasswordInput\Password;
-use LaraZeus\Quantity\Components\Quantity;
+use Filament\Pages\Page;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
+use LaraZeus\Quantity\Components\Quantity;
+use Log;
+use Parfaitementweb\FilamentCountryField\Forms\Components\Country;
+use Rawilk\FilamentPasswordInput\Password;
+use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
 
-class Settings extends Page implements Forms\Contracts\HasForms
+final class Settings extends Page implements Forms\Contracts\HasForms
 {
     use Forms\Concerns\InteractsWithForms;
 
     protected static ?string $navigationIcon = 'heroicon-o-cog';
+
     protected static string $view = 'filament.pages.settings';
+
     protected static ?string $title = '環境設定';
+
     protected static ?string $navigationGroup = '管理';
+
     protected static ?int $navigationSort = 2;
+
     protected ?array $data = [];
 
     public $APP_NAME;
+
     public $APP_DEBUG;
+
     public $APP_TIMEZONE;
+
     public $APP_LOCALE;
+
     public $APP_URL;
+
     public $LOG_LEVEL;
+
     public $DB_CONNECTION;
+
     public $DB_HOST;
+
     public $DB_PORT;
+
     public $DB_DATABASE;
+
     public $DB_USERNAME;
+
     public $DB_PASSWORD;
+
     public $TURNSTILE_SITEKEY;
+
     public $TURNSTILE_SECRET;
+
     public $LOGIN_ATTEMPT_LIMIT;
+
     public $LOGIN_BLOCK_TIME;
 
     public function mount(): void
@@ -55,22 +79,22 @@ class Settings extends Page implements Forms\Contracts\HasForms
 
         /** @phpstan-ignore-next-line */
         $this->form->fill([
-            'APP_NAME'            => config('app.name', ''),
-            'APP_DEBUG'           => config('app.debug', ''),
-            'APP_TIMEZONE'        => config('app.timezone', ''),
-            'APP_LOCALE'          => config('app.locale', ''),
-            'APP_URL'             => config('app.url', ''),
-            'LOG_LEVEL'           => config('logging.level', ''),
-            'DB_CONNECTION'       => config('database.default', ''),
-            'DB_HOST'             => config('database.connections.mysql.host', ''),
-            'DB_PORT'             => config('database.connections.mysql.port', ''),
-            'DB_DATABASE'         => config('database.connections.mysql.database', ''),
-            'DB_USERNAME'         => config('database.connections.mysql.username', ''),
-            'DB_PASSWORD'         => config('database.connections.mysql.password', ''),
-            'TURNSTILE_SITEKEY'   => config('services.turnstile.sitekey', ''),
-            'TURNSTILE_SECRET'    => config('services.turnstile.secret', ''),
+            'APP_NAME' => config('app.name', ''),
+            'APP_DEBUG' => config('app.debug', ''),
+            'APP_TIMEZONE' => config('app.timezone', ''),
+            'APP_LOCALE' => config('app.locale', ''),
+            'APP_URL' => config('app.url', ''),
+            'LOG_LEVEL' => config('logging.level', ''),
+            'DB_CONNECTION' => config('database.default', ''),
+            'DB_HOST' => config('database.connections.mysql.host', ''),
+            'DB_PORT' => config('database.connections.mysql.port', ''),
+            'DB_DATABASE' => config('database.connections.mysql.database', ''),
+            'DB_USERNAME' => config('database.connections.mysql.username', ''),
+            'DB_PASSWORD' => config('database.connections.mysql.password', ''),
+            'TURNSTILE_SITEKEY' => config('services.turnstile.sitekey', ''),
+            'TURNSTILE_SECRET' => config('services.turnstile.secret', ''),
             'LOGIN_ATTEMPT_LIMIT' => config('auth.attempt_limit'),
-            'LOGIN_BLOCK_TIME'    => config('auth.block_time'),
+            'LOGIN_BLOCK_TIME' => config('auth.block_time'),
         ]);
     }
 
@@ -96,12 +120,12 @@ class Settings extends Page implements Forms\Contracts\HasForms
             Forms\Components\Select::make('LOG_LEVEL')
                 ->label('LOG_LEVEL')
                 ->options([
-                    'debug'     => 'debug',
-                    'info'      => 'info',
-                    'notice'    => 'notice',
-                    'warning'   => 'warning',
-                    'error'     => 'error',
-                    'critical'  => 'critical',
+                    'debug' => 'debug',
+                    'info' => 'info',
+                    'notice' => 'notice',
+                    'warning' => 'warning',
+                    'error' => 'error',
+                    'critical' => 'critical',
                 ])
                 ->required(),
             Quantity::make('LOGIN_ATTEMPT_LIMIT')
@@ -119,7 +143,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
                 ->label('DB_CONNECTION')
                 ->options([
                     'sqlite' => 'SQLite',
-                    'mysql'  => 'MySQL / MariaDB',
+                    'mysql' => 'MySQL / MariaDB',
                 ])
                 ->required()
                 ->reactive(),
@@ -161,33 +185,34 @@ class Settings extends Page implements Forms\Contracts\HasForms
                 ->title('.env ファイルが存在しません')
                 ->danger()
                 ->send();
+
             return;
         }
 
         $envContent = File::get($envFilePath);
-        $envLines   = explode("\n", $envContent);
+        $envLines = explode("\n", $envContent);
         $keys = array_keys($data);
 
         foreach ($keys as $key) {
             $value = $data[$key];
 
-            if (strpos($value, ' ') !== false) {
-                $value = '"' . $value . '"';
+            if (mb_strpos($value, ' ') !== false) {
+                $value = '"'.$value.'"';
             }
             $found = false;
             foreach ($envLines as $index => $line) {
-                if (strpos(trim($line), '#') === 0 || trim($line) === '') {
+                if (mb_strpos(trim($line), '#') === 0 || trim($line) === '') {
                     continue;
                 }
 
-                if (preg_match('/^' . $key . '\s*=/', $line)) {
-                    $envLines[$index] = $key . '=' . $value;
+                if (preg_match('/^'.$key.'\s*=/', $line)) {
+                    $envLines[$index] = $key.'='.$value;
                     $found = true;
                     break;
                 }
             }
             if (!$found) {
-                $envLines[] = $key . '=' . $value;
+                $envLines[] = $key.'='.$value;
             }
         }
 
@@ -195,12 +220,13 @@ class Settings extends Page implements Forms\Contracts\HasForms
 
         try {
             File::put($envFilePath, $newEnvContent);
-        } catch (\Exception $e) {
-            \Log::error('Failed to update .env file: ' . $e->getMessage());
+        } catch (Exception $e) {
+            Log::error('Failed to update .env file: '.$e->getMessage());
             Notification::make()
                 ->title('.env ファイルの更新に失敗しました')
                 ->danger()
                 ->send();
+
             return;
         }
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
@@ -7,14 +9,16 @@ use App\Models\Product;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\EditAction;
 use LaraZeus\Quantity\Components\Quantity;
 
-class ProductResource extends Resource
+final class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
+
     protected static ?string $navigationLabel = '商品管理';
+
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     public static function form(\Filament\Forms\Form $form): \Filament\Forms\Form
@@ -52,7 +56,7 @@ class ProductResource extends Resource
                 ->collapsible()
                 ->collapsed()
                 ->itemLabel(fn (?array $state = null): string => $state
-                    ? (($state['option_name'] ?? 'オプション') . ' - ' . ($state['price'] ?? ''))
+                    ? (($state['option_name'] ?? 'オプション').' - '.($state['price'] ?? ''))
                     : 'オプション'
                 )
                 ->schema([
@@ -87,6 +91,7 @@ class ProductResource extends Resource
                     if ($record->stock <= 5) {
                         return "残りわずか ({$record->stock})";
                     }
+
                     return "在庫あり ({$record->stock})";
                 })
                 ->colors([
@@ -96,13 +101,13 @@ class ProductResource extends Resource
                 ]),
             Tables\Columns\TextColumn::make('created_at')->label('登録日')->dateTime(),
         ])
-        ->actions([
-            EditAction::make(),
-            DeleteAction::make(),
-        ])
-        ->bulkActions([
-            Tables\Actions\DeleteBulkAction::make(),
-        ]);
+            ->actions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
+            ]);
     }
 
     public static function getRelations(): array
