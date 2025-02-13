@@ -38,9 +38,11 @@ class CreateUser extends CreateRecord
 
     protected function afterCreate(): void
     {
+        /** @var \App\Models\User $user */
+        $user = $this->record;
         activity()
             ->useLog('info')
             ->withProperties(['ip_address' => request()->ip()])
-            ->log("ユーザー '{$this->record->name}' が追加されました");
+            ->log("ユーザー '{$user->name}' が追加されました");
     }
 }

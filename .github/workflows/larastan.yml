@@ -27,8 +27,5 @@ jobs:
       - name: Install Dependencies
         run: composer install --optimize-autoloader
 
-      - name: Install Larastan
-        run: composer require --dev "larastan/larastan:^3.0"
-
       - name: Run Larastan
         run: vendor/bin/phpstan analyse -c phpstan.neon --error-format=github --memory-limit=1G

@@ -41,9 +41,11 @@ class EditUser extends EditRecord
 
     protected function afterSave(): void
     {
+        /** @var \App\Models\User $user */
+        $user = $this->record;
         activity()
             ->useLog('info')
             ->withProperties(['ip_address' => request()->ip()])
-            ->log("ユーザー '{$this->record->name}' が編集されました");
+            ->log("ユーザー '{$user->name}' が編集されました");
     }
 }

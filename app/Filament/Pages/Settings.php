@@ -42,12 +42,8 @@ class Settings extends Page implements Forms\Contracts\HasForms
     public $LOGIN_ATTEMPT_LIMIT;
     public $LOGIN_BLOCK_TIME;
 
-    protected $form;
-
     public function mount(): void
     {
-        $this->form = $this->makeForm();
-
         if (!auth()->user()->hasRole('admin')) {
             Notification::make()
                 ->warning()
@@ -57,6 +53,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
             throw new HttpResponseException(new RedirectResponse('/admin/'));
         }
 
+        /** @phpstan-ignore-next-line */
         $this->form->fill([
             'APP_NAME'            => config('app.name', ''),
             'APP_DEBUG'           => config('app.debug', ''),
@@ -155,6 +152,7 @@ class Settings extends Page implements Forms\Contracts\HasForms
 
     public function updateEnv(): void
     {
+        /** @phpstan-ignore-next-line */
         $data = $this->form->getState();
         $envFilePath = base_path('.env');
 

@@ -20,7 +20,7 @@ class EditOrder extends EditRecord
             Notification::make()
                 ->warning()
                 ->title('アクセス拒否')
-                ->message('管理者権限が必要です。');
+                ->body('管理者権限が必要です。');
             throw new HttpResponseException(new RedirectResponse('/admin/'));
         }
         parent::mount($record);

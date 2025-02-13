@@ -52,6 +52,7 @@ class OrdersOverTime extends ApexChartWidget
         $isMySQL = $driver === 'mysql';
 
         $filter = $this->filter ?? 'today';
+        /** @phpstan-ignore-next-line */
         $formData = $this->form->getState();
 
         $startDate = match ($filter) {

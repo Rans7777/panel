@@ -19,7 +19,7 @@ class CreateProduct extends CreateRecord
             Notification::make()
                 ->warning()
                 ->title('アクセス拒否')
-                ->message('管理者権限が必要です。');
+                ->body('管理者権限が必要です。');
             throw new HttpResponseException(new RedirectResponse('/admin/'));
         }
         parent::mount();
@@ -37,9 +37,11 @@ class CreateProduct extends CreateRecord
 
     protected function afterCreate(): void
     {
+        /** @var \App\Models\Product $product */
+        $product = $this->record;
         activity()
             ->useLog('info')
             ->withProperties(['ip_address' => request()->ip()])
-            ->log("商品『{$this->record->name}』が作成されました");
+            ->log("商品『{$product->name}』が作成されました");
     }
 }

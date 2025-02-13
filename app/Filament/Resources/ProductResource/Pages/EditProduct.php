@@ -41,9 +41,11 @@ class EditProduct extends EditRecord
 
     protected function afterSave(): void
     {
+        /** @var \App\Models\Product $product */
+        $product = $this->record;
         activity()
             ->useLog('info')
             ->withProperties(['ip_address' => request()->ip()])
-            ->log("商品『{$this->record->name}』が編集されました");
+            ->log("商品『{$product->name}』が編集されました");
     }
 }
