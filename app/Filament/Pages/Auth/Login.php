@@ -24,12 +24,16 @@ class Login extends BaseLogin
 
         $loginAttempt = LoginAttempt::where('ip_address', $ipAddress)->first();
 
-        $attemptLimit = (int)config('LOGIN_ATTEMPT_LIMIT', 5);
-        $blockTime = (int)config('LOGIN_BLOCK_TIME', 60);
+        $attemptLimit = (int)config('auth.attempt_limit', 5);
+        $blockTime = (int)config('auth.block_time', 60);
 
         if ($loginAttempt && $loginAttempt->attempts >= $attemptLimit) {
             $lastAttemptTime = $loginAttempt->last_attempt_at;
             if ($lastAttemptTime && now()->diffInMinutes($lastAttemptTime) < $blockTime) {
+                activity()
+                    ->useLog('warning')
+                    ->withProperties(['ip_address' => $ipAddress])
+                    ->log("IPアドレス '{$ipAddress}' からのログインが試行制限に達したためブロックされました");
                 $this->addError('name', 'このIPアドレスからのログインはブロックされています。');
                 return null;
             } else {
@@ -66,6 +70,12 @@ class Login extends BaseLogin
             if ($loginAttempt) {
                 $loginAttempt->delete();
             }
+
+            activity()
+                ->useLog('info')
+                ->withProperties(['ip_address' => $ipAddress])
+                ->log("ユーザー '{$this->name}' がログインしました");
+
             $url = session()->pull('url.intended', Filament::getUrl());
             $this->redirect($url);
             return null;
@@ -82,6 +92,11 @@ class Login extends BaseLogin
                 'last_attempt_at' => now(),
             ]);
         }
+
+        activity()
+            ->useLog('error')
+            ->withProperties(['ip_address' => $ipAddress])
+            ->log("ユーザー '{$this->name}' がログインに失敗しました");
 
         $this->addError('name', 'ログイン情報が正しくありません。');
         return null;

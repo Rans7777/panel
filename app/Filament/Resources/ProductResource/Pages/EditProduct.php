@@ -22,4 +22,12 @@ class EditProduct extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function afterSave(): void
+    {
+        activity()
+            ->useLog('info')
+            ->withProperties(['ip_address' => request()->ip()])
+            ->log("商品『{$this->record->name}』が編集されました");
+    }
 }

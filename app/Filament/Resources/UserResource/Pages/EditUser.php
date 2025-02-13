@@ -22,4 +22,12 @@ class EditUser extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function afterSave(): void
+    {
+        activity()
+            ->useLog('info')
+            ->withProperties(['ip_address' => request()->ip()])
+            ->log("ユーザー '{$this->record->name}' が編集されました");
+    }
 }

@@ -112,4 +112,6 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'attempt_limit' => env('LOGIN_ATTEMPT_LIMIT', 5),
+    'block_time'    => env('LOGIN_BLOCK_TIME', 60),
 ];

@@ -10,6 +10,7 @@ use Filament\Notifications\Notification;
 use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
 use Parfaitementweb\FilamentCountryField\Forms\Components\Country;
 use Rawilk\FilamentPasswordInput\Password;
+use LaraZeus\Quantity\Components\Quantity;
 
 class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -18,7 +19,8 @@ class Settings extends Page implements Forms\Contracts\HasForms
     protected static ?string $navigationIcon = 'heroicon-o-cog';
     protected static string $view = 'filament.pages.settings';
     protected static ?string $title = '環境設定';
-    protected static ?string $navigationGroup = 'ユーザー管理';
+    protected static ?string $navigationGroup = '管理';
+    protected static ?int $navigationSort = 2;
     protected ?array $data = [];
 
     public $APP_NAME;
@@ -35,6 +37,8 @@ class Settings extends Page implements Forms\Contracts\HasForms
     public $DB_PASSWORD;
     public $TURNSTILE_SITEKEY;
     public $TURNSTILE_SECRET;
+    public $LOGIN_ATTEMPT_LIMIT;
+    public $LOGIN_BLOCK_TIME;
 
     public function mount(): void
     {
@@ -53,6 +57,8 @@ class Settings extends Page implements Forms\Contracts\HasForms
             'DB_PASSWORD'        => config('database.connections.mysql.password', ''),
             'TURNSTILE_SITEKEY'  => config('services.turnstile.sitekey', ''),
             'TURNSTILE_SECRET'   => config('services.turnstile.secret', ''),
+            'LOGIN_ATTEMPT_LIMIT' => config('auth.attempt_limit'),
+            'LOGIN_BLOCK_TIME'   => config('auth.block_time'),
         ]);
     }
 
@@ -85,6 +91,17 @@ class Settings extends Page implements Forms\Contracts\HasForms
                     'error'     => 'error',
                     'critical'  => 'critical',
                 ])
+                ->required(),
+            Quantity::make('LOGIN_ATTEMPT_LIMIT')
+                ->label('LOGIN_ATTEMPT_LIMIT')
+                ->default(5)
+                ->minValue(0)
+                ->suffix('回')
+                ->required(),
+            Quantity::make('LOGIN_BLOCK_TIME')
+                ->label('LOGIN_BLOCK_TIME')
+                ->numeric()
+                ->suffix('分')
                 ->required(),
             Forms\Components\Select::make('DB_CONNECTION')
                 ->label('DB_CONNECTION')
@@ -179,6 +196,11 @@ class Settings extends Page implements Forms\Contracts\HasForms
             ->title('.env が更新されました')
             ->success()
             ->send();
+
+        activity()
+            ->useLog('info')
+            ->withProperties(['ip_address' => request()->ip()])
+            ->log('環境設定が更新されました');
     }
 
     protected function getActions(): array

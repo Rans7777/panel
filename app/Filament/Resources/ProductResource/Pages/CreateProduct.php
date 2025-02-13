@@ -19,4 +19,12 @@ class CreateProduct extends CreateRecord
     {
         return ProductResource::getUrl('index');
     }
+
+    protected function afterCreate(): void
+    {
+        activity()
+            ->useLog('info')
+            ->withProperties(['ip_address' => request()->ip()])
+            ->log("商品『{$this->record->name}』が作成されました");
+    }
 }

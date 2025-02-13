@@ -19,4 +19,12 @@ class CreateUser extends CreateRecord
     {
         return UserResource::getUrl('index');
     }
+
+    protected function afterCreate(): void
+    {
+        activity()
+            ->useLog('info')
+            ->withProperties(['ip_address' => request()->ip()])
+            ->log("ユーザー '{$this->record->name}' が追加されました");
+    }
 }
