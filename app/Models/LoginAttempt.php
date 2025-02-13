@@ -16,4 +16,8 @@ final class LoginAttempt extends Model
         'attempts',
         'last_attempt_at',
     ];
+
+    protected $casts = [
+        'last_attempt_at' => 'datetime',
+    ];
 }

@@ -24,7 +24,7 @@ final class OrdersOverTime extends ApexChartWidget
         return auth()->check() && auth()->user()->hasRole('admin');
     }
 
-    protected function getFilters(): ?array
+    protected function getFilters(): array
     {
         return [
             'today' => '今日',

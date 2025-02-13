@@ -22,7 +22,7 @@ final class OrderPage extends Page
 
     protected static ?string $title = null;
 
-    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    public function getTitle(): string
     {
         return '';
     }
