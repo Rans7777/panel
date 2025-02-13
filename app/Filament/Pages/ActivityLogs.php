@@ -6,13 +6,17 @@ use Filament\Pages\Page;
 use Filament\Tables;
 use Filament\Tables\Contracts\HasTable;
 use Spatie\Activitylog\Models\Activity;
+use Filament\Notifications\Notification;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\RedirectResponse;
 
 class ActivityLogs extends Page implements HasTable
 {
     use Tables\Concerns\InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-clock';
-    protected static ?string $navigationLabel = 'Activity Logs';
+    protected static ?string $title = 'アクティビティログ';
+    protected static ?string $navigationLabel = 'アクティビティログ';
     protected static ?string $navigationGroup = '管理';
     protected static ?int $navigationSort = 3;
     protected static string $view = 'filament.pages.activity-logs';
@@ -20,7 +24,12 @@ class ActivityLogs extends Page implements HasTable
     public function mount(): void
     {
         if (!auth()->user()->hasRole('admin')) {
-            abort(403, '管理者権限が必要です。');
+            Notification::make()
+                ->warning()
+                ->title('アクセス拒否')
+                ->body('管理者権限が必要です。')
+                ->send();
+            throw new HttpResponseException(new RedirectResponse('/admin/'));
         }
     }
 

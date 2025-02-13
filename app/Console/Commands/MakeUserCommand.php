@@ -30,6 +30,12 @@ class MakeUserCommand extends Command
     public function handle()
     {
         $username = $this->argument('username') ?: $this->ask('ユーザー名を入力してください');
+
+        if (User::where('name', $username)->exists()) {
+            $this->error("ユーザー名 \"{$username}\" は既に存在します。");
+            return 0;
+        }
+
         $password = $this->argument('password') ?: $this->secret('パスワードを入力してください');
         $role = $this->argument('role') ?: $this->ask('付与するロールを入力してください');
 

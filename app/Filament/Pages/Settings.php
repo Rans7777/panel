@@ -11,6 +11,8 @@ use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
 use Parfaitementweb\FilamentCountryField\Forms\Components\Country;
 use Rawilk\FilamentPasswordInput\Password;
 use LaraZeus\Quantity\Components\Quantity;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\RedirectResponse;
 
 class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -40,28 +42,38 @@ class Settings extends Page implements Forms\Contracts\HasForms
     public $LOGIN_ATTEMPT_LIMIT;
     public $LOGIN_BLOCK_TIME;
 
+    protected $form;
+
     public function mount(): void
     {
+        $this->form = $this->makeForm();
+
         if (!auth()->user()->hasRole('admin')) {
-            abort(403, '管理者権限が必要です。');
+            Notification::make()
+                ->warning()
+                ->title('アクセス拒否')
+                ->body('管理者権限が必要です。')
+                ->send();
+            throw new HttpResponseException(new RedirectResponse('/admin/'));
         }
+
         $this->form->fill([
-            'APP_NAME'           => config('app.name', ''),
-            'APP_DEBUG'          => config('app.debug', ''),
-            'APP_TIMEZONE'       => config('app.timezone', ''),
-            'APP_LOCALE'         => config('app.locale', ''),
-            'APP_URL'            => config('app.url', ''),
-            'LOG_LEVEL'          => config('logging.level', ''),
-            'DB_CONNECTION'      => config('database.default', ''),
-            'DB_HOST'            => config('database.connections.mysql.host', ''),
-            'DB_PORT'            => config('database.connections.mysql.port', ''),
-            'DB_DATABASE'        => config('database.connections.mysql.database', ''),
-            'DB_USERNAME'        => config('database.connections.mysql.username', ''),
-            'DB_PASSWORD'        => config('database.connections.mysql.password', ''),
-            'TURNSTILE_SITEKEY'  => config('services.turnstile.sitekey', ''),
-            'TURNSTILE_SECRET'   => config('services.turnstile.secret', ''),
+            'APP_NAME'            => config('app.name', ''),
+            'APP_DEBUG'           => config('app.debug', ''),
+            'APP_TIMEZONE'        => config('app.timezone', ''),
+            'APP_LOCALE'          => config('app.locale', ''),
+            'APP_URL'             => config('app.url', ''),
+            'LOG_LEVEL'           => config('logging.level', ''),
+            'DB_CONNECTION'       => config('database.default', ''),
+            'DB_HOST'             => config('database.connections.mysql.host', ''),
+            'DB_PORT'             => config('database.connections.mysql.port', ''),
+            'DB_DATABASE'         => config('database.connections.mysql.database', ''),
+            'DB_USERNAME'         => config('database.connections.mysql.username', ''),
+            'DB_PASSWORD'         => config('database.connections.mysql.password', ''),
+            'TURNSTILE_SITEKEY'   => config('services.turnstile.sitekey', ''),
+            'TURNSTILE_SECRET'    => config('services.turnstile.secret', ''),
             'LOGIN_ATTEMPT_LIMIT' => config('auth.attempt_limit'),
-            'LOGIN_BLOCK_TIME'   => config('auth.block_time'),
+            'LOGIN_BLOCK_TIME'    => config('auth.block_time'),
         ]);
     }
 
