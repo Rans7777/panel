@@ -23,132 +23,83 @@ final class OrdersResource extends Resource
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form->schema([
-            Forms\Components\Select::make('id')
-                ->label('商品名')
-                ->relationship('product', 'name')
-                ->required(),
-
-            Flatpickr::make('created_at')
-                ->label('注文日')
-                ->required(),
-
-            Quantity::make('quantity')
-                ->label('個数')
-                ->default(0)
-                ->minValue(0)
-                ->required(),
-
-            Quantity::make('total_price')
-                ->label('合計金額')
-                ->default(0)
-                ->minValue(0)
-                ->required(),
-
-            Forms\Components\Textarea::make('options')
-                ->label('購入オプション')
-                ->disabled()
-                ->rows(5)
-                ->afterStateHydrated(function (\Filament\Forms\Components\Field $component, $state) {
-                    if (is_string($state)) {
-                        $decoded = json_decode($state, true);
-                        if (json_last_error() === JSON_ERROR_NONE) {
-                            $state = $decoded;
-                        }
-                    }
-
-                    if (is_array($state)) {
-                        if (array_is_list($state)) {
-                            $state = collect($state)
-                                ->map(function ($item) {
-                                    if (is_array($item) && isset($item['option_name'], $item['price'])) {
-                                        return sprintf('%s: %s', $item['option_name'], $item['price']);
-                                    }
-
-                                    return '';
-                                })
-                                ->filter()
-                                ->implode(', ');
-                        } else {
-                            $state = collect($state)
-                                ->map(function ($value, $key) {
-                                    if (is_array($value)) {
-                                        $value = $value['price'] ?? json_encode($value);
-                                    }
-
-                                    return sprintf('%s: %s', $key, $value);
-                                })
-                                ->implode(', ');
-                        }
-                    }
-                    $component->state($state);
-                }),
+            Forms\Components\Tabs::make('注文情報')
+                ->tabs([
+                    Forms\Components\Tabs\Tab::make('基本情報')
+                        ->schema([
+                            Forms\Components\Card::make()->schema([
+                                Forms\Components\Select::make('id')
+                                    ->label('商品名')
+                                    ->relationship('product', 'name')
+                                    ->required(),
+                                Flatpickr::make('created_at')
+                                    ->label('注文日')
+                                    ->required(),
+                            ]),
+                        ]),
+                    Forms\Components\Tabs\Tab::make('注文明細')
+                        ->schema([
+                            Forms\Components\Card::make()->schema([
+                                Forms\Components\Grid::make(2)->schema([
+                                    Quantity::make('quantity')
+                                        ->label('個数')
+                                        ->default(0)
+                                        ->minValue(0)
+                                        ->required(),
+                                    Quantity::make('total_price')
+                                        ->label('合計金額')
+                                        ->default(0)
+                                        ->minValue(0)
+                                        ->required(),
+                                ]),
+                            ]),
+                        ]),
+                    Forms\Components\Tabs\Tab::make('購入オプション')
+                        ->schema([
+                            Forms\Components\Card::make()->schema([
+                                Forms\Components\Textarea::make('options')
+                                    ->label('購入オプション')
+                                    ->disabled()
+                                    ->rows(5)
+                                    ->afterStateHydrated(function (\Filament\Forms\Components\Field $component, $state) {
+                                        $formatted = self::formatOptionsForForm($state);
+                                        $component->state($formatted);
+                                    }),
+                            ]),
+                        ]),
+                ])
+                ->columnSpan(2),
         ]);
     }
 
     public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
     {
         return $table->columns([
-            // 商品名カラム
             Tables\Columns\TextColumn::make('name')
                 ->label('商品名')
                 ->sortable(),
 
-            // 個数カラム
             Tables\Columns\TextColumn::make('quantity')
                 ->label('個数')
                 ->sortable(),
 
-            // 商品画像カラム
             Tables\Columns\ImageColumn::make('image')
                 ->label('商品画像')
                 ->size(50)
                 ->sortable()
                 ->placeholder('No Image'),
 
-            // 合計金額カラム
             Tables\Columns\TextColumn::make('total_price')
                 ->label('合計金額')
                 ->sortable()
                 ->money('JPY'),
 
-            // 購入オプション表示用のカラム
             Tables\Columns\TextColumn::make('options')
                 ->label('購入オプション')
                 ->formatStateUsing(function ($state) {
-                    $shorten = function ($text, $limit = 20) {
-                        return (mb_strlen($text) > $limit) ? mb_substr($text, 0, $limit).'…' : $text;
-                    };
-
-                    if (is_string($state)) {
-                        $decoded = json_decode($state, true);
-                        if (json_last_error() === JSON_ERROR_NONE) {
-                            $state = $decoded;
-                        }
-                    }
-
-                    if (is_array($state)) {
-                        if (array_is_list($state)) {
-                            return collect($state)
-                                ->map(function ($item) use ($shorten) {
-                                    return (is_array($item) && isset($item['option_name']))
-                                        ? $shorten($item['option_name'])
-                                        : '';
-                                })
-                                ->filter()
-                                ->implode(', ');
-                        } else {
-                            return collect($state)
-                                ->map(function ($value, $key) use ($shorten) {
-                                    return $shorten($key);
-                                })
-                                ->implode(', ');
-                        }
-                    }
-
-                    return $state;
+                    return self::formatOptionsForTable($state);
                 }),
 
-            // 注文日カラム
             Tables\Columns\TextColumn::make('created_at')
                 ->label('注文日')
                 ->sortable()
@@ -178,11 +129,11 @@ final class OrdersResource extends Resource
                         return $query
                             ->when(
                                 $data['from'],
-                                fn ($query) => $query->whereDate('created_at', '>=', $data['from']),
+                                fn ($query) => $query->whereDate('created_at', '>=', $data['from'])
                             )
                             ->when(
                                 $data['until'],
-                                fn ($query) => $query->whereDate('created_at', '<=', $data['until']),
+                                fn ($query) => $query->whereDate('created_at', '<=', $data['until'])
                             );
                     }),
             ])
@@ -207,5 +158,77 @@ final class OrdersResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         return auth()->check() && auth()->user()->hasRole('admin');
+    }
+
+    private static function formatOptionsForForm($state)
+    {
+        if (is_string($state)) {
+            $decoded = json_decode($state, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $state = $decoded;
+            }
+        }
+        if (is_array($state)) {
+            if (array_is_list($state)) {
+                $state = collect($state)
+                    ->map(function ($item) {
+                        if (is_array($item) && isset($item['option_name'], $item['price'])) {
+                            return sprintf('%s: %s', $item['option_name'], $item['price']);
+                        }
+
+                        return '';
+                    })
+                    ->filter()
+                    ->implode(', ');
+            } else {
+                $state = collect($state)
+                    ->map(function ($value, $key) {
+                        if (is_array($value)) {
+                            $value = $value['price'] ?? json_encode($value);
+                        }
+
+                        return sprintf('%s: %s', $key, $value);
+                    })
+                    ->implode(', ');
+            }
+        }
+
+        return $state;
+    }
+
+    private static function formatOptionsForTable($state): string
+    {
+        $limit = 20;
+        if (is_string($state)) {
+            $decoded = json_decode($state, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $state = $decoded;
+            }
+        }
+        if (is_array($state)) {
+            if (array_is_list($state)) {
+                return collect($state)
+                    ->map(function ($item) use ($limit) {
+                        return is_array($item) && isset($item['option_name'])
+                            ? self::shortenText($item['option_name'], $limit)
+                            : '';
+                    })
+                    ->filter()
+                    ->implode(', ');
+            } else {
+                return collect($state)
+                    ->map(function ($value, $key) use ($limit) {
+                        return self::shortenText($key, $limit);
+                    })
+                    ->implode(', ');
+            }
+        }
+
+        return (string) $state;
+    }
+
+    private static function shortenText(string $text, int $limit = 20): string
+    {
+        return (mb_strlen($text) > $limit) ? mb_substr($text, 0, $limit).'…' : $text;
     }
 }

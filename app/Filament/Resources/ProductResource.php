@@ -60,7 +60,7 @@ final class ProductResource extends Resource
                         ->collapsible()
                         ->collapsed()
                         ->itemLabel(fn (?array $state = null): string => $state
-                            ? (($state['option_name'] ?? 'オプション') . ' - ' . ($state['price'] ?? ''))
+                            ? (($state['option_name'] ?? 'オプション').' - '.($state['price'] ?? ''))
                             : 'オプション'
                         )
                         ->schema([
@@ -109,6 +109,7 @@ final class ProductResource extends Resource
                     if ($record->stock <= 5) {
                         return "残りわずか ({$record->stock})";
                     }
+
                     return "在庫あり ({$record->stock})";
                 })
                 ->colors([
@@ -133,7 +134,7 @@ final class ProductResource extends Resource
     /**
      * 各テーブル行にホバー時のエフェクトを付与するためのクラスを設定しています。
      */
-    public static function getTableRecordClasses($record): ?string
+    public static function getTableRecordClasses($record): string
     {
         return 'hover:bg-gray-50 transition-colors';
     }

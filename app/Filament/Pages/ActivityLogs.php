@@ -22,7 +22,7 @@ final class ActivityLogs extends Page implements HasTable
 
     protected static ?string $navigationLabel = 'アクティビティログ';
 
-    protected static ?string $navigationGroup = '管理';
+    protected static ?string $navigationGroup = 'パネル管理';
 
     protected static ?int $navigationSort = 3;
 

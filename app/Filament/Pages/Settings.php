@@ -17,6 +17,7 @@ use Log;
 use Parfaitementweb\FilamentCountryField\Forms\Components\Country;
 use Rawilk\FilamentPasswordInput\Password;
 use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
+use Wallo\FilamentSelectify\Components\ToggleButton;
 
 final class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -28,7 +29,7 @@ final class Settings extends Page implements Forms\Contracts\HasForms
 
     protected static ?string $title = '環境設定';
 
-    protected static ?string $navigationGroup = '管理';
+    protected static ?string $navigationGroup = 'パネル管理';
 
     protected static ?int $navigationSort = 2;
 
@@ -101,76 +102,101 @@ final class Settings extends Page implements Forms\Contracts\HasForms
     protected function getFormSchema(): array
     {
         return [
-            Forms\Components\TextInput::make('APP_NAME')
-                ->label('APP_NAME')
-                ->required(),
-            Forms\Components\TextInput::make('APP_DEBUG')
-                ->label('APP_DEBUG')
-                ->required(),
-            TimezoneSelect::make('APP_TIMEZONE')
-                ->label('APP_TIMEZONE')
-                ->required(),
-            Country::make('APP_LOCALE')
-                ->label('APP_LOCALE')
-                ->required(),
-            Forms\Components\TextInput::make('APP_URL')
-                ->label('APP_URL')
-                ->url()
-                ->required(),
-            Forms\Components\Select::make('LOG_LEVEL')
-                ->label('LOG_LEVEL')
-                ->options([
-                    'debug' => 'debug',
-                    'info' => 'info',
-                    'notice' => 'notice',
-                    'warning' => 'warning',
-                    'error' => 'error',
-                    'critical' => 'critical',
-                ])
-                ->required(),
-            Quantity::make('LOGIN_ATTEMPT_LIMIT')
-                ->label('LOGIN_ATTEMPT_LIMIT')
-                ->default(5)
-                ->minValue(0)
-                ->suffix('回')
-                ->required(),
-            Quantity::make('LOGIN_BLOCK_TIME')
-                ->label('LOGIN_BLOCK_TIME')
-                ->numeric()
-                ->suffix('分')
-                ->required(),
-            Forms\Components\Select::make('DB_CONNECTION')
-                ->label('DB_CONNECTION')
-                ->options([
-                    'sqlite' => 'SQLite',
-                    'mysql' => 'MySQL / MariaDB',
-                ])
-                ->required()
-                ->reactive(),
-            Forms\Components\TextInput::make('DB_HOST')
-                ->label('DB_HOST')
-                ->required()
-                ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-            Forms\Components\TextInput::make('DB_PORT')
-                ->label('DB_PORT')
-                ->required()
-                ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-            Forms\Components\TextInput::make('DB_DATABASE')
-                ->label('DB_DATABASE')
-                ->required()
-                ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-            Forms\Components\TextInput::make('DB_USERNAME')
-                ->label('DB_USERNAME')
-                ->required()
-                ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-            Password::make('DB_PASSWORD')
-                ->label('DB_PASSWORD')
-                ->required()
-                ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-            Password::make('TURNSTILE_SITEKEY')
-                ->label('TURNSTILE_SITEKEY'),
-            Password::make('TURNSTILE_SECRET')
-                ->label('TURNSTILE_SECRET'),
+            Forms\Components\Section::make('アプリケーション基本設定')
+                ->description('アプリケーションの基本情報（名前、デバッグモード、タイムゾーン、ロケール、URL）を設定します。')
+                ->collapsible()
+                ->schema([
+                    Forms\Components\TextInput::make('APP_NAME')
+                        ->label('APP_NAME')
+                        ->required(),
+                    ToggleButton::make('APP_DEBUG')
+                        ->label('APP_DEBUG')
+                        ->required()
+                        ->offLabel('無効')
+                        ->onLabel('有効'),
+                    TimezoneSelect::make('APP_TIMEZONE')
+                        ->label('APP_TIMEZONE')
+                        ->required(),
+                    Country::make('APP_LOCALE')
+                        ->label('APP_LOCALE')
+                        ->required(),
+                    Forms\Components\TextInput::make('APP_URL')
+                        ->label('APP_URL')
+                        ->url()
+                        ->required(),
+                ]),
+
+            Forms\Components\Section::make('ログ・認証設定')
+                ->description('ログレベルやログイン試行回数、ブロック時間の設定を行います。')
+                ->collapsible()
+                ->schema([
+                    Forms\Components\Select::make('LOG_LEVEL')
+                        ->label('LOG_LEVEL')
+                        ->options([
+                            'debug' => 'debug',
+                            'info' => 'info',
+                            'notice' => 'notice',
+                            'warning' => 'warning',
+                            'error' => 'error',
+                            'critical' => 'critical',
+                        ])
+                        ->required(),
+                    Quantity::make('LOGIN_ATTEMPT_LIMIT')
+                        ->label('LOGIN_ATTEMPT_LIMIT')
+                        ->default(5)
+                        ->minValue(0)
+                        ->suffix('回')
+                        ->required(),
+                    Quantity::make('LOGIN_BLOCK_TIME')
+                        ->label('LOGIN_BLOCK_TIME')
+                        ->numeric()
+                        ->suffix('分')
+                        ->required(),
+                ]),
+
+            Forms\Components\Section::make('データベース接続設定')
+                ->description('利用するデータベースの種類と接続情報を設定します。SQLite を選択した場合、接続情報は自動的に非表示になります。')
+                ->collapsible()
+                ->schema([
+                    Forms\Components\Select::make('DB_CONNECTION')
+                        ->label('DB_CONNECTION')
+                        ->options([
+                            'sqlite' => 'SQLite',
+                            'mysql' => 'MySQL / MariaDB',
+                        ])
+                        ->required()
+                        ->reactive(),
+                    Forms\Components\TextInput::make('DB_HOST')
+                        ->label('DB_HOST')
+                        ->required()
+                        ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
+                    Forms\Components\TextInput::make('DB_PORT')
+                        ->label('DB_PORT')
+                        ->required()
+                        ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
+                    Forms\Components\TextInput::make('DB_DATABASE')
+                        ->label('DB_DATABASE')
+                        ->required()
+                        ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
+                    Forms\Components\TextInput::make('DB_USERNAME')
+                        ->label('DB_USERNAME')
+                        ->required()
+                        ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
+                    Password::make('DB_PASSWORD')
+                        ->label('DB_PASSWORD')
+                        ->required()
+                        ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
+                ]),
+
+            Forms\Components\Section::make('Turnstile サービス設定')
+                ->description('Turnstile サービスのサイトキーとシークレットキーを設定します。')
+                ->collapsible()
+                ->schema([
+                    Password::make('TURNSTILE_SITEKEY')
+                        ->label('TURNSTILE_SITEKEY'),
+                    Password::make('TURNSTILE_SECRET')
+                        ->label('TURNSTILE_SECRET'),
+                ]),
         ];
     }
 
@@ -195,6 +221,12 @@ final class Settings extends Page implements Forms\Contracts\HasForms
 
         foreach ($keys as $key) {
             $value = $data[$key];
+
+            if (is_bool($value)) {
+                $value = $value ? 'true' : 'false';
+            } else {
+                $value = (string) $value;
+            }
 
             if (mb_strpos($value, ' ') !== false) {
                 $value = '"'.$value.'"';
