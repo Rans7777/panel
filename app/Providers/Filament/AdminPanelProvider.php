@@ -16,7 +16,6 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets;
 use Hasnayeen\Themes\ThemesPlugin;
-use IbrahimBougaoua\FilaSortable\FilaSortablePlugin;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -62,7 +61,6 @@ final class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->plugins([
-                FilaSortablePlugin::make(),
                 ThemesPlugin::make(),
                 FilamentApexChartsPlugin::make(),
                 GravatarPlugin::make(),
