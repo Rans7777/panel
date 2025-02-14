@@ -131,14 +131,6 @@ final class ProductResource extends Resource
             ]);
     }
 
-    /**
-     * 各テーブル行にホバー時のエフェクトを付与するためのクラスを設定しています。
-     */
-    public static function getTableRecordClasses($record): string
-    {
-        return 'hover:bg-gray-50 transition-colors';
-    }
-
     public static function getRelations(): array
     {
         return [];
