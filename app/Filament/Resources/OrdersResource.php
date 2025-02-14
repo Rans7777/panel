@@ -114,7 +114,7 @@ final class OrdersResource extends Resource
                     ->query(function ($query, array $data): mixed {
                         return $query->when(
                             $data['name'],
-                            fn ($query, $name) => $query->whereHas('product', fn($q) => $q->where('name', 'like', "%{$name}%"))
+                            fn ($query, $name) => $query->whereHas('product', fn ($q) => $q->where('name', 'like', "%{$name}%"))
                         );
                     }),
 
