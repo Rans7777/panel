@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Tables;
@@ -40,6 +41,11 @@ final class ActivityLogs extends Page implements HasTable
         }
     }
 
+    protected function isTableReorderable(): bool
+    {
+        return false;
+    }
+
     protected function getTableQuery()
     {
         return Activity::query()->orderBy('created_at', 'desc');
@@ -54,15 +60,48 @@ final class ActivityLogs extends Page implements HasTable
                     'info' => 'primary',
                     'warning' => 'warning',
                     'error' => 'danger',
-                ]),
+                ])
+                ->searchable(),
             Tables\Columns\TextColumn::make('description')
-                ->label('ログ'),
+                ->label('ログ')
+                ->searchable(),
             Tables\Columns\TextColumn::make('ip_address')
                 ->label('IPアドレス')
-                ->getStateUsing(fn ($record) => $record->properties['ip_address'] ?? 'N/A'),
+                ->getStateUsing(fn ($record) => $record->properties['ip_address'] ?? 'N/A')
+                ->searchable([
+                    'properties->ip_address',
+                ]),
             Tables\Columns\TextColumn::make('created_at')
                 ->dateTime()
                 ->label('日時'),
+        ];
+    }
+
+    protected function getTableFilters(): array
+    {
+        return [
+            Tables\Filters\SelectFilter::make('log_name')
+                ->label('ログレベル')
+                ->options([
+                    'info' => 'Info',
+                    'warning' => 'Warning',
+                    'error' => 'Error',
+                ]),
+            Tables\Filters\Filter::make('created_at')
+                ->label('日時')
+                ->form([
+                    Flatpickr::make('created_from')
+                        ->label('開始日時'),
+                    Flatpickr::make('created_until')
+                        ->label('終了日時'),
+                ])
+                ->query(function ($query, array $data) {
+                    return $query
+                        ->when($data['created_from'], fn ($query, $date) => $query->whereDate('created_at', '>=', $date)
+                        )
+                        ->when($data['created_until'], fn ($query, $date) => $query->whereDate('created_at', '<=', $date)
+                        );
+                }),
         ];
     }
 
