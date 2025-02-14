@@ -377,7 +377,7 @@ final class OrderPage extends Page
                     $product->decrement('stock', $item['quantity']);
 
                     Orders::create([
-                        'name' => $item['name'],
+                        'product_id' => $item['id'],
                         'quantity' => $item['quantity'],
                         'image' => $item['image'] ?? null,
                         'total_price' => $item['price'] * $item['quantity'],

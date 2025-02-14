@@ -28,7 +28,7 @@ final class OrdersResource extends Resource
                     Forms\Components\Tabs\Tab::make('基本情報')
                         ->schema([
                             Forms\Components\Card::make()->schema([
-                                Forms\Components\Select::make('id')
+                                Forms\Components\Select::make('product_id')
                                     ->label('商品名')
                                     ->relationship('product', 'name')
                                     ->required(),
@@ -75,7 +75,7 @@ final class OrdersResource extends Resource
     public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
     {
         return $table->columns([
-            Tables\Columns\TextColumn::make('name')
+            Tables\Columns\TextColumn::make('product.name')
                 ->label('商品名')
                 ->sortable(),
 
@@ -106,7 +106,7 @@ final class OrdersResource extends Resource
                 ->date('M d, Y'),
         ])
             ->filters([
-                Tables\Filters\Filter::make('name')
+                Tables\Filters\Filter::make('商品名')
                     ->form([
                         Forms\Components\TextInput::make('name')
                             ->label('商品名'),
@@ -114,7 +114,7 @@ final class OrdersResource extends Resource
                     ->query(function ($query, array $data): mixed {
                         return $query->when(
                             $data['name'],
-                            fn ($query, $name) => $query->where('name', 'like', "%{$name}%")
+                            fn ($query, $name) => $query->whereHas('product', fn($q) => $q->where('name', 'like', "%{$name}%"))
                         );
                     }),
 
