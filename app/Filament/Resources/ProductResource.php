@@ -11,6 +11,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use LaraZeus\Quantity\Components\Quantity;
 
 final class ProductResource extends Resource
@@ -124,10 +126,22 @@ final class ProductResource extends Resource
         ])
             ->actions([
                 EditAction::make(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->before(function ($record) {
+                        if ($record->image && Storage::disk('public')->exists($record->image)) {
+                            Storage::disk('public')->delete($record->image);
+                        }
+                    }),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->before(function (Collection $records) {
+                        foreach ($records as $record) {
+                            if ($record->image && Storage::disk('public')->exists($record->image)) {
+                                Storage::disk('public')->delete($record->image);
+                            }
+                        }
+                    }),
             ]);
     }
 
@@ -141,7 +155,7 @@ final class ProductResource extends Resource
         return [
             'index' => Pages\ListProducts::route('/'),
             'create' => Pages\CreateProduct::route('/create'),
-            'edit' => Pages\EditProduct::route('/{record}/edit'),
+            'edit' => Pages\EditProduct::route('/{record:slug}/edit'),
         ];
     }
 

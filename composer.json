@@ -10,6 +10,7 @@
         "andrewdwallo/filament-selectify": "^2.0",
         "awcodes/filament-gravatar": "^2.0",
         "coolsam/flatpickr": "^3.1",
+        "cviebrock/eloquent-sluggable": "^11.0",
         "filament/filament": "3.2.135",
         "hasnayeen/themes": "^3.0",
         "joshembling/image-optimizer": "^1.4",
