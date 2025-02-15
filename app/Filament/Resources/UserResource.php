@@ -62,7 +62,8 @@ final class UserResource extends Resource
                     ->multiple()
                     ->relationship('roles', 'name')
                     ->preload()
-                    ->label('ロール'),
+                    ->label('ロール')
+                    ->required(),
             ]);
     }
 

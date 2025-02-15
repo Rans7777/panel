@@ -19,6 +19,7 @@
         "laravel/tinker": "^2.9",
         "leandrocfe/filament-apex-charts": "^3.1",
         "parfaitementweb/filament-country-field": "^2.2",
+        "plesk/ext-laravel-integration": "*",
         "rawilk/filament-password-input": "^2.0",
         "spatie/laravel-activitylog": "^4.10",
         "spatie/laravel-discord-alerts": "^1.6",
