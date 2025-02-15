@@ -23,7 +23,7 @@
         "rawilk/filament-password-input": "^2.0",
         "spatie/laravel-activitylog": "^4.10",
         "spatie/laravel-discord-alerts": "^1.6",
-        "spatie/laravel-permission": "^6.13",
+        "spatie/laravel-permission": "^6.14",
         "tapp/filament-timezone-field": "3.0"
     },
     "require-dev": {
@@ -31,7 +31,7 @@
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "3.0",
         "laravel/pail": "^1.1",
-        "laravel/pint": "^1.13",
+        "laravel/pint": "^1.20",
         "laravel/sail": "^1.26",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.1",
