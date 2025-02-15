@@ -22,8 +22,8 @@ final class SalesOverview extends BaseWidget
 
     protected function getCards(): array
     {
-        $todayTotal = Orders::whereDate('created_at', now()->toDateString())->sum('total_price');
-        $yesterdayTotal = Orders::whereDate('created_at', now()->subDay()->toDateString())->sum('total_price');
+        $todayTotal = (float) Orders::whereDate('created_at', now()->toDateString())->sum('total_price');
+        $yesterdayTotal = (float) Orders::whereDate('created_at', now()->subDay()->toDateString())->sum('total_price');
 
         $percentageChange = 0;
         if ($yesterdayTotal > 0) {
@@ -35,7 +35,7 @@ final class SalesOverview extends BaseWidget
         $trend = collect(range(6, 0))->map(function ($day) {
             return [
                 'date' => now()->subDays((int) $day)->toDateString(),
-                'total' => Orders::whereDate('created_at', now()->subDays((int) $day)->toDateString())
+                'total' => (float) Orders::whereDate('created_at', now()->subDays((int) $day)->toDateString())
                     ->sum('total_price'),
             ];
         })->values();
@@ -48,7 +48,7 @@ final class SalesOverview extends BaseWidget
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor($percentageChange >= 0 ? 'success' : 'danger'),
 
-            Card::make('総売上', new HtmlString('¥'.number_format(Orders::sum('total_price'))))
+            Card::make('総売上', new HtmlString('¥'.number_format((float) Orders::sum('total_price'))))
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor('primary'),
         ];

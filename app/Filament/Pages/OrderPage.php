@@ -162,18 +162,24 @@ final class OrderPage extends Page
     // カート内の商品情報を最新の状態に同期する
     private function syncCartWithDatabase(): void
     {
+        if (empty($this->cart)) {
+            return;
+        }
+        $productIds = array_column($this->cart, 'id');
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
         $updatedCart = [];
         foreach ($this->cart as $item) {
-            $product = Product::find($item['id']);
-            if ($product) {
-                $item['name'] = $product->name;
+            if (isset($products[$item['id']])) {
+                $product = $products[$item['id']];
+                $item['name']  = $product->name;
                 $item['image'] = $product->image;
                 $item['price'] = $product->price;
                 if ($product->stock > 0) {
                     $updatedCart[] = $item;
                 } else {
                     Notification::make()
-                        ->title('商品が在庫切れのためカートから削除されました: '.$product->name)
+                        ->title('商品が在庫切れのためカートから削除されました: ' . $product->name)
                         ->warning()
                         ->send();
                 }
