@@ -172,14 +172,14 @@ final class OrderPage extends Page
         foreach ($this->cart as $item) {
             if (isset($products[$item['id']])) {
                 $product = $products[$item['id']];
-                $item['name']  = $product->name;
+                $item['name'] = $product->name;
                 $item['image'] = $product->image;
                 $item['price'] = $product->price;
                 if ($product->stock > 0) {
                     $updatedCart[] = $item;
                 } else {
                     Notification::make()
-                        ->title('商品が在庫切れのためカートから削除されました: ' . $product->name)
+                        ->title('商品が在庫切れのためカートから削除されました: '.$product->name)
                         ->warning()
                         ->send();
                 }
