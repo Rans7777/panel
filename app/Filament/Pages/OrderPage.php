@@ -10,6 +10,7 @@ use Exception;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
+use Spatie\DiscordAlerts\Facades\DiscordAlert;
 use Throwable;
 
 final class OrderPage extends Page
@@ -395,6 +396,31 @@ final class OrderPage extends Page
             return;
         }
 
+        if (!empty(config('discord-alerts.webhook_urls.default'))) {
+            $fields = [];
+            foreach ($this->cart as $index => $item) {
+                $fields[] = [
+                    'name' => '商品 '.($index + 1),
+                    'value' => '商品名: '.$item['name']."\n".
+                               '個数: '.$item['quantity']."\n".
+                               'オプション: '.(isset($item['options']) ? $this->formatOptions($item['options']) : 'なし'),
+                    'inline' => false,
+                ];
+            }
+            $fields[] = [
+                'name' => '合計金額',
+                'value' => '¥'.(string) $this->totalPrice,
+                'inline' => false,
+            ];
+            $embed = [
+                'title' => '注文確定',
+                'description' => '新しい注文が確定しました。',
+                'color' => '#2ecc71',
+                'fields' => $fields,
+            ];
+            DiscordAlert::to(config('discord-alerts.webhook_urls.default'))->message('注文が確定しました！', [$embed]);
+        }
+
         // カートを空にしてセッションデータをクリア
         $this->cart = [];
         $this->showPaymentPopup = false;
@@ -415,5 +441,12 @@ final class OrderPage extends Page
     public function updatedPaymentAmount($value): void
     {
         $this->paymentAmount = $value === '' ? 0 : (int) $value;
+    }
+
+    private function formatOptions(array $options): string
+    {
+        return collect($options)->map(function ($option) {
+            return $option['option_name'].' (¥'.number_format($option['price']).')';
+        })->join("\n");
     }
 }

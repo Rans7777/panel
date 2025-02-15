@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4fd47822f9a342c191a70d3d3d5bc34d",
+    "content-hash": "cba246313bae6ecdea9d5709dff8f340",
     "packages": [
         {
             "name": "andrewdwallo/filament-selectify",
@@ -5666,6 +5666,92 @@
                 }
             ],
             "time": "2025-02-10T15:38:25+00:00"
+        },
+        {
+            "name": "spatie/laravel-discord-alerts",
+            "version": "1.6.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/laravel-discord-alerts.git",
+                "reference": "7f92bcb2d408e7ed5e92fb32815ed171568c23f7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/laravel-discord-alerts/zipball/7f92bcb2d408e7ed5e92fb32815ed171568c23f7",
+                "reference": "7f92bcb2d408e7ed5e92fb32815ed171568c23f7",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^8.73|^9.0|^10.0|^11.0",
+                "php": "^8.0",
+                "spatie/laravel-package-tools": "^1.9.2"
+            },
+            "require-dev": {
+                "nunomaduro/collision": "^5.10|^6.0|^7.0|^8.0",
+                "nunomaduro/larastan": "^1.0|^2.0",
+                "orchestra/testbench": "^6.22|^7.0|^8.0|^9.0",
+                "pestphp/pest": "^1.21|^2.0|^3.0",
+                "pestphp/pest-plugin-laravel": "^1.1|^2.0",
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan-deprecation-rules": "^1.0",
+                "spatie/laravel-ray": "^1.26"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Discord": "DiscordAlert"
+                    },
+                    "providers": [
+                        "Spatie\\DiscordAlerts\\DiscordAlertsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\DiscordAlerts\\": "src",
+                    "Spatie\\DiscordAlerts\\Database\\Factories\\": "database/factories"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Rias Van der Veken",
+                    "email": "rias@spatie.be",
+                    "role": "Developer"
+                },
+                {
+                    "name": "Niels Vanpachtenbeke",
+                    "email": "niels@spatie.be",
+                    "role": "Developer"
+                },
+                {
+                    "name": "Freek Van der Herten",
+                    "email": "freek@spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Send a message to Discord",
+            "homepage": "https://github.com/spatie/laravel-discord-alerts",
+            "keywords": [
+                "laravel",
+                "laravel-discord-alerts",
+                "spatie"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/laravel-discord-alerts/issues",
+                "source": "https://github.com/spatie/laravel-discord-alerts/tree/1.6.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-02-06T12:15:38+00:00"
         },
         {
             "name": "spatie/laravel-package-tools",

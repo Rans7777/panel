@@ -67,6 +67,8 @@ final class Settings extends Page implements Forms\Contracts\HasForms
 
     public $LOGIN_BLOCK_TIME;
 
+    public $DISCORD_WEBHOOK_URL;
+
     public function mount(): void
     {
         if (!auth()->user()->hasRole('admin')) {
@@ -96,6 +98,7 @@ final class Settings extends Page implements Forms\Contracts\HasForms
             'TURNSTILE_SECRET' => config('services.turnstile.secret', ''),
             'LOGIN_ATTEMPT_LIMIT' => config('auth.attempt_limit'),
             'LOGIN_BLOCK_TIME' => config('auth.block_time'),
+            'DISCORD_WEBHOOK_URL' => config('discord-alerts.webhook_urls.default', ''),
         ]);
     }
 
@@ -196,6 +199,15 @@ final class Settings extends Page implements Forms\Contracts\HasForms
                         ->label('TURNSTILE_SITEKEY'),
                     Password::make('TURNSTILE_SECRET')
                         ->label('TURNSTILE_SECRET'),
+                ]),
+
+            Forms\Components\Section::make('webhook 通知設定')
+                ->description('通知用のWebhook URL を設定します。')
+                ->collapsible()
+                ->schema([
+                    Forms\Components\TextInput::make('DISCORD_WEBHOOK_URL')
+                        ->label('DISCORD_WEBHOOK_URL')
+                        ->url(),
                 ]),
         ];
     }
