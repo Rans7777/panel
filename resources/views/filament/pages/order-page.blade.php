@@ -8,7 +8,14 @@
 
     <!-- 商品一覧・カート・支払い画面 -->
     <div class="space-y-6">
-        <h1 class="text-2xl font-bold mb-4">注文ページ</h1>
+        <h1 class="text-2xl font-bold mb-4">
+            <div class="flex items-center">
+                <img width="32" height="32"
+                     src="https://img.icons8.com/color/32/add-shopping-cart--v1.png"
+                     alt="注文アイコン"/>
+                <span class="ml-2 text-2xl font-bold">注文ページ</span>
+            </div>
+        </h1>
 
         @php
             $products = \App\Models\Product::where('stock', '>', 0)->get();
@@ -28,7 +35,7 @@
                         x-on:touchcancel="$el.classList.remove('pressed-active')"
                     >
                         <div class="flex flex-col items-center">
-                            <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('storage/no-image.png') }}" 
+                            <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('https://img.icons8.com/clouds/100/no-image.png') }}" 
                                  alt="{{ $product->name }}"
                                  class="h-32 w-32 object-cover rounded-lg">
                             <span class="block mt-2 font-bold truncate" title="{{ $product->name }}">
@@ -38,7 +45,10 @@
                     </button>
                 </div>
             @empty
-                <p class="col-span-full text-center">利用可能な商品はありません。</p>
+                <div class="col-span-full flex items-center justify-center space-x-2">
+                    <img width="24" height="24" src="https://img.icons8.com/fluency/24/error.png" alt="error"/>
+                    <p>利用可能な商品はありません。</p>
+                </div>
             @endforelse
         </div>
 
@@ -141,7 +151,12 @@
                             x-on:touchend="$el.classList.remove('pressed-active')"
                             x-on:touchcancel="$el.classList.remove('pressed-active')"
                         >
-                            キャンセル
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="24" height="24" viewBox="0 0 48 48">
+                                  <path fill="#f44336" d="M44,24c0,11.045-8.955,20-20,20S4,35.045,4,24S12.955,4,24,4S44,12.955,44,24z"></path><path fill="#fff" d="M29.656,15.516l2.828,2.828l-14.14,14.14l-2.828-2.828L29.656,15.516z"></path><path fill="#fff" d="M32.484,29.656l-2.828,2.828l-14.14-14.14l2.828-2.828L32.484,29.656z"></path>
+                                </svg>
+                                <span class="ml-2">キャンセル</span>
+                            </div>
                         </button>
                         <button type="button"
                             wire:click="confirmOrder"
@@ -153,7 +168,12 @@
                             x-on:touchend="$el.classList.remove('pressed-active')"
                             x-on:touchcancel="$el.classList.remove('pressed-active')"
                         >
-                            注文確定
+                            <div class="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="24" height="24" viewBox="0 0 48 48">
+                                  <path fill="#43A047" d="M40.6 12.1L17 35.7 7.4 26.1 4.6 29 17 41.3 43.4 14.9z"></path>
+                                </svg>
+                                <span class="ml-2">注文確定</span>
+                            </div>
                         </button>
                     </div>
                 </div>
@@ -166,7 +186,7 @@
                 <div class="w-1/3 p-6 rounded-lg shadow-lg bg-white text-black dark:bg-gray-900 dark:text-white space-y-4">
                     <h2 class="text-xl font-bold">オプション選択</h2>
                     <div class="space-y-2">
-                        <p>この商品には複数のオプションが用意されています。必要なオプションを選択してください。</p>
+                        <p>この商品にはオプションが用意されています。必要なオプションを選択してください。</p>
                         @if (!empty($selectedProductOptions))
                             <ul class="space-y-2">
                                 @foreach ($selectedProductOptions as $option)
@@ -185,12 +205,18 @@
                             wire:click="cancelOptionSelection"
                             class="border border-red-500 text-red-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hover:bg-red-500 hover:text-white"
                         >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                             キャンセル
                         </button>
                         <button type="button"
                             wire:click="confirmOptionSelection"
                             class="border border-green-500 text-green-500 rounded-lg px-4 py-2 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 hover:bg-green-500 hover:text-white"
                         >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
                             確定する
                         </button>
                     </div>
@@ -198,5 +224,8 @@
             </div>
         @endif
 
+        <footer class="mt-8 text-center text-sm text-gray-600">
+            Icon by <a href="https://icons8.com">Icons8</a>
+        </footer>
     </div>
 </x-filament::page>

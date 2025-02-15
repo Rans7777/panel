@@ -55,7 +55,7 @@
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
     }
     
-    button {
+    button.login-button {
         width: 100%;
         padding: 12px;
         background-color: #ea580c;
@@ -66,6 +66,9 @@
         cursor: pointer;
         font-size: 1rem;
         transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     button:hover {
@@ -137,16 +140,40 @@
         color: #dc2626;
         margin-top: 0.25rem;
     }
+    
+    footer.custom-footer {
+        margin-top: 14px;
+        text-align: center;
+        font-size: 0.875rem;
+        color: #4b5563;
+    }
+    
+    .icon-wrapper,
+    .dummy-icon {
+        width: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .dummy-icon {
+        visibility: hidden;
+    }
 </style>
 @endpush
 
 <div id="login-component">
     <div class="form-container bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200">
-        <h1 class="mb-6 text-2xl font-bold">ログイン</h1>
+        <h1 class="mb-6 text-2xl font-bold">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.105 0 2-.895 2-2V7a2 2 0 10-4 0v2c0 1.105.895 2 2 2zM6 11h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2z" />
+            </svg>
+            ログイン
+        </h1>
         <form wire:submit.prevent="authenticate">
             <div class="form-group">
-                <label for="name" class="text-gray-900 dark:text-gray-200">
-                    ユーザー名<span class="required">*</span>
+                <label for="name" class="flex items-center text-gray-900 dark:text-gray-200 ml-2">
+                    <img width="24" height="24" src="https://img.icons8.com/fluency/24/user-male-circle--v1.png" alt="login_account"/>
+                    ユーザー名<span class="required ml-1">*</span>
                 </label>
                 <input
                     type="text"
@@ -160,8 +187,9 @@
             </div>
 
             <div class="form-group">
-                <label for="password" class="dark:text-gray-200">
-                    パスワード<span class="required">*</span>
+                <label for="password" class="flex items-center text-gray-900 dark:text-gray-200">
+                    <img width="24" height="24" class="mr-2" src="https://img.icons8.com/fluency/24/password--v1.png" alt="login_password"/>
+                    パスワード<span class="required ml-1">*</span>
                 </label>
                 <input 
                     type="password"
@@ -200,8 +228,17 @@
                 </div>
             @endif
 
-            <button type="submit">ログイン</button>
+            <button type="submit" class="login-button">
+                <span class="icon-wrapper">
+                    <img width="24" height="24" src="https://img.icons8.com/fluency/24/login-rounded-right.png" alt="login-rounded-right"/>
+                </span>
+                <span class="button-text">ログイン</span>
+                <span class="dummy-icon"></span>
+            </button>
         </form>
+        <footer class="custom-footer">
+            Icon by <a href="https://icons8.com">Icons8</a>
+        </footer>
     </div>
 </div>
 
