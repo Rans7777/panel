@@ -106,7 +106,7 @@ final class OrdersResource extends Resource
                 ->date('M d, Y'),
         ])
             ->filters([
-                Tables\Filters\Filter::make('商品名')
+                Tables\Filters\Filter::make('name')
                     ->form([
                         Forms\Components\TextInput::make('name')
                             ->label('商品名'),
