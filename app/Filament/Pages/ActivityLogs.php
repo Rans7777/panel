@@ -54,14 +54,16 @@ final class ActivityLogs extends Page implements HasTable
     protected function getTableColumns(): array
     {
         return [
-            Tables\Columns\BadgeColumn::make('log_name')
+            Tables\Columns\TextColumn::make('log_name')
                 ->label('ログレベル')
-                ->colors([
-                    'info' => 'primary',
-                    'warning' => 'warning',
-                    'error' => 'danger',
-                ])
-                ->searchable(),
+                ->color(function ($state) {
+                    return match ($state) {
+                        'info' => 'primary',
+                        'warning' => 'warning',
+                        'error' => 'danger',
+                        default => null,
+                    };
+                }),
             Tables\Columns\TextColumn::make('description')
                 ->label('ログ')
                 ->searchable(),
