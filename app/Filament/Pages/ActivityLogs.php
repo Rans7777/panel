@@ -74,8 +74,9 @@ final class ActivityLogs extends Page implements HasTable
                     'properties->ip_address',
                 ]),
             Tables\Columns\TextColumn::make('created_at')
-                ->dateTime()
-                ->label('日時'),
+                ->label('日時')
+                ->sortable()
+                ->dateTime('Y年m月d日 H:i:s'),
         ];
     }
 

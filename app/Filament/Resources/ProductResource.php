@@ -121,7 +121,7 @@ final class ProductResource extends Resource
                 ]),
             Tables\Columns\TextColumn::make('created_at')
                 ->label('登録日')
-                ->dateTime()
+                ->dateTime('Y年m月d日')
                 ->extraAttributes(['class' => 'text-sm text-gray-500']),
         ])
             ->actions([

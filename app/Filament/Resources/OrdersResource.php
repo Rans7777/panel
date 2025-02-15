@@ -103,7 +103,7 @@ final class OrdersResource extends Resource
             Tables\Columns\TextColumn::make('created_at')
                 ->label('注文日')
                 ->sortable()
-                ->date('M d, Y'),
+                ->date('Y年m月d日 H:i:s'),
         ])
             ->filters([
                 Tables\Filters\Filter::make('name')

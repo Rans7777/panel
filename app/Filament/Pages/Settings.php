@@ -106,8 +106,9 @@ final class Settings extends Page implements Forms\Contracts\HasForms
     {
         return [
             Forms\Components\Section::make('アプリケーション基本設定')
-                ->description('アプリケーションの基本情報（名前、デバッグモード、タイムゾーン、ロケール、URL）を設定します。')
+                ->description('アプリケーションの基本情報を設定します。')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\TextInput::make('APP_NAME')
                         ->label('APP_NAME')
@@ -132,6 +133,7 @@ final class Settings extends Page implements Forms\Contracts\HasForms
             Forms\Components\Section::make('ログ・認証設定')
                 ->description('ログレベルやログイン試行回数、ブロック時間の設定を行います。')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\Select::make('LOG_LEVEL')
                         ->label('LOG_LEVEL')
@@ -158,8 +160,9 @@ final class Settings extends Page implements Forms\Contracts\HasForms
                 ]),
 
             Forms\Components\Section::make('データベース接続設定')
-                ->description('利用するデータベースの種類と接続情報を設定します。SQLite を選択した場合、接続情報は自動的に非表示になります。')
+                ->description('利用するデータベースの種類と接続情報を設定します。')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\Select::make('DB_CONNECTION')
                         ->label('DB_CONNECTION')
@@ -194,6 +197,7 @@ final class Settings extends Page implements Forms\Contracts\HasForms
             Forms\Components\Section::make('Turnstile サービス設定')
                 ->description('Turnstile サービスのサイトキーとシークレットキーを設定します。')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Password::make('TURNSTILE_SITEKEY')
                         ->label('TURNSTILE_SITEKEY'),
@@ -204,6 +208,7 @@ final class Settings extends Page implements Forms\Contracts\HasForms
             Forms\Components\Section::make('webhook 通知設定')
                 ->description('通知用のWebhook URL を設定します。')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\TextInput::make('DISCORD_WEBHOOK_URL')
                         ->label('DISCORD_WEBHOOK_URL')

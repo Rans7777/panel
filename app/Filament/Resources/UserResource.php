@@ -77,7 +77,7 @@ final class UserResource extends Resource
                     ->getStateUsing(fn ($record) => Gravatar::get($record->email, 100)),
                 Tables\Columns\TextColumn::make('name')->sortable()->searchable(),
                 Tables\Columns\BooleanColumn::make('is_active')->label('有効'),
-                Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('created_at')->dateTime('Y年m月d日 H:i:s')->sortable(),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
