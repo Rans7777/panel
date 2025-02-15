@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "33bb79b7e6ed094ed6a6b54b41dfdd38",
+    "content-hash": "4fd47822f9a342c191a70d3d3d5bc34d",
     "packages": [
         {
             "name": "andrewdwallo/filament-selectify",
