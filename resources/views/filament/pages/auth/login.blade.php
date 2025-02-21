@@ -169,7 +169,8 @@
             </svg>
             ログイン
         </h1>
-        <form wire:submit.prevent="authenticate">
+        <form wire:submit.prevent="authenticate" method="POST">
+            @csrf
             <div class="form-group">
                 <label for="name" class="flex items-center text-gray-900 dark:text-gray-200 ml-2">
                     <img width="24" height="24" src="https://img.icons8.com/fluency/24/user-male-circle--v1.png" alt="login_account"/>
@@ -177,8 +178,10 @@
                 </label>
                 <input
                     type="text"
+                    required
                     id="name"
-                    wire:model.lazy="name"
+                    name="name"
+                    wire:model.defer="name"
                     placeholder="ユーザー名を入力してください"
                     class="bg-gray-50 dark:bg-gray-600 dark:text-white">
                 @error('name')
@@ -193,8 +196,10 @@
                 </label>
                 <input 
                     type="password"
+                    required
                     id="password"
-                    wire:model.lazy="password"
+                    name="password"
+                    wire:model.defer="password"
                     placeholder="パスワードを入力してください"
                     class="bg-gray-50 dark:bg-gray-600 dark:text-white">
             </div>
@@ -203,7 +208,7 @@
                 <input 
                     id="remember"
                     type="checkbox"
-                    wire:model.lazy="remember"
+                    wire:model.defer="remember"
                     class="rounded border-gray-300 shadow-sm focus:ring focus:ring-orange-500">
                 <label for="remember">Remember me</label>
             </div>

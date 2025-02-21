@@ -6,10 +6,10 @@ namespace App\Filament\Pages\Auth;
 
 use App\Models\LoginAttempt;
 use App\Models\User;
-use Filament\Facades\Filament;
 use Filament\Pages\Auth\Login as BaseLogin;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Filament\Http\Responses\Auth\Contracts\LoginResponse;
 
 final class Login extends BaseLogin
 {
@@ -23,8 +23,13 @@ final class Login extends BaseLogin
 
     public string $turnstileToken = '';
 
-    public function authenticate(): ?\Filament\Http\Responses\Auth\Contracts\LoginResponse
+    public function authenticate(): ?LoginResponse
     {
+        $credential = $this->validate([
+            'name' => 'required',
+            'password' => 'required',
+        ]);
+
         $ipAddress = request()->ip();
 
         $loginAttempt = LoginAttempt::where('ip_address', $ipAddress)->first();
@@ -40,7 +45,6 @@ final class Login extends BaseLogin
                     ->withProperties(['ip_address' => $ipAddress])
                     ->log("IPアドレス '{$ipAddress}' からのログインが試行制限に達したためブロックされました");
                 $this->addError('name', 'このIPアドレスからのログインはブロックされています。');
-
                 return null;
             } else {
                 $loginAttempt->attempts = 0;
@@ -59,7 +63,6 @@ final class Login extends BaseLogin
             $result = $response->json();
             if (!isset($result['success']) || !$result['success']) {
                 $this->addError('turnstileToken', 'Cloudflare Turnstile 認証に失敗しました。');
-
                 return null;
             }
         }
@@ -67,26 +70,17 @@ final class Login extends BaseLogin
         $user = User::where('name', $this->name)->first();
         if ($user && !$user->is_active) {
             $this->addError('name', 'このアカウントは無効です。');
-
             return null;
         }
 
-        if (Auth::guard(config('filament.auth.guard'))->attempt([
-            'name' => $this->name,
-            'password' => $this->password,
-        ], $this->remember)) {
+        if (Auth::guard(config('filament.auth.guard'))->attempt($credential, $this->remember)) {
             if ($loginAttempt) {
                 $loginAttempt->delete();
             }
-
             activity()
                 ->useLog('info')
                 ->withProperties(['ip_address' => $ipAddress])
                 ->log("ユーザー '{$this->name}' がログインしました");
-
-            $url = session()->pull('url.intended', Filament::getUrl());
-            $this->redirect($url);
-
             return null;
         }
 
@@ -106,9 +100,7 @@ final class Login extends BaseLogin
             ->useLog('error')
             ->withProperties(['ip_address' => $ipAddress])
             ->log("ユーザー '{$this->name}' がログインに失敗しました");
-
         $this->addError('name', 'ログイン情報が正しくありません。');
-
         return null;
     }
 }

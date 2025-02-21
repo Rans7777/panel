@@ -7,12 +7,5 @@ Route::get('/', function () {
     return;
 });
 
-Route::get('/admin/login', Login::class)
+Route::post('/admin/login', [Login::class, 'authenticate'])
     ->name('filament.admin.auth.login');
-
-/*
-将来的な実装かもしれない
-Route::get('/order', function () {
-    return view('filament.pages.order-page');
-});
-*/
