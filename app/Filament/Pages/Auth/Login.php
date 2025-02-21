@@ -26,8 +26,8 @@ final class Login extends BaseLogin
     public function authenticate(): ?LoginResponse
     {
         $credential = $this->validate([
-            'name' => 'required',
-            'password' => 'required',
+            'name' => ['required'],
+            'password' => ['required'],
         ]);
 
         $ipAddress = request()->ip();
