@@ -11,7 +11,7 @@ final class Orders extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'quantity', 'image', 'total_price', 'options'];
+    protected $fillable = ['product_id', 'quantity', 'image', 'total_price', 'options'];
 
     protected $casts = [
         'options' => 'array',
