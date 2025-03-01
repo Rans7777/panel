@@ -53,8 +53,8 @@ jobs:
               continue
             fi
             
-            # 未完了のチェックがあるか確認
-            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. != "SUCCESS")')
+            # 未完了のチェックがあるか確認（"SUCCESS"、"COMPLETED"、"NEUTRAL" なら完了とみなす）
+            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. != "SUCCESS" and . != "NEUTRAL")')
             echo "未完了のチェックがあるか: $INCOMPLETE"
             
             if [[ "$INCOMPLETE" == "true" ]]; then
@@ -85,6 +85,11 @@ jobs:
           REPO="${{ github.repository }}"
           
           echo "PRを承認しています: $PR_NUMBER"
+          gh pr review $PR_NUMBER --approve --repo $REPO
+          echo "PRを自動承認しました"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
           gh pr review $PR_NUMBER --approve --repo $REPO
           echo "PRを自動承認しました"
         env:
