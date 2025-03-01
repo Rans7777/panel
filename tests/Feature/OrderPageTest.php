@@ -1,267 +1,278 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Filament\Pages\OrderPage;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class OrderPageTest extends TestCase
-{
-    use RefreshDatabase;
+uses(RefreshDatabase::class);
 
-    public function test_mount_initializes_cart_and_totalPrice()
-    {
-        session()->put('cart', [
-            [
-                'id' => 1,
-                'name' => 'Test Product',
-                'image' => 'test.jpg',
-                'price' => 100,
-                'quantity' => 2,
-            ]
-        ]);
-        Product::create([
-            'id'    => 1,
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 100,
-            'stock' => 10,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $this->assertCount(1, $orderPage->cart);
-        $this->assertEquals(200, $orderPage->totalPrice);
-    }
+test('mount initializes cart and total price', function () {
+    session()->put('cart', [
+        [
+            'id'       => 1,
+            'name'     => 'Test Product',
+            'image'    => 'test.jpg',
+            'price'    => 100,
+            'quantity' => 2,
+        ],
+    ]);
+    Product::create([
+        'id'    => 1,
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 100,
+        'stock' => 10,
+    ]);
 
-    public function test_addToCart_success()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 150,
-            'stock' => 5,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $this->assertCount(1, $orderPage->cart);
-        $this->assertEquals($product->id, $orderPage->cart[0]['id']);
-        $this->assertEquals(1, $orderPage->cart[0]['quantity']);
-        $this->assertEquals(150, $orderPage->totalPrice);
-        $this->assertEquals($orderPage->cart, session('cart'));
-    }
+    $orderPage = new OrderPage();
+    $orderPage->mount();
 
-    public function test_addToCart_increments_quantity_if_item_exists()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 150,
-            'stock' => 5,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $orderPage->addToCart($product->id);
-        $this->assertCount(1, $orderPage->cart);
-        $this->assertEquals(2, $orderPage->cart[0]['quantity']);
-        $this->assertEquals(300, $orderPage->totalPrice);
-    }
+    expect($orderPage->cart)->toHaveCount(1);
+    expect($orderPage->totalPrice)->toEqual(200);
+});
 
-    public function test_addToCart_does_not_add_when_stock_insufficient()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 100,
-            'stock' => 1,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $orderPage->addToCart($product->id);
-        $this->assertCount(1, $orderPage->cart);
-        $this->assertEquals(1, $orderPage->cart[0]['quantity']);
-    }
+test('addToCart success', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 150,
+        'stock' => 5,
+    ]);
 
-    public function test_updateQuantity_updates_quantity_correctly()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 200,
-            'stock' => 10,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $orderPage->updateQuantity(0, 3);
-        $this->assertEquals(3, $orderPage->cart[0]['quantity']);
-        $this->assertEquals(600, $orderPage->totalPrice);
-    }
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
 
-    public function test_updateQuantity_removes_item_when_quantity_set_to_zero()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 200,
-            'stock' => 10,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $orderPage->updateQuantity(0, 0);
-        $this->assertCount(0, $orderPage->cart);
-        $this->assertEquals(0, $orderPage->totalPrice);
-    }
+    expect($orderPage->cart)->toHaveCount(1);
+    expect($orderPage->cart[0]['id'])->toEqual($product->id);
+    expect($orderPage->cart[0]['quantity'])->toEqual(1);
+    expect($orderPage->totalPrice)->toEqual(150);
+    expect(session('cart'))->toEqual($orderPage->cart);
+});
 
-    public function test_removeFromCart_removes_item_correctly()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 100,
-            'stock' => 10,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $this->assertCount(1, $orderPage->cart);
-        $orderPage->removeFromCart(0);
-        $this->assertCount(0, $orderPage->cart);
-    }
+test('addToCart increments quantity if item exists', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 150,
+        'stock' => 5,
+    ]);
 
-    public function test_calculateChange_calculates_correctly()
-    {
-        $orderPage = new OrderPage();
-        $orderPage->totalPrice = 500;
-        $orderPage->paymentAmount = 800;
-        $orderPage->calculateChange();
-        $this->assertEquals(300, $orderPage->changeAmount);
-    }
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
+    $orderPage->addToCart($product->id);
 
-    public function test_updatedPaymentAmount_updates_correctly()
-    {
-        $orderPage = new OrderPage();
-        $orderPage->updatedPaymentAmount(1000);
-        $this->assertEquals(1000, $orderPage->paymentAmount);
-        $orderPage->updatedPaymentAmount('');
-        $this->assertEquals(0, $orderPage->paymentAmount);
-    }
+    expect($orderPage->cart)->toHaveCount(1);
+    expect($orderPage->cart[0]['quantity'])->toEqual(2);
+    expect($orderPage->totalPrice)->toEqual(300);
+});
 
-    public function test_confirmOrder_successful_order()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 250,
-            'stock' => 5,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $orderPage->paymentAmount = 250;
-        $orderPage->confirmOrder();
-        $this->assertEmpty($orderPage->cart);
-        $this->assertFalse($orderPage->showPaymentPopup);
-        $this->assertNull(session('cart'));
-        $updatedProduct = Product::find($product->id);
-        $this->assertEquals(4, $updatedProduct->stock);
-        $this->assertDatabaseHas('orders', [
-            'product_id'  => $product->id,
-            'quantity'    => 1,
-            'total_price' => 250,
-        ]);
-    }
+test('addToCart does not add when stock insufficient', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 100,
+        'stock' => 1,
+    ]);
 
-    public function test_confirmOrder_fails_with_empty_cart()
-    {
-        $orderPage = new OrderPage();
-        $orderPage->cart = [];
-        $orderPage->paymentAmount = 0;
-        $orderPage->confirmOrder();
-        $this->assertEmpty($orderPage->cart);
-    }
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
+    $orderPage->addToCart($product->id);
 
-    public function test_confirmOrder_fails_with_insufficient_payment()
-    {
-        $product = Product::create([
-            'name'  => 'Test Product',
-            'image' => 'test.jpg',
-            'price' => 300,
-            'stock' => 5,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->addToCart($product->id);
-        $orderPage->paymentAmount = 200;
-        $orderPage->confirmOrder();
-        $updatedProduct = Product::find($product->id);
-        $this->assertEquals(5, $updatedProduct->stock);
-        $this->assertDatabaseMissing('orders', [
-            'product_id' => $product->id,
-        ]);
-    }
+    expect($orderPage->cart)->toHaveCount(1);
+    expect($orderPage->cart[0]['quantity'])->toEqual(1);
+});
 
-    public function test_handleProductClick_shows_options_popup_when_options_exist()
-    {
-        $product = Product::create([
-            'name' => 'Test Product with Options',
-            'image' => 'test.jpg',
-            'price' => 200,
-            'stock' => 10,
-        ]);
-        $product->options()->create([
-            'option_name' => 'Extra Cheese',
-            'price' => 50,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->handleProductClick($product->id);
-        $this->assertTrue($orderPage->showOptionsPopup);
-        $this->assertEquals($product->id, $orderPage->selectedProductId);
-        $this->assertCount(1, $orderPage->selectedProductOptions);
-    }
+test('updateQuantity updates quantity correctly', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 200,
+        'stock' => 10,
+    ]);
 
-    public function test_confirmOptionSelection_adds_product_with_options()
-    {
-        $product = Product::create([
-            'name' => 'Test Product with Options',
-            'image' => 'test.jpg',
-            'price' => 200,
-            'stock' => 10,
-        ]);
-        $option = $product->options()->create([
-            'option_name' => 'Extra Cheese',
-            'price' => 50,
-        ]);
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-        $orderPage->handleProductClick($product->id);
-        $orderPage->selectedOptionIds = [$option->id];
-        $orderPage->confirmOptionSelection();
-        $this->assertCount(1, $orderPage->cart);
-        $this->assertEquals($product->id, $orderPage->cart[0]['id']);
-        $this->assertEquals(1, $orderPage->cart[0]['quantity']);
-        $this->assertEquals(250, $orderPage->cart[0]['price']);
-        $this->assertArrayHasKey('options', $orderPage->cart[0]);
-        $this->assertEquals(session('cart'), $orderPage->cart);
-    }
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
+    $orderPage->updateQuantity(0, 3);
 
-    public function test_cancelOptionSelection_resets_selection()
-    {
-        $orderPage = new OrderPage();
-        $orderPage->selectedProductId = 1;
-        $orderPage->selectedProductOptions = [['id' => 1, 'option_name' => 'Extra Cheese', 'price' => 50]];
-        $orderPage->selectedOptionIds = [1];
-        $orderPage->showOptionsPopup = true;
-        $orderPage->cancelOptionSelection();
-        $this->assertNull($orderPage->selectedProductId);
-        $this->assertEmpty($orderPage->selectedProductOptions);
-        $this->assertEmpty($orderPage->selectedOptionIds);
-        $this->assertFalse($orderPage->showOptionsPopup);
-    }
-}
+    expect($orderPage->cart[0]['quantity'])->toEqual(3);
+    expect($orderPage->totalPrice)->toEqual(600);
+});
+
+test('updateQuantity removes item when quantity set to zero', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 200,
+        'stock' => 10,
+    ]);
+
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
+    $orderPage->updateQuantity(0, 0);
+
+    expect($orderPage->cart)->toHaveCount(0);
+    expect($orderPage->totalPrice)->toEqual(0);
+});
+
+test('removeFromCart removes item correctly', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 100,
+        'stock' => 10,
+    ]);
+
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
+
+    expect($orderPage->cart)->toHaveCount(1);
+    $orderPage->removeFromCart(0);
+    expect($orderPage->cart)->toHaveCount(0);
+});
+
+test('calculateChange calculates correctly', function () {
+    $orderPage = new OrderPage();
+    $orderPage->totalPrice = 500;
+    $orderPage->paymentAmount = 800;
+    $orderPage->calculateChange();
+
+    expect($orderPage->changeAmount)->toEqual(300);
+});
+
+test('updatedPaymentAmount updates correctly', function () {
+    $orderPage = new OrderPage();
+    $orderPage->updatedPaymentAmount(1000);
+    expect($orderPage->paymentAmount)->toEqual(1000);
+    $orderPage->updatedPaymentAmount('');
+    expect($orderPage->paymentAmount)->toEqual(0);
+});
+
+test('confirmOrder successful order', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 250,
+        'stock' => 5,
+    ]);
+
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
+    $orderPage->paymentAmount = 250;
+    $orderPage->confirmOrder();
+
+    expect($orderPage->cart)->toBeEmpty();
+    expect($orderPage->showPaymentPopup)->toBeFalse();
+    expect(session('cart'))->toBeNull();
+
+    $updatedProduct = Product::find($product->id);
+    expect($updatedProduct->stock)->toEqual(4);
+
+    $this->assertDatabaseHas('orders', [
+        'product_id'  => $product->id,
+        'quantity'    => 1,
+        'total_price' => 250,
+    ]);
+});
+
+test('confirmOrder fails with empty cart', function () {
+    $orderPage = new OrderPage();
+    $orderPage->cart = [];
+    $orderPage->paymentAmount = 0;
+    $orderPage->confirmOrder();
+
+    expect($orderPage->cart)->toBeEmpty();
+});
+
+test('confirmOrder fails with insufficient payment', function () {
+    $product = Product::create([
+        'name'  => 'Test Product',
+        'image' => 'test.jpg',
+        'price' => 300,
+        'stock' => 5,
+    ]);
+
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->addToCart($product->id);
+    $orderPage->paymentAmount = 200;
+    $orderPage->confirmOrder();
+
+    $updatedProduct = Product::find($product->id);
+    expect($updatedProduct->stock)->toEqual(5);
+
+    $this->assertDatabaseMissing('orders', [
+        'product_id' => $product->id,
+    ]);
+});
+
+test('handleProductClick shows options popup when options exist', function () {
+    $product = Product::create([
+        'name'  => 'Test Product with Options',
+        'image' => 'test.jpg',
+        'price' => 200,
+        'stock' => 10,
+    ]);
+
+    $product->options()->create([
+        'option_name' => 'Extra Cheese',
+        'price'       => 50,
+    ]);
+
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->handleProductClick($product->id);
+
+    expect($orderPage->showOptionsPopup)->toBeTrue();
+    expect($orderPage->selectedProductId)->toEqual($product->id);
+    expect($orderPage->selectedProductOptions)->toHaveCount(1);
+});
+
+test('confirmOptionSelection adds product with options', function () {
+    $product = Product::create([
+        'name'  => 'Test Product with Options',
+        'image' => 'test.jpg',
+        'price' => 200,
+        'stock' => 10,
+    ]);
+
+    $option = $product->options()->create([
+        'option_name' => 'Extra Cheese',
+        'price'       => 50,
+    ]);
+
+    $orderPage = new OrderPage();
+    $orderPage->mount();
+    $orderPage->handleProductClick($product->id);
+    $orderPage->selectedOptionIds = [$option->id];
+    $orderPage->confirmOptionSelection();
+
+    expect($orderPage->cart)->toHaveCount(1);
+    expect($orderPage->cart[0]['id'])->toEqual($product->id);
+    expect($orderPage->cart[0]['quantity'])->toEqual(1);
+    expect($orderPage->cart[0]['price'])->toEqual(250);
+    expect($orderPage->cart[0])->toHaveKey('options');
+    expect(session('cart'))->toEqual($orderPage->cart);
+});
+
+test('cancelOptionSelection resets selection', function () {
+    $orderPage = new OrderPage();
+    $orderPage->selectedProductId = 1;
+    $orderPage->selectedProductOptions = [
+        ['id' => 1, 'option_name' => 'Extra Cheese', 'price' => 50]
+    ];
+    $orderPage->selectedOptionIds = [1];
+    $orderPage->showOptionsPopup = true;
+    $orderPage->cancelOptionSelection();
+
+    expect($orderPage->selectedProductId)->toBeNull();
+    expect($orderPage->selectedProductOptions)->toBeEmpty();
+    expect($orderPage->selectedOptionIds)->toBeEmpty();
+    expect($orderPage->showOptionsPopup)->toBeFalse();
+});
