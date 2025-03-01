@@ -4,20 +4,18 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
+use DateTimeZone;
 use Exception;
 use Filament\Forms;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use LaraZeus\Quantity\Components\Quantity;
-use Log;
-use Parfaitementweb\FilamentCountryField\Forms\Components\Country;
-use Rawilk\FilamentPasswordInput\Password;
-use Tapp\FilamentTimezoneField\Forms\Components\TimezoneSelect;
-use Wallo\FilamentSelectify\Components\ToggleButton;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\Intl\Locales;
 
 final class Settings extends Page implements Forms\Contracts\HasForms
 {
@@ -113,16 +111,21 @@ final class Settings extends Page implements Forms\Contracts\HasForms
                     Forms\Components\TextInput::make('APP_NAME')
                         ->label('APP_NAME')
                         ->required(),
-                    ToggleButton::make('APP_DEBUG')
+                    ToggleButtons::make('APP_DEBUG')
                         ->label('APP_DEBUG')
                         ->required()
-                        ->offLabel('無効')
-                        ->onLabel('有効'),
-                    TimezoneSelect::make('APP_TIMEZONE')
+                        ->options([
+                            'true' => '有効',
+                            'false' => '無効',
+                        ])
+                        ->default('true'),
+                    Forms\Components\Select::make('APP_TIMEZONE')
                         ->label('APP_TIMEZONE')
+                        ->options(collect(DateTimeZone::listIdentifiers())->mapWithKeys(fn ($timezone) => [$timezone => $timezone]))
                         ->required(),
-                    Country::make('APP_LOCALE')
+                    Forms\Components\Select::make('APP_LOCALE')
                         ->label('APP_LOCALE')
+                        ->options(collect(Locales::getLocales())->mapWithKeys(fn ($locale) => [$locale => $locale]))
                         ->required(),
                     Forms\Components\TextInput::make('APP_URL')
                         ->label('APP_URL')
@@ -146,13 +149,14 @@ final class Settings extends Page implements Forms\Contracts\HasForms
                             'critical' => 'critical',
                         ])
                         ->required(),
-                    Quantity::make('LOGIN_ATTEMPT_LIMIT')
+                    Forms\Components\TextInput::make('LOGIN_ATTEMPT_LIMIT')
                         ->label('LOGIN_ATTEMPT_LIMIT')
                         ->default(5)
                         ->minValue(0)
                         ->suffix('回')
+                        ->numeric()
                         ->required(),
-                    Quantity::make('LOGIN_BLOCK_TIME')
+                    Forms\Components\TextInput::make('LOGIN_BLOCK_TIME')
                         ->label('LOGIN_BLOCK_TIME')
                         ->numeric()
                         ->suffix('分')
@@ -188,8 +192,9 @@ final class Settings extends Page implements Forms\Contracts\HasForms
                         ->label('DB_USERNAME')
                         ->required()
                         ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
-                    Password::make('DB_PASSWORD')
+                    Forms\Components\TextInput::make('DB_PASSWORD')
                         ->label('DB_PASSWORD')
+                        ->password()
                         ->required()
                         ->hidden(fn (callable $get): bool => $get('DB_CONNECTION') === 'sqlite'),
                 ]),
@@ -199,10 +204,12 @@ final class Settings extends Page implements Forms\Contracts\HasForms
                 ->collapsible()
                 ->collapsed()
                 ->schema([
-                    Password::make('TURNSTILE_SITEKEY')
-                        ->label('TURNSTILE_SITEKEY'),
-                    Password::make('TURNSTILE_SECRET')
-                        ->label('TURNSTILE_SECRET'),
+                    Forms\Components\TextInput::make('TURNSTILE_SITEKEY')
+                        ->label('TURNSTILE_SITEKEY')
+                        ->password(),
+                    Forms\Components\TextInput::make('TURNSTILE_SECRET')
+                        ->label('TURNSTILE_SECRET')
+                        ->password(),
                 ]),
 
             Forms\Components\Section::make('webhook 通知設定')

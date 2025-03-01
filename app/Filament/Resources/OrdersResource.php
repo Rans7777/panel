@@ -6,11 +6,10 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrdersResource\Pages;
 use App\Models\Orders;
-use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use LaraZeus\Quantity\Components\Quantity;
 
 final class OrdersResource extends Resource
 {
@@ -32,7 +31,7 @@ final class OrdersResource extends Resource
                                     ->label('商品名')
                                     ->relationship('product', 'name')
                                     ->required(),
-                                Flatpickr::make('created_at')
+                                DatePicker::make('created_at')
                                     ->label('注文日')
                                     ->required(),
                             ]),
@@ -41,15 +40,17 @@ final class OrdersResource extends Resource
                         ->schema([
                             Forms\Components\Card::make()->schema([
                                 Forms\Components\Grid::make(2)->schema([
-                                    Quantity::make('quantity')
+                                    Forms\Components\TextInput::make('quantity')
                                         ->label('個数')
                                         ->default(0)
                                         ->minValue(0)
+                                        ->numeric()
                                         ->required(),
-                                    Quantity::make('total_price')
+                                    Forms\Components\TextInput::make('total_price')
                                         ->label('合計金額')
                                         ->default(0)
                                         ->minValue(0)
+                                        ->numeric()
                                         ->required(),
                                 ]),
                             ]),
@@ -120,9 +121,9 @@ final class OrdersResource extends Resource
 
                 Tables\Filters\Filter::make('created_at')
                     ->form([
-                        Flatpickr::make('from')
+                        DatePicker::make('from')
                             ->label('開始日'),
-                        Flatpickr::make('until')
+                        DatePicker::make('until')
                             ->label('終了日'),
                     ])
                     ->query(function ($query, array $data): mixed {

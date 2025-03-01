@@ -13,7 +13,6 @@ use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
-use LaraZeus\Quantity\Components\Quantity;
 
 final class ProductResource extends Resource
 {
@@ -34,16 +33,18 @@ final class ProductResource extends Resource
                         ->maxLength(255)
                         ->columnSpan(2),
 
-                    Quantity::make('price')
+                    Forms\Components\TextInput::make('price')
                         ->label('価格')
                         ->default(0)
                         ->minValue(0)
+                        ->numeric()
                         ->required(),
 
-                    Quantity::make('stock')
+                    Forms\Components\TextInput::make('stock')
                         ->label('在庫数')
                         ->default(0)
                         ->minValue(0)
+                        ->numeric()
                         ->required(),
 
                     Forms\Components\FileUpload::make('image')
@@ -70,7 +71,7 @@ final class ProductResource extends Resource
                                 ->label('オプション名')
                                 ->required()
                                 ->maxLength(255),
-                            Quantity::make('price')
+                            Forms\Components\TextInput::make('price')
                                 ->label('値段')
                                 ->default(0)
                                 ->minValue(0)

@@ -6,14 +6,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
-use Awcodes\FilamentGravatar\Gravatar;
 use Filament\Forms;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Rawilk\FilamentPasswordInput\Password;
-use Wallo\FilamentSelectify\Components\ToggleButton;
 
 final class UserResource extends Resource
 {
@@ -41,22 +39,21 @@ final class UserResource extends Resource
                     ->unique(ignoreRecord: true)
                     ->label('メールアドレス'),
 
-                Password::make('password')
-                    ->regeneratePassword()
-                    ->newPasswordLength(14)
-                    ->maxLength(255)
+                Forms\Components\TextInput::make('password')
+                    ->password()
                     ->dehydrated(fn ($state) => filled($state))
                     ->dehydrateStateUsing(fn ($state) => bcrypt($state))
                     ->required(fn ($livewire) => !isset($livewire->record) || auth()->id() !== $livewire->record->id)
                     ->label('パスワード'),
 
-                ToggleButton::make('is_active')
+                ToggleButtons::make('is_active')
                     ->label('アカウントの状態')
-                    ->offColor('danger')
-                    ->onColor('primary')
-                    ->offLabel('無効')
-                    ->onLabel('有効')
-                    ->default(true),
+                    ->options([
+                        'true' => '有効',
+                        'false' => '無効',
+                    ])
+                    ->default('true')
+                    ->inline(),
 
                 Forms\Components\Select::make('roles')
                     ->multiple()
@@ -71,10 +68,6 @@ final class UserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('gravatar')
-                    ->label('Avatar')
-                    ->circular()
-                    ->getStateUsing(fn ($record) => Gravatar::get($record->email, 100)),
                 Tables\Columns\TextColumn::make('name')->sortable()->searchable(),
                 Tables\Columns\BooleanColumn::make('is_active')->label('有効'),
                 Tables\Columns\TextColumn::make('created_at')->dateTime('Y年m月d日 H:i:s')->sortable(),
