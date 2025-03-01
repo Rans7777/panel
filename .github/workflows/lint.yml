@@ -28,7 +28,7 @@ jobs:
           tools: composer
 
       - name: Install Dependencies
-        run: composer install --optimize-autoloader
+        run: composer install --no-interaction --no-scripts --no-progress
 
       - name: Run Larastan
         run: vendor/bin/phpstan analyse -c phpstan.neon --error-format=github --memory-limit=1G
@@ -51,7 +51,7 @@ jobs:
           tools: composer
 
       - name: Install Dependencies
-        run: composer install --optimize-autoloader
+        run: composer install --no-interaction --no-scripts --no-progress
 
       - name: Run Pint
         run: vendor/bin/pint --test
