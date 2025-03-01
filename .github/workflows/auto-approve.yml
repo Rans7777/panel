@@ -89,8 +89,3 @@ jobs:
           echo "PRを自動承認しました"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-          gh pr review $PR_NUMBER --approve --repo $REPO
-          echo "PRを自動承認しました"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
