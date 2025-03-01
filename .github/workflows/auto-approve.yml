@@ -18,14 +18,8 @@ jobs:
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
-          # 自分自身のワークフロー名
           SELF_WORKFLOW="${{ github.workflow }}"
-          # 除外するワークフロー（自分自身と他の自動承認関連のワークフローを指定）
           EXCLUDE_PATTERNS=("$SELF_WORKFLOW" "auto-approve")
-          
-          echo "PR番号: $PR_NUMBER"
-          echo "リポジトリ: $REPO"
-          echo "除外するワークフロー: ${EXCLUDE_PATTERNS[*]}"
           
           # 最大待機時間（5分）
           MAX_ATTEMPTS=30
@@ -60,7 +54,7 @@ jobs:
             fi
             
             # 未完了のチェックがあるか確認
-            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state] | any(. != "COMPLETED")')
+            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. != "SUCCESS")')
             echo "未完了のチェックがあるか: $INCOMPLETE"
             
             if [[ "$INCOMPLETE" == "true" ]]; then
