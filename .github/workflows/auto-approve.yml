@@ -19,7 +19,7 @@ jobs:
           MAX_ATTEMPTS=30
           while true; do
             CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json state,name)
-            INCOMPLETE=$(echo "$CHECKS_JSON" | jq '[.[] | .state] | any(. != "COMPLETED")')
+            INCOMPLETE=$(echo "$CHECKS_JSON" | jq '[.[] | .state] | any(. != "COMPLETED" and . != "NEUTRAL")')
             if [[ "$INCOMPLETE" == "true" ]]; then
               echo "Waiting for checks to complete..."
               ATTEMPTS=$((ATTEMPTS+1))
