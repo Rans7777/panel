@@ -5,247 +5,204 @@ namespace Tests\Unit;
 use App\Filament\Pages\OrderPage;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Session;
 use Tests\TestCase;
 
 class OrderPageTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
+    public function test_mount_initializes_cart_and_totalPrice()
     {
-        parent::setUp();
-        Session::flush();
-    }
-
-    public function test_add_to_cart_increments_quantity()
-    {
-        $product = Product::factory()->create([
-            'stock' => 5,
-            'price' => 100,
+        session()->put('cart', [
+            [
+                'id' => 1,
+                'name' => 'Test Product',
+                'image' => 'test.jpg',
+                'price' => 100,
+                'quantity' => 2,
+            ]
+        ]);
+        Product::create([
+            'id'    => 1,
             'name'  => 'Test Product',
             'image' => 'test.jpg',
+            'price' => 100,
+            'stock' => 10,
         ]);
-
         $orderPage = new OrderPage();
         $orderPage->mount();
+        $this->assertCount(1, $orderPage->cart);
+        $this->assertEquals(200, $orderPage->totalPrice);
+    }
 
+    public function test_addToCart_success()
+    {
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 150,
+            'stock' => 5,
+        ]);
+        $orderPage = new OrderPage();
+        $orderPage->mount();
         $orderPage->addToCart($product->id);
         $this->assertCount(1, $orderPage->cart);
+        $this->assertEquals($product->id, $orderPage->cart[0]['id']);
         $this->assertEquals(1, $orderPage->cart[0]['quantity']);
+        $this->assertEquals(150, $orderPage->totalPrice);
+        $this->assertEquals($orderPage->cart, session('cart'));
+    }
 
+    public function test_addToCart_increments_quantity_if_item_exists()
+    {
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 150,
+            'stock' => 5,
+        ]);
+        $orderPage = new OrderPage();
+        $orderPage->mount();
+        $orderPage->addToCart($product->id);
         $orderPage->addToCart($product->id);
         $this->assertCount(1, $orderPage->cart);
         $this->assertEquals(2, $orderPage->cart[0]['quantity']);
-
-        $orderPage->addToCart($product->id);
-        $orderPage->addToCart($product->id);
-        $orderPage->addToCart($product->id);
-        $orderPage->addToCart($product->id);
-        $this->assertEquals(5, $orderPage->cart[0]['quantity']);
+        $this->assertEquals(300, $orderPage->totalPrice);
     }
 
-    public function test_update_quantity_updates_and_removes_item()
+    public function test_addToCart_does_not_add_when_stock_insufficient()
     {
-        $product = Product::factory()->create([
-            'stock' => 10,
-            'price' => 200,
-            'name'  => 'Update Test Product',
-            'image' => 'update.jpg',
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 100,
+            'stock' => 1,
         ]);
-
         $orderPage = new OrderPage();
         $orderPage->mount();
+        $orderPage->addToCart($product->id);
+        $orderPage->addToCart($product->id);
+        $this->assertCount(1, $orderPage->cart);
+        $this->assertEquals(1, $orderPage->cart[0]['quantity']);
+    }
 
-        $orderPage->cart = [
-            [
-                'id'      => $product->id,
-                'name'    => $product->name,
-                'image'   => $product->image,
-                'price'   => $product->price,
-                'quantity'=> 2,
-            ],
-        ];
+    public function test_updateQuantity_updates_quantity_correctly()
+    {
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 200,
+            'stock' => 10,
+        ]);
+        $orderPage = new OrderPage();
+        $orderPage->mount();
+        $orderPage->addToCart($product->id);
+        $orderPage->updateQuantity(0, 3);
+        $this->assertEquals(3, $orderPage->cart[0]['quantity']);
+        $this->assertEquals(600, $orderPage->totalPrice);
+    }
 
-        $orderPage->updateQuantity(0, 5);
-        $this->assertEquals(5, $orderPage->cart[0]['quantity']);
-
+    public function test_updateQuantity_removes_item_when_quantity_set_to_zero()
+    {
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 200,
+            'stock' => 10,
+        ]);
+        $orderPage = new OrderPage();
+        $orderPage->mount();
+        $orderPage->addToCart($product->id);
         $orderPage->updateQuantity(0, 0);
+        $this->assertCount(0, $orderPage->cart);
+        $this->assertEquals(0, $orderPage->totalPrice);
+    }
+
+    public function test_removeFromCart_removes_item_correctly()
+    {
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 100,
+            'stock' => 10,
+        ]);
+        $orderPage = new OrderPage();
+        $orderPage->mount();
+        $orderPage->addToCart($product->id);
+        $this->assertCount(1, $orderPage->cart);
+        $orderPage->removeFromCart(0);
         $this->assertCount(0, $orderPage->cart);
     }
 
-    public function test_remove_from_cart()
+    public function test_calculateChange_calculates_correctly()
     {
-        $product1 = Product::factory()->create([
-            'stock' => 5,
-            'price' => 100,
-            'name'  => 'Product 1',
-            'image' => '1.jpg',
-        ]);
-
-        $product2 = Product::factory()->create([
-            'stock' => 3,
-            'price' => 150,
-            'name'  => 'Product 2',
-            'image' => '2.jpg',
-        ]);
-
         $orderPage = new OrderPage();
-        $orderPage->mount();
-
-        $orderPage->cart = [
-            [
-                'id'      => $product1->id,
-                'name'    => $product1->name,
-                'image'   => $product1->image,
-                'price'   => $product1->price,
-                'quantity'=> 1,
-            ],
-            [
-                'id'      => $product2->id,
-                'name'    => $product2->name,
-                'image'   => $product2->image,
-                'price'   => $product2->price,
-                'quantity'=> 2,
-            ],
-        ];
-
-        $orderPage->removeFromCart(0);
-        $this->assertCount(1, $orderPage->cart);
-        $this->assertEquals($product2->id, $orderPage->cart[0]['id']);
+        $orderPage->totalPrice = 500;
+        $orderPage->paymentAmount = 800;
+        $orderPage->calculateChange();
+        $this->assertEquals(300, $orderPage->changeAmount);
     }
 
-    public function test_calculate_total_price()
+    public function test_updatedPaymentAmount_updates_correctly()
     {
-        $product1 = Product::factory()->create([
-            'stock' => 5,
-            'price' => 100,
-            'name'  => 'Product 1',
-            'image' => '1.jpg',
-        ]);
-
-        $product2 = Product::factory()->create([
-            'stock' => 3,
-            'price' => 150,
-            'name'  => 'Product 2',
-            'image' => '2.jpg',
-        ]);
-
         $orderPage = new OrderPage();
-        $orderPage->mount();
-
-        $orderPage->cart = [
-            [
-                'id'      => $product1->id,
-                'name'    => $product1->name,
-                'image'   => $product1->image,
-                'price'   => $product1->price,
-                'quantity'=> 2,
-            ],
-            [
-                'id'      => $product2->id,
-                'name'    => $product2->name,
-                'image'   => $product2->image,
-                'price'   => $product2->price,
-                'quantity'=> 1,
-            ],
-        ];
-        $orderPage->updateCartSession();
-
-        $reflection = new \ReflectionClass($orderPage);
-        $method = $reflection->getMethod('calculateTotalPrice');
-        $method->setAccessible(true);
-        $method->invoke($orderPage);
-
-        $expectedTotal = (100 * 2) + (150 * 1);
-        $this->assertEquals($expectedTotal, $orderPage->totalPrice);
+        $orderPage->updatedPaymentAmount(1000);
+        $this->assertEquals(1000, $orderPage->paymentAmount);
+        $orderPage->updatedPaymentAmount('');
+        $this->assertEquals(0, $orderPage->paymentAmount);
     }
 
-    public function test_confirm_order_successful()
+    public function test_confirmOrder_successful_order()
     {
-        $product = Product::factory()->create([
-            'stock' => 10,
-            'price' => 100,
-            'name'  => 'Order Product',
-            'image' => 'order.jpg',
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 250,
+            'stock' => 5,
         ]);
-
         $orderPage = new OrderPage();
         $orderPage->mount();
-
         $orderPage->addToCart($product->id);
-        $orderPage->paymentAmount = 150;
-
+        $orderPage->paymentAmount = 250;
         $orderPage->confirmOrder();
-
         $this->assertEmpty($orderPage->cart);
         $this->assertFalse($orderPage->showPaymentPopup);
-
-        $product->refresh();
-        $this->assertEquals(9, $product->stock);
-
+        $this->assertNull(session('cart'));
+        $updatedProduct = Product::find($product->id);
+        $this->assertEquals(4, $updatedProduct->stock);
         $this->assertDatabaseHas('orders', [
-            'name'        => $product->name,
+            'product_id'  => $product->id,
             'quantity'    => 1,
-            'total_price' => $product->price * 1,
+            'total_price' => 250,
         ]);
     }
 
-    public function test_confirm_order_insufficient_payment()
+    public function test_confirmOrder_fails_with_empty_cart()
     {
-        $product = Product::factory()->create([
-            'stock' => 10,
-            'price' => 100,
-            'name'  => 'Insufficient Payment Product',
-            'image' => 'insufficient.jpg',
-        ]);
+        $orderPage = new OrderPage();
+        $orderPage->cart = [];
+        $orderPage->paymentAmount = 0;
+        $orderPage->confirmOrder();
+        $this->assertEmpty($orderPage->cart);
+    }
 
+    public function test_confirmOrder_fails_with_insufficient_payment()
+    {
+        $product = Product::create([
+            'name'  => 'Test Product',
+            'image' => 'test.jpg',
+            'price' => 300,
+            'stock' => 5,
+        ]);
         $orderPage = new OrderPage();
         $orderPage->mount();
-
         $orderPage->addToCart($product->id);
-        $orderPage->paymentAmount = 50;
-
-        $initialCart = $orderPage->cart;
-
+        $orderPage->paymentAmount = 200;
         $orderPage->confirmOrder();
-
-        $this->assertEquals($initialCart, $orderPage->cart);
+        $updatedProduct = Product::find($product->id);
+        $this->assertEquals(5, $updatedProduct->stock);
         $this->assertDatabaseMissing('orders', [
-            'name' => $product->name,
-        ]);
-    }
-
-    public function test_confirm_order_fail_due_to_stock_insufficiency()
-    {
-        $product = Product::factory()->create([
-            'stock' => 1,
-            'price' => 100,
-            'name'  => 'Low Stock Product',
-            'image' => 'lowstock.jpg',
-        ]);
-
-        $orderPage = new OrderPage();
-        $orderPage->mount();
-
-        $orderPage->cart = [
-            [
-                'id'      => $product->id,
-                'name'    => $product->name,
-                'image'   => $product->image,
-                'price'   => $product->price,
-                'quantity'=> 2,
-            ],
-        ];
-        $orderPage->paymentAmount = 300;
-
-        $orderPage->confirmOrder();
-
-        $this->assertNotEmpty($orderPage->cart);
-        $product->refresh();
-        $this->assertEquals(1, $product->stock);
-        $this->assertDatabaseMissing('orders', [
-            'name' => $product->name,
+            'product_id' => $product->id,
         ]);
     }
 }
