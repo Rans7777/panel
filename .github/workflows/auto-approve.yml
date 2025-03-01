@@ -10,43 +10,65 @@ jobs:
     permissions:
       pull-requests: write
       statuses: read
+      checks: read
 
     steps:
-      - name: Wait for all checks to complete
+      - name: Wait for checks to complete
         id: wait_for_checks
         run: |
-          ATTEMPTS=0
-          MAX_ATTEMPTS=30
-          while true; do
-            CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json state,name)
-            INCOMPLETE=$(echo "$CHECKS_JSON" | jq '[.[] | .state] | any(. != "COMPLETED" and . != "NEUTRAL")')
+          CURRENT_WORKFLOW="${{ github.workflow }}"
+
+          MAX_ATTEMPTS=60
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json name,status,conclusion)
+            
+            # 現在のワークフローを除外し、進行中のチェックがあるかどうかを確認
+            INCOMPLETE=$(echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '[.[] | select(.name != $current)] | any(.status == "in_progress" or .status == null or .conclusion == null)')
+            
             if [[ "$INCOMPLETE" == "true" ]]; then
-              echo "Waiting for checks to complete..."
-              ATTEMPTS=$((ATTEMPTS+1))
-              if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
-                echo "Timeout reached. Exiting loop."
-                exit 1
-              fi
+              echo "チェックの完了を待っています... (試行 $ATTEMPT/$MAX_ATTEMPTS)"
+              ATTEMPT=$((ATTEMPT+1))
               sleep 10
             else
+              echo "すべてのチェックが完了しました"
               break
             fi
           done
+
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+            echo "チェックの完了待ちがタイムアウトしました"
+            exit 1
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check if all checks passed
         id: check_status
         run: |
-          CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json state)
-          SUCCESS=$(echo "$CHECKS_JSON" | jq '[.[] | .state] | all(. == "COMPLETED")')
-          echo "status=$SUCCESS" >> "$GITHUB_OUTPUT"
+          CURRENT_WORKFLOW="${{ github.workflow }}"
+          CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json name,conclusion)
+
+          echo "チェック結果の詳細:"
+          echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '.[] | select(.name != $current) | {name: .name, conclusion: .conclusion}'
+
+          FAILED=$(echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '[.[] | select(.name != $current)] | any(.conclusion != "success" and .conclusion != "neutral")')
+
+          if [[ "$FAILED" == "false" ]]; then
+            echo "all_passed=true" >> "$GITHUB_OUTPUT"
+            echo "すべてのチェックが成功または中立です"
+          else
+            echo "all_passed=false" >> "$GITHUB_OUTPUT"
+            echo "一部のチェックが失敗または不明な状態です"
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Approve PR if all checks passed
-        if: steps.check_status.outputs.status == 'true'
+        if: steps.check_status.outputs.all_passed == 'true'
         run: |
           gh pr review ${{ github.event.pull_request.number }} --approve --repo ${{ github.repository }}
+          echo "PRを自動承認しました"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
