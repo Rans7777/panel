@@ -16,7 +16,6 @@ jobs:
       - name: Wait for checks to complete
         id: wait_for_checks
         run: |
-          # このワークフローを除外
           CURRENT_WORKFLOW="${{ github.workflow }}"
           
           # 最大待機時間（10分）
