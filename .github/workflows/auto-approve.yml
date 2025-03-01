@@ -19,61 +19,42 @@ jobs:
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
           SELF_WORKFLOW="${{ github.workflow }}"
-          EXCLUDE_PATTERNS=("$SELF_WORKFLOW" "auto-approve")
-          
-          # 最大待機時間（5分）
+          EXCLUDE_PATTERNS=("$SELF_WORKFLOW" "auto-approve") 
           MAX_ATTEMPTS=30
           ATTEMPT=0
-          
+
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-            echo "チェック試行 $ATTEMPT/$MAX_ATTEMPTS"
-            
-            # すべてのチェックの状態を取得
             CHECKS_JSON=$(gh pr checks $PR_NUMBER --repo $REPO --json name,state)
-            echo "取得したチェック情報:"
-            echo "$CHECKS_JSON" | jq
-            
-            # 除外パターンにマッチしないチェックのみをフィルタリング
             FILTERED_CHECKS=$(echo "$CHECKS_JSON" | jq -c '.')
             for PATTERN in "${EXCLUDE_PATTERNS[@]}"; do
               FILTERED_CHECKS=$(echo "$FILTERED_CHECKS" | jq --arg pattern "$PATTERN" '[.[] | select(.name | contains($pattern) | not)]')
             done
-            
-            echo "フィルタリング後のチェック:"
-            echo "$FILTERED_CHECKS" | jq
-            
-            # 他のチェックが存在するか確認
+
             CHECK_COUNT=$(echo "$FILTERED_CHECKS" | jq 'length')
-            echo "フィルタリング後のチェック数: $CHECK_COUNT"
-            
             if [ "$CHECK_COUNT" -eq 0 ]; then
-              echo "監視対象のチェックが見つかりません。一時停止して再試行します..."
               ATTEMPT=$((ATTEMPT+1))
               sleep 10
               continue
             fi
-            
-            # 未完了のチェックがあるか確認（"SUCCESS"、"COMPLETED"、"NEUTRAL" なら完了とみなす）
-            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. != "SUCCESS" and . != "NEUTRAL")')
-            echo "未完了のチェックがあるか: $INCOMPLETE"
-            
+
+            FAILED=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. == "FAILURE")')
+            if [[ "$FAILED" == "true" ]]; then
+              exit 1
+            fi
+
+            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any((. != "SUCCESS") and (. != "NEUTRAL"))')
             if [[ "$INCOMPLETE" == "true" ]]; then
-              echo "まだ完了していないチェックがあります。待機しています..."
-              # 未完了チェックの名前を表示
-              echo "$FILTERED_CHECKS" | jq '.[] | select(.state != "COMPLETED") | .name'
               ATTEMPT=$((ATTEMPT+1))
               sleep 10
             else
-              echo "すべてのチェックが完了しました。ループから抜けます。"
               break
             fi
           done
-          
+
           if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-            echo "チェックの完了待ちがタイムアウトしました"
             exit 1
           fi
-          
+
           echo "wait_completed=true" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -83,9 +64,6 @@ jobs:
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
-          
-          echo "PRを承認しています: $PR_NUMBER"
           gh pr review $PR_NUMBER --approve --repo $REPO
-          echo "PRを自動承認しました"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
