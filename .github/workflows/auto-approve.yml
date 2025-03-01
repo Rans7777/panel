@@ -13,53 +13,60 @@ jobs:
       checks: read
 
     steps:
-      - name: Wait for checks to complete
+      - name: Wait for checks to complete (excluding self)
         id: wait_for_checks
         run: |
-          # このワークフローを除外
-          CURRENT_WORKFLOW="${{ github.workflow }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
           REPO="${{ github.repository }}"
+          # 自分自身のワークフロー名
+          SELF_WORKFLOW="${{ github.workflow }}"
+          # 除外するワークフロー（自分自身と他の自動承認関連のワークフローを指定）
+          EXCLUDE_PATTERNS=("$SELF_WORKFLOW" "auto-approve")
+          
+          echo "PR番号: $PR_NUMBER"
+          echo "リポジトリ: $REPO"
+          echo "除外するワークフロー: ${EXCLUDE_PATTERNS[*]}"
           
           # 最大待機時間（5分）
           MAX_ATTEMPTS=30
           ATTEMPT=0
           
-          # デバッグ情報を出力
-          echo "現在のワークフロー: $CURRENT_WORKFLOW"
-          echo "PR番号: $PR_NUMBER"
-          echo "リポジトリ: $REPO"
-          
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
             echo "チェック試行 $ATTEMPT/$MAX_ATTEMPTS"
             
-            # 自分自身のワークフロー以外のすべてのチェックの状態を取得
+            # すべてのチェックの状態を取得
             CHECKS_JSON=$(gh pr checks $PR_NUMBER --repo $REPO --json name,state)
             echo "取得したチェック情報:"
             echo "$CHECKS_JSON" | jq
             
-            # 自分自身のワークフローを除外したチェックリストを取得
-            OTHER_CHECKS=$(echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '[.[] | select(.name != $current)]')
-            echo "このワークフロー以外のチェック:"
-            echo "$OTHER_CHECKS" | jq
+            # 除外パターンにマッチしないチェックのみをフィルタリング
+            FILTERED_CHECKS=$(echo "$CHECKS_JSON" | jq -c '.')
+            for PATTERN in "${EXCLUDE_PATTERNS[@]}"; do
+              FILTERED_CHECKS=$(echo "$FILTERED_CHECKS" | jq --arg pattern "$PATTERN" '[.[] | select(.name | contains($pattern) | not)]')
+            done
+            
+            echo "フィルタリング後のチェック:"
+            echo "$FILTERED_CHECKS" | jq
             
             # 他のチェックが存在するか確認
-            CHECK_COUNT=$(echo "$OTHER_CHECKS" | jq 'length')
-            echo "他のチェック数: $CHECK_COUNT"
+            CHECK_COUNT=$(echo "$FILTERED_CHECKS" | jq 'length')
+            echo "フィルタリング後のチェック数: $CHECK_COUNT"
             
             if [ "$CHECK_COUNT" -eq 0 ]; then
-              echo "他のチェックが見つかりません。一時停止して再試行します..."
+              echo "監視対象のチェックが見つかりません。一時停止して再試行します..."
               ATTEMPT=$((ATTEMPT+1))
               sleep 10
               continue
             fi
             
             # 未完了のチェックがあるか確認
-            INCOMPLETE=$(echo "$OTHER_CHECKS" | jq '[.[] | .state] | any(. != "COMPLETED")')
+            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state] | any(. != "COMPLETED")')
             echo "未完了のチェックがあるか: $INCOMPLETE"
             
             if [[ "$INCOMPLETE" == "true" ]]; then
               echo "まだ完了していないチェックがあります。待機しています..."
+              # 未完了チェックの名前を表示
+              echo "$FILTERED_CHECKS" | jq '.[] | select(.state != "COMPLETED") | .name'
               ATTEMPT=$((ATTEMPT+1))
               sleep 10
             else
