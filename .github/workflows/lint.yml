@@ -11,6 +11,9 @@ on:
 jobs:
   larastan:
     name: Run Larastan
+    permissions:
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
 
     steps:
@@ -31,6 +34,9 @@ jobs:
         run: vendor/bin/phpstan analyse -c phpstan.neon --error-format=github --memory-limit=1G
   pint:
     name: Run Pint
+    permissions:
+      contents: read
+      pull-requests: read
     runs-on: ubuntu-latest
 
     steps:
