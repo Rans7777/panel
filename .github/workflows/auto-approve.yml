@@ -1,0 +1,27 @@
+name: Auto Approve PR
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      statuses: read
+    steps:
+      - name: Check if all checks have passed
+        id: check_status
+        run: |
+          STATUS=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json conclusion --jq '[.[] | .conclusion] | all(. == "SUCCESS")')
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Automatically approve PR"
+        if: steps.check_status.outputs.status == 'true'
+        run: |
+          gh pr review ${{ github.event.pull_request.number }} --approve --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
