@@ -13,7 +13,7 @@ jobs:
       checks: read
 
     steps:
-      - name: Wait for checks to complete (excluding self)
+      - name: Wait for checks to complete
         id: wait_for_checks
         run: |
           PR_NUMBER="${{ github.event.pull_request.number }}"
