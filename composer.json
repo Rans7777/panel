@@ -11,7 +11,7 @@
         "awcodes/filament-gravatar": "^2.0",
         "coolsam/flatpickr": "^3.1",
         "cviebrock/eloquent-sluggable": "^11.0",
-        "filament/filament": "3.2.135",
+        "filament/filament": "3.3.0",
         "hasnayeen/themes": "^3.0",
         "joshembling/image-optimizer": "^1.4",
         "lara-zeus/quantity": "^1.0",
