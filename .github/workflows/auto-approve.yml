@@ -16,16 +16,18 @@ jobs:
       - name: Wait for checks to complete
         id: wait_for_checks
         run: |
+          # このワークフローを除外
           CURRENT_WORKFLOW="${{ github.workflow }}"
-
+          
+          # 最大待機時間（10分）
           MAX_ATTEMPTS=60
           ATTEMPT=0
-
+          
           while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-            CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json name,status,conclusion)
+            CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json name,state,conclusion)
             
             # 現在のワークフローを除外し、進行中のチェックがあるかどうかを確認
-            INCOMPLETE=$(echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '[.[] | select(.name != $current)] | any(.status == "in_progress" or .status == null or .conclusion == null)')
+            INCOMPLETE=$(echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '[.[] | select(.name != $current)] | any(.state != "COMPLETED")')
             
             if [[ "$INCOMPLETE" == "true" ]]; then
               echo "チェックの完了を待っています... (試行 $ATTEMPT/$MAX_ATTEMPTS)"
@@ -36,7 +38,7 @@ jobs:
               break
             fi
           done
-
+          
           if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
             echo "チェックの完了待ちがタイムアウトしました"
             exit 1
@@ -48,13 +50,16 @@ jobs:
         id: check_status
         run: |
           CURRENT_WORKFLOW="${{ github.workflow }}"
-          CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json name,conclusion)
-
+          CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json name,conclusion,state)
+          
+          # 現在のワークフローを除外し、各チェックの結論を確認
           echo "チェック結果の詳細:"
-          echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '.[] | select(.name != $current) | {name: .name, conclusion: .conclusion}'
-
-          FAILED=$(echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '[.[] | select(.name != $current)] | any(.conclusion != "success" and .conclusion != "neutral")')
-
+          echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '.[] | select(.name != $current) | {name: .name, conclusion: .conclusion, state: .state}'
+          
+          # 'success' または 'neutral' 以外の結論を持つチェックがあるかどうかを確認
+          FAILED=$(echo "$CHECKS_JSON" | jq --arg current "$CURRENT_WORKFLOW" '[.[] | select(.name != $current)] | any(.conclusion != "success" and .conclusion != "neutral" and .conclusion != null)')
+          
+          # 結果がすべて成功または中立である場合にのみ承認
           if [[ "$FAILED" == "false" ]]; then
             echo "all_passed=true" >> "$GITHUB_OUTPUT"
             echo "すべてのチェックが成功または中立です"
