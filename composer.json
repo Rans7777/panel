@@ -7,25 +7,17 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "andrewdwallo/filament-selectify": "^2.0",
-        "awcodes/filament-gravatar": "^2.0",
-        "coolsam/flatpickr": "^3.1",
         "cviebrock/eloquent-sluggable": "^11.0",
         "filament/filament": "3.3.0",
-        "hasnayeen/themes": "^3.0",
         "joshembling/image-optimizer": "^1.4",
-        "lara-zeus/quantity": "^1.0",
-        "laravel/framework": "^11.31",
+        "laravel/framework": "11.44.0",
         "laravel/prompts": "^0.3.5",
         "laravel/tinker": "^2.9",
-        "leandrocfe/filament-apex-charts": "^3.1",
-        "parfaitementweb/filament-country-field": "^2.2",
         "plesk/ext-laravel-integration": "*",
-        "rawilk/filament-password-input": "^2.0",
         "spatie/laravel-activitylog": "^4.10",
         "spatie/laravel-discord-alerts": "^1.6",
         "spatie/laravel-permission": "^6.14",
-        "tapp/filament-timezone-field": "3.0"
+        "symfony/intl": "^7.2"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.14",

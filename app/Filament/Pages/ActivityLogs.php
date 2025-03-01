@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use Coolsam\FilamentFlatpickr\Forms\Components\Flatpickr;
+use Filament\Forms\Components\DatePicker;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Tables;
@@ -93,9 +93,9 @@ final class ActivityLogs extends Page implements HasTable
             Tables\Filters\Filter::make('created_at')
                 ->label('日時')
                 ->form([
-                    Flatpickr::make('created_from')
+                    DatePicker::make('created_from')
                         ->label('開始日時'),
-                    Flatpickr::make('created_until')
+                    DatePicker::make('created_until')
                         ->label('終了日時'),
                 ])
                 ->query(function ($query, array $data) {
