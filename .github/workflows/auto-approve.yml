@@ -15,12 +15,18 @@ jobs:
       - name: Wait for all checks to complete
         id: wait_for_checks
         run: |
+          ATTEMPTS=0
+          MAX_ATTEMPTS=30
           while true; do
             CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json state,name)
             INCOMPLETE=$(echo "$CHECKS_JSON" | jq '[.[] | .state] | any(. != "COMPLETED")')
-
             if [[ "$INCOMPLETE" == "true" ]]; then
               echo "Waiting for checks to complete..."
+              ATTEMPTS=$((ATTEMPTS+1))
+              if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
+                echo "Timeout reached. Exiting loop."
+                exit 1
+              fi
               sleep 10
             else
               break
