@@ -2,7 +2,7 @@ name: Auto Approve PR
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 
 jobs:
   auto-approve:
@@ -10,18 +10,60 @@ jobs:
     permissions:
       pull-requests: write
       statuses: read
+      checks: read
+
     steps:
-      - name: Check if all checks have passed
-        id: check_status
+      - name: Wait for checks to complete (excluding self)
+        id: wait_for_checks
         run: |
-          STATUS=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json conclusion --jq '[.[] | .conclusion] | all(. == "SUCCESS")')
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          SELF_WORKFLOW="${{ github.workflow }}"
+          EXCLUDE_PATTERNS=("$SELF_WORKFLOW" "auto-approve") 
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            CHECKS_JSON=$(gh pr checks $PR_NUMBER --repo $REPO --json name,state)
+            FILTERED_CHECKS=$(echo "$CHECKS_JSON" | jq -c '.')
+            for PATTERN in "${EXCLUDE_PATTERNS[@]}"; do
+              FILTERED_CHECKS=$(echo "$FILTERED_CHECKS" | jq --arg pattern "$PATTERN" '[.[] | select(.name | contains($pattern) | not)]')
+            done
+
+            CHECK_COUNT=$(echo "$FILTERED_CHECKS" | jq 'length')
+            if [ "$CHECK_COUNT" -eq 0 ]; then
+              ATTEMPT=$((ATTEMPT+1))
+              sleep 10
+              continue
+            fi
+
+            FAILED=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. == "FAILURE")')
+            if [[ "$FAILED" == "true" ]]; then
+              exit 1
+            fi
+
+            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any((. != "SUCCESS") and (. != "NEUTRAL"))')
+            if [[ "$INCOMPLETE" == "true" ]]; then
+              ATTEMPT=$((ATTEMPT+1))
+              sleep 10
+            else
+              break
+            fi
+          done
+
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+            exit 1
+          fi
+
+          echo "wait_completed=true" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: "Automatically approve PR"
-        if: steps.check_status.outputs.status == 'true'
+      - name: Approve PR
+        if: steps.wait_for_checks.outputs.wait_completed == 'true'
         run: |
-          gh pr review ${{ github.event.pull_request.number }} --approve --repo ${{ github.repository }}
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          gh pr review $PR_NUMBER --approve --repo $REPO
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
