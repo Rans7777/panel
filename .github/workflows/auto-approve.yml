@@ -10,16 +10,35 @@ jobs:
     permissions:
       pull-requests: write
       statuses: read
+
     steps:
-      - name: Check if all checks have passed
-        id: check_status
+      - name: Wait for all checks to complete
+        id: wait_for_checks
         run: |
-          STATUS=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json conclusion --jq '[.[] | .conclusion] | all(. == "SUCCESS")')
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          while true; do
+            CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json state,name)
+            INCOMPLETE=$(echo "$CHECKS_JSON" | jq '[.[] | .state] | any(. != "COMPLETED")')
+
+            if [[ "$INCOMPLETE" == "true" ]]; then
+              echo "Waiting for checks to complete..."
+              sleep 10
+            else
+              break
+            fi
+          done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: "Automatically approve PR"
+      - name: Check if all checks passed
+        id: check_status
+        run: |
+          CHECKS_JSON=$(gh pr checks ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --json state)
+          SUCCESS=$(echo "$CHECKS_JSON" | jq '[.[] | .state] | all(. == "COMPLETED")')
+          echo "status=$SUCCESS" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve PR if all checks passed
         if: steps.check_status.outputs.status == 'true'
         run: |
           gh pr review ${{ github.event.pull_request.number }} --approve --repo ${{ github.repository }}
