@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Widgets;
 
-use App\Models\Orders;
+use App\Models\Order;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Card;
 use Illuminate\Support\HtmlString;
@@ -22,8 +22,8 @@ final class SalesOverview extends BaseWidget
 
     protected function getCards(): array
     {
-        $todayTotal = (float) Orders::whereDate('created_at', now()->toDateString())->sum('total_price');
-        $yesterdayTotal = (float) Orders::whereDate('created_at', now()->subDay()->toDateString())->sum('total_price');
+        $todayTotal = (float) Order::whereDate('created_at', now()->toDateString())->sum('total_price');
+        $yesterdayTotal = (float) Order::whereDate('created_at', now()->subDay()->toDateString())->sum('total_price');
 
         $percentageChange = 0;
         if ($yesterdayTotal > 0) {
@@ -35,7 +35,7 @@ final class SalesOverview extends BaseWidget
         $trend = collect(range(6, 0))->map(function ($day) {
             return [
                 'date' => now()->subDays((int) $day)->toDateString(),
-                'total' => (float) Orders::whereDate('created_at', now()->subDays((int) $day)->toDateString())
+                'total' => (float) Order::whereDate('created_at', now()->subDays((int) $day)->toDateString())
                     ->sum('total_price'),
             ];
         })->values();
@@ -48,7 +48,7 @@ final class SalesOverview extends BaseWidget
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor($percentageChange >= 0 ? 'success' : 'danger'),
 
-            Card::make('総売上', new HtmlString('¥'.number_format((float) Orders::sum('total_price'))))
+            Card::make('総売上', new HtmlString('¥'.number_format((float) Order::sum('total_price'))))
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor('primary'),
         ];

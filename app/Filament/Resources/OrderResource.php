@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\OrdersResource\Pages;
-use App\Models\Orders;
+use App\Filament\Resources\OrderResource\Pages;
+use App\Models\Order;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Resources\Resource;
 use Filament\Tables;
 
-final class OrdersResource extends Resource
+final class OrderResource extends Resource
 {
-    protected static ?string $model = Orders::class;
+    protected static ?string $model = Order::class;
 
     protected static ?string $navigationLabel = '注文履歴';
 
@@ -150,7 +150,7 @@ final class OrdersResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListOrders::route('/'),
+            'index' => Pages\ListOrder::route('/'),
             'create' => Pages\CreateOrder::route('/create'),
             'edit' => Pages\EditOrder::route('/{record}/edit'),
         ];
