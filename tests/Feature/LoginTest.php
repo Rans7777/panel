@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\LoginAttempt;
 use App\Models\User;
-use Filament\Facades\Filament;
-use Filament\Pages\Auth\Login as FilamentLogin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Livewire;
