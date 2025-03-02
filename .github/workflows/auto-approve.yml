@@ -39,7 +39,7 @@ jobs:
 
             FAILED=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. == "FAILURE")')
             if [[ "$FAILED" == "true" ]]; then
-              gh pr review $PR_NUMBER --request-changes --repo $REPO --body "The tests have failed."
+              gh pr review $PR_NUMBER --request-changes --repo $REPO
               exit 1
             fi
 
