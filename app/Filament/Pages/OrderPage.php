@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Pages;
 
-use App\Models\Orders;
+use App\Models\Order;
 use App\Models\Product;
 use Exception;
 use Filament\Notifications\Notification;
@@ -383,7 +383,7 @@ final class OrderPage extends Page
 
                     $product->decrement('stock', $item['quantity']);
 
-                    Orders::create([
+                    Order::create([
                         'product_id' => $item['id'],
                         'quantity' => $item['quantity'],
                         'image' => $item['image'] ?? null,

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Filament\Resources\OrdersResource\Pages;
+namespace App\Filament\Resources\OrderResource\Pages;
 
-use App\Filament\Resources\OrdersResource;
+use App\Filament\Resources\OrderResource;
 use Filament\Notifications\Notification;
 use Filament\Pages\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
 
-final class ListOrders extends ListRecords
+final class ListOrder extends ListRecords
 {
-    protected static string $resource = OrdersResource::class;
+    protected static string $resource = OrderResource::class;
 
     protected static ?string $title = '注文一覧';
 
