@@ -165,7 +165,7 @@ final class OrderResource extends Resource
     {
         if (is_string($state)) {
             $decoded = json_decode($state, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
+            if (json_last_error() === \JSON_ERROR_NONE) {
                 $state = $decoded;
             }
         }
@@ -202,7 +202,7 @@ final class OrderResource extends Resource
         $limit = 20;
         if (is_string($state)) {
             $decoded = json_decode($state, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
+            if (json_last_error() === \JSON_ERROR_NONE) {
                 $state = $decoded;
             }
         }
