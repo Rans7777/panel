@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Database\Factories;
 
 use App\Models\Order;
@@ -9,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Order>
  */
-class OrderFactory extends Factory
+final class OrderFactory extends Factory
 {
     /**
      * @var string
@@ -25,9 +27,9 @@ class OrderFactory extends Factory
     {
         return [
             'total_price' => $this->faker->numberBetween(100, 5000),
-            'product_id'  => Product::factory(),
-            'created_at'  => now(),
-            'updated_at'  => now(),
+            'product_id' => Product::factory(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 }
