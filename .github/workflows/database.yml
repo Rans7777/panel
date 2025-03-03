@@ -3,10 +3,10 @@ name: Database Migration Test
 on:
   pull_request:
     branches: [ main ]
-
-jobs:
   permissions:
     pull-requests: read
+
+jobs:
   migration_mysql:
     name: Laravel Migration Test (MySQL)
     runs-on: ubuntu-latest
