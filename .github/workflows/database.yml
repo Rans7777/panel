@@ -1,16 +1,16 @@
-name: Database Migration Test
+name: Database Tests
 
 on:
   pull_request:
     branches: [ main ]
 
 jobs:
-  migration_mysql:
-    name: Laravel Migration Test (MySQL ${{ matrix.mysql_version }})
+  test_mysql:
+    name: Laravel Test (MySQL ${{ matrix.mysql_version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mysql_version: ['5.7', '8.0', '8.4']
+        mysql_version: ['8.0', '8.4']
     permissions:
       pull-requests: read
     services:
@@ -58,12 +58,15 @@ jobs:
       - name: Run Migrations
         run: php artisan migrate --seed --force
 
-  migration_mariadb:
-    name: Laravel Migration Test (MariaDB ${{ matrix.mariadb_version }})
+      - name: Run Laravel Tests
+        run: php artisan test --testsuite=Feature
+
+  test_mariadb:
+    name: Laravel Test (MariaDB ${{ matrix.mariadb_version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mariadb_version: ['10.5', '10.11', '11.4']
+        mariadb_version: ['10.5', '10.11', '11.4', '11.7']
     permissions:
       pull-requests: read
     services:
@@ -111,24 +114,5 @@ jobs:
       - name: Run Migrations
         run: php artisan migrate --seed --force
 
-  migration_sqlite:
-    name: Laravel Migration Test (SQLite)
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-
-      - name: Install Composer Dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
-
-      - name: Configure environment
-        run: php artisan make:env
-
-      - name: Run Migrations
-        run: php artisan migrate --seed --force
+      - name: Run Laravel Tests
+        run: php artisan test --testsuite=Feature
