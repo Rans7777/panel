@@ -122,3 +122,28 @@ jobs:
 
       - name: Run Rollback Migrations
         run: php artisan migrate:rollback
+
+  test_sqlite:
+    name: Laravel Test (SQLite)
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Configure environment
+        run: php artisan make:env
+
+      - name: Run Migrations
+        run: php artisan migrate --seed --force
+
+      - name: Run Rollback Migrations
+        run: php artisan migrate:rollback
