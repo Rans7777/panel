@@ -75,6 +75,7 @@ jobs:
         ports:
           - 3306:3306
         options: >-
+          --innodb-use-native-aio=0
           --health-cmd="mysqladmin ping -h localhost -uroot -proot"
           --health-interval=10s
           --health-timeout=5s
