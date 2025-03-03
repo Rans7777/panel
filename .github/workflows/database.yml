@@ -5,6 +5,8 @@ on:
     branches: [ main ]
 
 jobs:
+  permissions:
+    pull-requests: read
   migration_mysql:
     name: Laravel Migration Test (MySQL)
     runs-on: ubuntu-latest
@@ -39,8 +41,16 @@ jobs:
           sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
           sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
           sed -i "s/DB_DATABASE=.*/DB_DATABASE=test_db/" .env
-          sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
-          sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+          if grep -q "^DB_USERNAME=" .env; then
+            sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
+          else
+            echo "DB_USERNAME=root" >> .env
+          fi
+          if grep -q "^DB_PASSWORD=" .env; then
+            sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+          else
+            echo "DB_PASSWORD=root" >> .env
+          fi
 
       - name: Run Migrations
         run: php artisan migrate --seed --force
@@ -79,8 +89,16 @@ jobs:
           sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
           sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
           sed -i "s/DB_DATABASE=.*/DB_DATABASE=test_db/" .env
-          sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
-          sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+          if grep -q "^DB_USERNAME=" .env; then
+            sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
+          else
+            echo "DB_USERNAME=root" >> .env
+          fi
+          if grep -q "^DB_PASSWORD=" .env; then
+            sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+          else
+            echo "DB_PASSWORD=root" >> .env
+          fi
 
       - name: Run Migrations
         run: php artisan migrate --seed --force
