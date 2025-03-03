@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mariadb_version: ['10.5', '10.11', '11.4']
+        mariadb_version: ['10.5', '10.11', '11.3']
     permissions:
       pull-requests: read
     services:
@@ -72,7 +72,6 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: test_db
-          MARIADB_EXTRA_FLAGS: --innodb-use-native-aio=OFF
         ports:
           - 3306:3306
         options: >-
