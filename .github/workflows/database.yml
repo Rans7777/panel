@@ -142,6 +142,11 @@ jobs:
       - name: Configure environment
         run: php artisan make:env
 
+      - name: Create Database
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+
       - name: Run Migrations
         run: php artisan migrate --seed --force
 
