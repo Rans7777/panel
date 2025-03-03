@@ -72,11 +72,11 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: test_db
+          MARIADB_EXTRA_FLAGS: --innodb-use-native-aio=OFF
         ports:
           - 3306:3306
         options: >-
-          --innodb-use-native-aio=0
-          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-cmd="mysqladmin ping -h localhost"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
