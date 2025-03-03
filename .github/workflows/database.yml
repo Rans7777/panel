@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mariadb_version: ['10.5', '10.11', '11.3']
+        mariadb_version: ['10.5', '10.11', '11.0']
     permissions:
       pull-requests: read
     services:
