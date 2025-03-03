@@ -1,0 +1,106 @@
+name: Database Migration Test
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  migration_mysql:
+    name: Laravel Migration Test (MySQL)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Generate .env
+        run: |
+          php artisan make:env
+          sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env
+          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+          sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
+          sed -i "s/DB_DATABASE=.*/DB_DATABASE=test_db/" .env
+          sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
+          sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+
+      - name: Run Migrations
+        run: php artisan migrate --seed --force
+
+  migration_mariadb:
+    name: Laravel Migration Test (MariaDB)
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Generate .env
+        run: |
+          php artisan make:env
+          sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env
+          sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+          sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
+          sed -i "s/DB_DATABASE=.*/DB_DATABASE=test_db/" .env
+          sed -i "s/DB_USERNAME=.*/DB_USERNAME=root/" .env
+          sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=root/" .env
+
+      - name: Run Migrations
+        run: php artisan migrate --seed --force
+
+  migration_sqlite:
+    name: Laravel Migration Test (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Configure environment
+        run: php artisan make:env
+
+      - name: Run Migrations
+        run: php artisan migrate --seed --force
