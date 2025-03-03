@@ -76,17 +76,7 @@ test('getTableQuery returns activities ordered by created_at descending', functi
 
     $this->actingAs($adminUser);
 
-    $newActivity = Activity::create([
-        'log_name'    => 'info',
-        'description' => 'New activity',
-        'subject_id'  => 1,
-        'subject_type'=> 'Test',
-        'causer_id'   => 1,
-        'causer_type' => 'Test',
-        'properties'  => ['ip_address' => '127.0.0.1'],
-        'created_at'  => now(),
-        'updated_at'  => now(),
-    ]);
+    Activity::query()->delete();
 
     Activity::create([
         'log_name'    => 'warning',
@@ -100,6 +90,18 @@ test('getTableQuery returns activities ordered by created_at descending', functi
         'updated_at'  => now()->subDay(),
     ]);
 
+    Activity::create([
+        'log_name'    => 'info',
+        'description' => 'New activity',
+        'subject_id'  => 1,
+        'subject_type'=> 'Test',
+        'causer_id'   => 1,
+        'causer_type' => 'Test',
+        'properties'  => ['ip_address' => '127.0.0.1'],
+        'created_at'  => now(),
+        'updated_at'  => now(),
+    ]);
+
     $page = new ActivityLogs();
     $page->mount();
 
@@ -109,7 +111,8 @@ test('getTableQuery returns activities ordered by created_at descending', functi
     $query = $method->invoke($page);
     $activities = $query->get();
 
-    expect($activities->first()->id)->toBe($newActivity->id);
+    expect($activities->first()->description)->toBe('New activity');
+    expect($activities->last()->description)->toBe('Old activity');
 });
 
 test('getTableFilters returns correct filter types', function () {
