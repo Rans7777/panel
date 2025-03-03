@@ -67,7 +67,7 @@ return new class() extends Migration
 
             Schema::create('orders_temp', function (Blueprint $table) {
                 $table->id();
-                $table->string('name')->after('id');
+                $table->string('name');
                 $table->integer('quantity')->default(0);
                 $table->string('image')->nullable();
                 $table->integer('total_price')->default(0);
@@ -87,7 +87,7 @@ return new class() extends Migration
 
             Schema::create('orders_temp', function (Blueprint $table) {
                 $table->id();
-                $table->string('name')->after('id');
+                $table->string('name');
                 $table->integer('quantity')->default(0);
                 $table->string('image')->nullable();
                 $table->integer('total_price')->default(0);
