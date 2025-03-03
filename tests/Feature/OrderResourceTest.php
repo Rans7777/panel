@@ -1,7 +1,17 @@
 <?php
 
 use App\Filament\Resources\OrderResource;
-use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use Spatie\Permission\Models\Role;
+
+uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    Role::firstOrCreate(['name' => 'admin']);
+    Role::firstOrCreate(['name' => 'user']);
+});
 
 function invokePrivateStaticMethod(string $method, array $arguments = [])
 {
@@ -12,6 +22,8 @@ function invokePrivateStaticMethod(string $method, array $arguments = [])
 }
 
 test('Format options for form with list input', function () {
+    DB::connection()->getPdo();
+
     $input = [
         ['option_name' => 'Extra Cheese', 'price' => 1000],
         ['option_name' => 'Extra Sauce', 'price' => 500],
@@ -22,6 +34,8 @@ test('Format options for form with list input', function () {
 });
 
 test('Format options for form with associative input', function () {
+    DB::connection()->getPdo();
+
     $input = [
         'option1' => ['price' => 1000],
         'option2' => ['price' => 2000],
@@ -32,6 +46,8 @@ test('Format options for form with associative input', function () {
 });
 
 test('Format options for form with JSON string input', function () {
+    DB::connection()->getPdo();
+
     $inputArray = [
         ['option_name' => 'Extra Cheese', 'price' => 1000],
         ['option_name' => 'Extra Sauce', 'price' => 500],
@@ -43,12 +59,16 @@ test('Format options for form with JSON string input', function () {
 });
 
 test('Format options for form with invalid JSON string returns original string', function () {
+    DB::connection()->getPdo();
+
     $input = 'invalid json';
     $result = invokePrivateStaticMethod('formatOptionsForForm', [$input]);
     expect($result)->toBe($input);
 });
 
 test('Format options for table with list input', function () {
+    DB::connection()->getPdo();
+
     $input = [
         ['option_name' => 'Extra Cheese that is so long it must be shortened', 'price' => 1000],
         ['option_name' => 'Extra Sauce', 'price' => 500],
@@ -64,6 +84,8 @@ test('Format options for table with list input', function () {
 });
 
 test('Format options for table with associative input', function () {
+    DB::connection()->getPdo();
+
     $input = [
         'LongOptionNameThatExceedsLimit' => ['price' => 1000],
         'ShortOption' => ['price' => 500],
@@ -79,6 +101,8 @@ test('Format options for table with associative input', function () {
 });
 
 test('Shorten text method works correctly', function () {
+    DB::connection()->getPdo();
+
     $text = 'This is a very long text that needs to be shortened';
     $limit = 10;
     $shortened = invokePrivateStaticMethod('shortenText', [$text, $limit]);
@@ -87,45 +111,29 @@ test('Shorten text method works correctly', function () {
 });
 
 test('Navigation registration returns true for admin user', function () {
-    $adminUser = new class implements Authenticatable {
-        public function getAuthIdentifierName() { return 'id'; }
-        public function getAuthIdentifier() { return 1; }
-        public function getAuthPassword() { return ''; }
-        public function getAuthPasswordName() { return 'password'; }
-        public function getRememberToken() { return null; }
-        public function setRememberToken($value) {}
-        public function getRememberTokenName() { return 'remember_token'; }
-        public function hasRole($role) {
-            return $role === 'admin';
-        }
-    };
+    DB::connection()->getPdo();
 
-    $this->actingAs($adminUser);
+    $adminUser = User::factory()->create();
+    $adminUser->assignRole('admin');
+    auth()->setUser($adminUser);
     $result = OrderResource::shouldRegisterNavigation();
     expect($result)->toBeTrue();
 });
 
 test('Navigation registration returns false for guest user', function () {
+    DB::connection()->getPdo();
+
     auth()->logout();
     $result = OrderResource::shouldRegisterNavigation();
     expect($result)->toBeFalse();
 });
 
 test('Navigation registration returns false for non-admin user', function () {
-    $nonAdminUser = new class implements Authenticatable {
-        public function getAuthIdentifierName() { return 'id'; }
-        public function getAuthIdentifier() { return 2; }
-        public function getAuthPassword() { return ''; }
-        public function getAuthPasswordName() { return 'password'; }
-        public function getRememberToken() { return null; }
-        public function setRememberToken($value) {}
-        public function getRememberTokenName() { return 'remember_token'; }
-        public function hasRole($role) {
-            return false;
-        }
-    };
+    DB::connection()->getPdo();
 
-    $this->actingAs($nonAdminUser);
+    $nonAdminUser = User::factory()->create();
+    $nonAdminUser->assignRole('user');
+    auth()->setUser($nonAdminUser);
     $result = OrderResource::shouldRegisterNavigation();
     expect($result)->toBeFalse();
 });
