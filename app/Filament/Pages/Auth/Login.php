@@ -85,7 +85,7 @@ final class Login extends BaseLogin
                 ->withProperties(['ip_address' => $ipAddress])
                 ->log("ユーザー '{$this->name}' がログインしました");
 
-            return null;
+            return app(LoginResponse::class);
         }
 
         if ($loginAttempt) {
