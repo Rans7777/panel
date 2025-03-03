@@ -3,13 +3,13 @@ name: Database Migration Test
 on:
   pull_request:
     branches: [ main ]
-  permissions:
-    pull-requests: read
 
 jobs:
   migration_mysql:
     name: Laravel Migration Test (MySQL)
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     services:
       mysql:
         image: mysql:8.0
@@ -58,6 +58,8 @@ jobs:
   migration_mariadb:
     name: Laravel Migration Test (MariaDB)
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     services:
       mariadb:
         image: mariadb:10.11
@@ -106,6 +108,8 @@ jobs:
   migration_sqlite:
     name: Laravel Migration Test (SQLite)
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
 
