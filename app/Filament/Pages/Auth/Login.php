@@ -47,11 +47,11 @@ final class Login extends BaseLogin
                 $this->addError('name', 'このIPアドレスからのログインはブロックされています。');
 
                 return null;
-            } else {
-                $loginAttempt->attempts = 0;
-                $loginAttempt->last_attempt_at = null;
-                $loginAttempt->save();
             }
+            $loginAttempt->attempts = 0;
+            $loginAttempt->last_attempt_at = null;
+            $loginAttempt->save();
+
         }
 
         if (config('services.turnstile.secret') && config('services.turnstile.sitekey')) {
@@ -85,7 +85,7 @@ final class Login extends BaseLogin
                 ->withProperties(['ip_address' => $ipAddress])
                 ->log("ユーザー '{$this->name}' がログインしました");
 
-            return null;
+            return app(LoginResponse::class);
         }
 
         if ($loginAttempt) {

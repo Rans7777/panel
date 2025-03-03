@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Filament\Resources\OrdersResource\Pages;
+namespace App\Filament\Resources\OrderResource\Pages;
 
-use App\Filament\Resources\OrdersResource;
+use App\Filament\Resources\OrderResource;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -12,7 +12,7 @@ use Illuminate\Http\RedirectResponse;
 
 final class CreateOrder extends CreateRecord
 {
-    protected static string $resource = OrdersResource::class;
+    protected static string $resource = OrderResource::class;
 
     protected static ?string $title = '注文追加';
 
@@ -36,6 +36,6 @@ final class CreateOrder extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return OrdersResource::getUrl('index');
+        return OrderResource::getUrl('index');
     }
 }

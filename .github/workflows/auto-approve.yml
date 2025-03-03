@@ -1,0 +1,70 @@
+name: Auto Approve PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      statuses: read
+      checks: read
+
+    steps:
+      - name: Wait for checks to complete
+        id: wait_for_checks
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          SELF_WORKFLOW="${{ github.workflow }}"
+          EXCLUDE_PATTERNS=("$SELF_WORKFLOW" "auto-approve") 
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            CHECKS_JSON=$(gh pr checks $PR_NUMBER --repo $REPO --json name,state)
+            FILTERED_CHECKS=$(echo "$CHECKS_JSON" | jq -c '.')
+            for PATTERN in "${EXCLUDE_PATTERNS[@]}"; do
+              FILTERED_CHECKS=$(echo "$FILTERED_CHECKS" | jq --arg pattern "$PATTERN" '[.[] | select(.name | contains($pattern) | not)]')
+            done
+
+            CHECK_COUNT=$(echo "$FILTERED_CHECKS" | jq 'length')
+            if [ "$CHECK_COUNT" -eq 0 ]; then
+              ATTEMPT=$((ATTEMPT+1))
+              sleep 10
+              continue
+            fi
+
+            FAILED=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any(. == "FAILURE")')
+            if [[ "$FAILED" == "true" ]]; then
+              gh pr review $PR_NUMBER --request-changes --repo $REPO --body "The tests have failed."
+              exit 1
+            fi
+
+            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any((. != "SUCCESS") and (. != "NEUTRAL"))')
+            if [[ "$INCOMPLETE" == "true" ]]; then
+              ATTEMPT=$((ATTEMPT+1))
+              sleep 10
+            else
+              break
+            fi
+          done
+
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+            exit 1
+          fi
+
+          echo "wait_completed=true" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve PR
+        if: steps.wait_for_checks.outputs.wait_completed == 'true'
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          gh pr review $PR_NUMBER --approve --repo $REPO
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
