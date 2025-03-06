@@ -8,16 +8,20 @@ on:
 
 jobs:
   laravel-tests:
-    name: Run Laravel Tests
+    name: Run Laravel Tests PHP ${{ matrix.php-version }}
     permissions:
       contents: read
       pull-requests: read
+    strategy:
+      matrix:
+        php-version: ['8.2', '8.3', '8.4']
     runs-on: ubuntu-latest
 
     steps:
-    - uses: shivammathur/setup-php@v2
+    - name: Setup PHP ${{ matrix.php-version }}
+      uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
+        php-version: ${{ matrix.php-version }}
     - uses: actions/checkout@v4
     - name: Copy .env
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"
