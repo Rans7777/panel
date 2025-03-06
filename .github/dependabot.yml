@@ -9,6 +9,8 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    reviewers:
+      - "Rans7777"
 
   - package-ecosystem: "composer"
     directory: "/"
