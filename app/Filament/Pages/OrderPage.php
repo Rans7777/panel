@@ -338,6 +338,7 @@ final class OrderPage extends Page
                 ->title('カートが空です。')
                 ->danger()
                 ->send();
+
             return;
         }
         $this->paymentAmount = 0;
