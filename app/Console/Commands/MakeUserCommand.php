@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Models\User;
@@ -46,7 +48,7 @@ final class MakeUserCommand extends Command
         $password = $this->argument('password') ?: password('<fg=green>パスワードを入力してください</>', required: true);
         $role = $this->argument('role') ?: text('<fg=green>付与するロールを入力してください</>', required: true);
 
-        $skipConfirmation = $this->argument('skip_confirmation') == true;
+        $skipConfirmation = (bool)$this->argument('skip_confirmation') === true;
         if (!$skipConfirmation && !confirm('この情報でユーザーを作成してよろしいですか？ [ユーザー名: '.$username.', ロール: '.$role.']', default: false)) {
             $this->info('ユーザー作成をキャンセルしました。');
 
