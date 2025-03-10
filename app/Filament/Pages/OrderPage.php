@@ -333,6 +333,13 @@ final class OrderPage extends Page
     // 支払いポップアップを開く
     public function showPaymentModal(): void
     {
+        if (empty($this->cart)) {
+            Notification::make()
+                ->title('カートが空です。')
+                ->danger()
+                ->send();
+            return;
+        }
         $this->paymentAmount = 0;
         $this->changeAmount = 0;
         $this->showPaymentPopup = true;
@@ -348,15 +355,6 @@ final class OrderPage extends Page
     public function confirmOrder(): void
     {
         $this->syncCartWithDatabase();
-
-        if (empty($this->cart)) {
-            Notification::make()
-                ->title('カートが空です。')
-                ->danger()
-                ->send();
-
-            return;
-        }
 
         if ($this->paymentAmount < $this->totalPrice) {
             Notification::make()
