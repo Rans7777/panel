@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mariadb_version: ['10.5', '10.11', '11.4', '11.7']
+        mariadb_version: ['10.3', '10.5', '10.11', '11.4', '11.7']
     permissions:
       pull-requests: read
     services:
@@ -101,7 +101,7 @@ jobs:
       - name: Generate .env
         run: |
           php artisan make:env
-          sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mysql/" .env
+          sed -i "s/DB_CONNECTION=.*/DB_CONNECTION=mariadb/" .env
           sed -i "s/DB_HOST=.*/DB_HOST=127.0.0.1/" .env
           sed -i "s/DB_PORT=.*/DB_PORT=3306/" .env
           sed -i "s/DB_DATABASE=.*/DB_DATABASE=test_db/" .env
