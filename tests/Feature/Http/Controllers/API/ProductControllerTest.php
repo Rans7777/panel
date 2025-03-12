@@ -4,11 +4,25 @@ namespace Tests\Feature\Http\Controllers\API;
 
 use Tests\TestCase;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class ProductControllerTest extends TestCase
 {
     use RefreshDatabase;
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->user = User::factory()->create();
+    }
+
+    public function test_unauthenticated_user_cannot_access_products()
+    {
+        $response = $this->getJson('/api/products');
+        $response->assertStatus(401);
+    }
 
     public function testIndexReturnsProducts()
     {
@@ -18,7 +32,7 @@ class ProductControllerTest extends TestCase
             'option_name' => 'Test Option',
             'price' => 1000
         ]);
-        $response = $this->getJson('/api/products');
+        $response = $this->actingAs($this->user)->getJson('/api/products');
         $response->assertStatus(200);
         $response->assertJsonStructure([
             '*' => [
@@ -45,7 +59,7 @@ class ProductControllerTest extends TestCase
     public function testShowReturnsProduct()
     {
         $product = Product::factory()->create();
-        $response = $this->getJson("/api/products/{$product->id}");
+        $response = $this->actingAs($this->user)->getJson("/api/products/{$product->id}");
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'id',
@@ -53,5 +67,12 @@ class ProductControllerTest extends TestCase
         ]);
         $responseData = $response->json();
         $this->assertFalse($responseData['has_options'], 'If no options set, has_options should be false');
+    }
+
+    public function test_unauthenticated_user_cannot_access_single_product()
+    {
+        $product = Product::factory()->create();
+        $response = $this->getJson("/api/products/{$product->id}");
+        $response->assertStatus(401);
     }
 }
