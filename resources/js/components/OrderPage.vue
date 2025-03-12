@@ -36,8 +36,8 @@
                 :alt="product.name"
                 class="w-24 h-24 object-contain"
               />
-              <div v-else class="w-12 h-12">
-                <img width="48" height="48" src="https://img.icons8.com/badges/48/shopping-basket.png" alt="shopping-basket"/>
+              <div v-else class="w-12 h-12 flex items-center justify-center">
+                <i class="pi pi-shopping-cart text-4xl" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }"></i>
               </div>
             </div>
             <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
@@ -295,11 +295,6 @@
         <i :class="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'" class="mr-2"></i>
         {{ isDarkMode ? 'ライトモード' : 'ダークモード' }}
       </button>
-
-      <!-- アトリビューション -->
-      <div class="text-center text-sm mt-8" :class="{ 'text-gray-400': isDarkMode, 'text-gray-500': !isDarkMode }">
-        <p>Icon by <a href="https://icons8.com" class="underline">Icons8</a></p>
-      </div>
     </div>
   </div>
 </template>
