@@ -9,10 +9,14 @@ use App\Models\User;
 use Filament\Http\Responses\Auth\Contracts\LoginResponse;
 use Filament\Pages\Auth\Login as BaseLogin;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Checkbox;
+use Coderflex\FilamentTurnstile\Forms\Components\Turnstile;
 
 final class Login extends BaseLogin
 {
+    public ?array $data = [];
+
     protected static string $view = 'filament.pages.auth.login';
 
     public string $name = '';
@@ -23,15 +27,42 @@ final class Login extends BaseLogin
 
     public string $turnstileToken = '';
 
+    protected function getForms(): array
+    {
+        return [
+            'form' => $this->form(
+                $this->makeForm()
+                    ->schema([
+                        TextInput::make('name')
+                            ->label('ユーザー名')
+                            ->required()
+                            ->placeholder('ユーザー名を入力してください'),
+                        TextInput::make('password')
+                            ->label('パスワード')
+                            ->password()
+                            ->required()
+                            ->placeholder('パスワードを入力してください'),
+                        Checkbox::make('remember')
+                            ->label('Remember me'),
+                        Turnstile::make('turnstileToken')
+                            ->theme('auto')
+                            ->visible(config('services.turnstile.enable')),
+                    ])
+                    ->statePath('data'),
+            ),
+        ];
+    }
+
     public function authenticate(): ?LoginResponse
     {
-        $credential = $this->validate([
-            'name' => ['required'],
-            'password' => ['required'],
-        ]);
+        $this->validate();
+
+        $credential = [
+            'name' => $this->data['name'],
+            'password' => $this->data['password'],
+        ];
 
         $ipAddress = request()->ip();
-
         $loginAttempt = LoginAttempt::where('ip_address', $ipAddress)->first();
 
         $attemptLimit = (int) config('auth.attempt_limit', 5);
@@ -44,46 +75,30 @@ final class Login extends BaseLogin
                     ->useLog('warning')
                     ->withProperties(['ip_address' => $ipAddress])
                     ->log("IPアドレス '{$ipAddress}' からのログインが試行制限に達したためブロックされました");
-                $this->addError('name', 'このIPアドレスからのログインはブロックされています。');
+                $this->addError('data.name', 'このIPアドレスからのログインはブロックされています。');
 
                 return null;
             }
             $loginAttempt->attempts = 0;
             $loginAttempt->last_attempt_at = null;
             $loginAttempt->save();
-
         }
 
-        if (config('services.turnstile.secret') && config('services.turnstile.sitekey')) {
-            $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-                'secret' => config('services.turnstile.secret'),
-                'response' => $this->turnstileToken,
-                'remoteip' => request()->ip(),
-            ]);
-
-            $result = $response->json();
-            if (!isset($result['success']) || !$result['success']) {
-                $this->addError('turnstileToken', 'Cloudflare Turnstile 認証に失敗しました。');
-
-                return null;
-            }
-        }
-
-        $user = User::where('name', $this->name)->first();
+        $user = User::where('name', $this->data['name'])->first();
         if ($user && !$user->is_active) {
-            $this->addError('name', 'このアカウントは無効です。');
+            $this->addError('data.name', 'このアカウントは無効です。');
 
             return null;
         }
 
-        if (Auth::guard(config('filament.auth.guard'))->attempt($credential, $this->remember)) {
+        if (Auth::guard(config('filament.auth.guard'))->attempt($credential, $this->data['remember'])) {
             if ($loginAttempt) {
                 $loginAttempt->delete();
             }
             activity()
                 ->useLog('info')
                 ->withProperties(['ip_address' => $ipAddress])
-                ->log("ユーザー '{$this->name}' がログインしました");
+                ->log("ユーザー '{$this->data['name']}' がログインしました");
 
             return app(LoginResponse::class);
         }
@@ -103,8 +118,8 @@ final class Login extends BaseLogin
         activity()
             ->useLog('error')
             ->withProperties(['ip_address' => $ipAddress])
-            ->log("ユーザー '{$this->name}' がログインに失敗しました");
-        $this->addError('name', 'ログイン情報が正しくありません。');
+            ->log("ユーザー '{$this->data['name']}' がログインに失敗しました");
+        $this->addError('data.name', 'ログイン情報が正しくありません。');
 
         return null;
     }
