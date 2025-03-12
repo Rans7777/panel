@@ -1,4 +1,5 @@
 import './bootstrap';
+import 'primeicons/primeicons.css';
 import { createApp } from 'vue';
 import OrderPage from './components/OrderPage.vue';
 import axios from 'axios';

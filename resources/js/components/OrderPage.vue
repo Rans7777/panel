@@ -288,7 +288,8 @@
         class="fixed bottom-5 right-5 px-4 py-2 rounded-full shadow-lg transition-colors text-white"
         :class="{ 'bg-gray-700 hover:bg-gray-600': isDarkMode, 'bg-green-600 hover:bg-green-700': !isDarkMode }"
       >
-        {{ isDarkMode ? '🌞 ライトモード' : '🌙 ダークモード' }}
+        <i :class="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'" class="mr-2"></i>
+        {{ isDarkMode ? 'ライトモード' : 'ダークモード' }}
       </button>
 
       <!-- アトリビューション -->
