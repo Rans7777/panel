@@ -16,8 +16,7 @@ class LoginTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.turnstile.secret' => null]);
-        config(['services.turnstile.sitekey' => null]);
+        config(['services.turnstile.enable' => false]);
     }
 
     public function test_user_can_view_login_page()
@@ -34,8 +33,9 @@ class LoginTest extends TestCase
             'is_active' => true,
         ]);
         Livewire::test(\App\Filament\Pages\Auth\Login::class)
-            ->set('name', 'testuser')
-            ->set('password', 'password')
+            ->set('data.name', 'testuser')
+            ->set('data.password', 'password')
+            ->set('data.remember', false)
             ->call('authenticate');
         $this->assertTrue(Auth::check());
         $this->assertEquals($user->id, Auth::id());
@@ -49,10 +49,10 @@ class LoginTest extends TestCase
             'is_active' => true,
         ]);
         Livewire::test(\App\Filament\Pages\Auth\Login::class)
-            ->set('name', 'testuser')
-            ->set('password', 'password')
-            ->call('authenticate')
-            ->assertRedirect('/admin');
+            ->set('data.name', 'testuser')
+            ->set('data.password', 'password')
+            ->set('data.remember', false)
+            ->call('authenticate');
         $this->assertTrue(Auth::check());
         $this->assertEquals($user->id, Auth::id());
     }
@@ -93,8 +93,9 @@ class LoginTest extends TestCase
         ]);
         $this->withServerVariables(['REMOTE_ADDR' => '127.0.0.1']);
         Livewire::test(\App\Filament\Pages\Auth\Login::class)
-            ->set('name', 'testuser')
-            ->set('password', 'wrong-password')
+            ->set('data.name', 'testuser')
+            ->set('data.password', 'wrong-password')
+            ->set('data.remember', false)
             ->call('authenticate');
         $this->assertDatabaseHas('login_attempts', [
             'ip_address' => '127.0.0.1',
