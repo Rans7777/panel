@@ -9,7 +9,20 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::all();
+        $products = Product::with('options')->get();
+        $products = $products->map(function ($product) {
+            $product->has_options = $product->options->count() > 0;
+            return $product;
+        });
+        
         return response()->json($products);
+    }
+    
+    public function show($id)
+    {
+        $product = Product::with('options')->findOrFail($id);
+        $product->has_options = $product->options->count() > 0;
+        
+        return response()->json($product);
     }
 }
