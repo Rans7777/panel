@@ -423,7 +423,6 @@ final class OrderPage extends Page
                 'color' => '#2ecc71',
                 'fields' => $fields,
             ];
-            DiscordAlert::to(config('discord-alerts.webhook_urls.default'))->message('注文が確定しました！', [$embed]);
         }
 
         // カートを空にしてセッションデータをクリア

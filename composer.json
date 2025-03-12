@@ -14,7 +14,6 @@
         "laravel/tinker": "^2.9",
         "plesk/ext-laravel-integration": "*",
         "spatie/laravel-activitylog": "^4.10",
-        "spatie/laravel-discord-alerts": "^1.6",
         "spatie/laravel-permission": "^6.14",
         "symfony/intl": "^7.2"
     },
