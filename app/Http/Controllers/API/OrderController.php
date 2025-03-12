@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
@@ -28,6 +30,7 @@ class OrderController extends Controller
                 $product = Product::findOrFail($item['id']);
                 if ($product->stock < $item['quantity']) {
                     DB::rollBack();
+
                     return response()->json([
                         'message' => '在庫不足: ' . $product->name,
                     ], 400);
@@ -43,10 +46,12 @@ class OrderController extends Controller
                 $orders[] = $order;
             }
             DB::commit();
-            return response()->make(status: 201);            
+
+            return response()->make(status: 201);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('注文処理エラー: ' . $e->getMessage());
+
             return response()->make(status: 500);
         }
     }
