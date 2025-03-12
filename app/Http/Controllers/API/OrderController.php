@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API;
 
-use App\Http\Controllers\Controller;
-use App\Models\Order;
-use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use App\Http\Controllers\Controller;
+use App\Models\Order;
+use App\Models\Product;
+use Exception;
 
 class OrderController extends Controller
 {
@@ -21,16 +23,15 @@ class OrderController extends Controller
                 'cart.*.id' => 'required|exists:products,id',
                 'cart.*.quantity' => 'required|integer|min:1',
                 'cart.*.price' => 'required|numeric|min:0',
+                'cart.*.options' => 'nullable|array',
                 'paymentAmount' => 'required|numeric|min:0',
                 'changeAmount' => 'required|numeric|min:0',
             ]);
             DB::beginTransaction();
-            $orders = [];
             foreach ($validatedData['cart'] as $item) {
                 $product = Product::findOrFail($item['id']);
                 if ($product->stock < $item['quantity']) {
                     DB::rollBack();
-
                     return response()->json([
                         'message' => '在庫不足: ' . $product->name,
                     ], 400);
@@ -43,15 +44,16 @@ class OrderController extends Controller
                     'total_price' => $item['price'] * $item['quantity'],
                     'options' => isset($item['options']) ? json_encode($item['options']) : null,
                 ]);
-                $orders[] = $order;
             }
             DB::commit();
-
             return response()->make(status: 201);
-        } catch (\Exception $e) {
+
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            return response()->make(status: 422);
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error('注文処理エラー: ' . $e->getMessage());
-
             return response()->make(status: 500);
         }
     }

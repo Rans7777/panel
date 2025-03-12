@@ -10,10 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-/**
- * @property string|null $image
- * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\ProductOption[] $options
- */
 final class Product extends Model
 {
     use HasFactory;
@@ -41,9 +37,6 @@ final class Product extends Model
         return $this->hasMany(Order::class);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
     public function options()
     {
         return $this->hasMany(ProductOption::class);
