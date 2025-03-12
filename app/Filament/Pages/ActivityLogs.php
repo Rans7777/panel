@@ -58,7 +58,7 @@ final class ActivityLogs extends Page implements HasTable
                 ->label('ログレベル')
                 ->color(function ($state) {
                     return match ($state) {
-                        'info' => 'primary',
+                        'info' => 'success',
                         'warning' => 'warning',
                         'error' => 'danger',
                         default => null,
