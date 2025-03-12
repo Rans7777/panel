@@ -229,13 +229,16 @@ const toggleDarkMode = () => {
 
 // ダークモード設定を適用
 const applyDarkMode = () => {
-  // Filamentのダークモード設定と同期
   if (isDarkMode.value) {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.add('dark-mode');
     document.body.classList.add('dark-mode');
+    document.documentElement.style.backgroundColor = '#1a1a1a';
+    document.body.style.backgroundColor = '#1a1a1a';
   } else {
-    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
+    document.documentElement.style.backgroundColor = '#fff';
+    document.body.style.backgroundColor = '#fff';
   }
 };
 
@@ -565,11 +568,7 @@ onMounted(() => {
   loadProducts();
   detectDarkMode();
   watchSystemTheme();
-
-  if (isDarkMode.value) {
-    document.body.style.backgroundColor = '#1a1a1a';
-    document.body.style.color = '#f0f0f0';
-  }
+  applyDarkMode();
 });
 </script>
 
@@ -578,21 +577,33 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-  color: #333;
-  background-color: #fff;
+  color: #333 !important;
+  background-color: #fff !important;
   transition: all 0.3s ease;
   min-height: 100vh;
 }
 
-.dark-mode {
-  color: #f0f0f0;
-  background-color: #1a1a1a;
+:global(body),
+:global(html) {
+  background-color: #fff !important;
+  margin: 0;
+  padding: 0;
 }
 
-.dark-mode h1,
-.dark-mode h2,
-.dark-mode h3 {
-  color: #f0f0f0;
+.order-page.dark-mode {
+  color: #f0f0f0 !important;
+  background-color: #1a1a1a !important;
+}
+
+:global(body.dark-mode),
+:global(html.dark-mode) {
+  background-color: #1a1a1a !important;
+}
+
+.order-page.dark-mode h1,
+.order-page.dark-mode h2,
+.order-page.dark-mode h3 {
+  color: #f0f0f0 !important;
 }
 
 h1 {
@@ -601,104 +612,99 @@ h1 {
   text-align: center;
 }
 
-.dark-mode .cart-section h2 {
-  border-bottom-color: #444;
+.order-page.dark-mode .cart-section h2 {
+  border-bottom-color: #444 !important;
 }
 
-.dark-mode .order-card {
-  background-color: #2a2a2a;
-  border-color: #444;
+.order-page.dark-mode .order-card {
+  background-color: #2a2a2a !important;
+  border-color: #444 !important;
 }
 
-.dark-mode .order-card:hover {
+.order-page.dark-mode .order-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
   z-index: 10;
 }
 
-.dark-mode .card-title {
-  color: #f0f0f0;
+.order-page.dark-mode .card-title {
+  color: #f0f0f0 !important;
 }
 
-.dark-mode .card-price {
-  color: #ff6b6b;
+.order-page.dark-mode .card-price {
+  color: #ff6b6b !important;
 }
 
-.dark-mode .order-table {
-  border-color: #444;
-  background-color: #2a2a2a;
+.order-page.dark-mode .order-table {
+  border-color: #444 !important;
+  background-color: #2a2a2a !important;
 }
 
-.dark-mode table {
-  background-color: #2a2a2a;
+.order-page.dark-mode table {
+  background-color: #2a2a2a !important;
 }
 
-.dark-mode table th {
-  background-color: #333;
-  color: #f0f0f0;
-  border-color: #444;
+.order-page.dark-mode table th {
+  background-color: #333 !important;
+  color: #f0f0f0 !important;
+  border-color: #444 !important;
 }
 
-.dark-mode table td {
-  border-color: #444;
-  color: #f0f0f0;
+.order-page.dark-mode table td {
+  border-color: #444 !important;
+  color: #f0f0f0 !important;
 }
 
-.dark-mode .quantity-input {
-  background-color: #333;
-  color: #f0f0f0;
-  border-color: #555;
+.order-page.dark-mode .quantity-input {
+  background-color: #333 !important;
+  color: #f0f0f0 !important;
+  border-color: #555 !important;
 }
 
-.dark-mode .empty-cart {
-  color: #aaa;
+.order-page.dark-mode .empty-cart {
+  color: #aaa !important;
 }
 
-.dark-mode .popup-content {
-  background-color: #2a2a2a;
-  color: #f0f0f0;
-  border: 1px solid #444;
+.order-page.dark-mode .popup-content {
+  background-color: #2a2a2a !important;
+  color: #f0f0f0 !important;
+  border: 1px solid #444 !important;
 }
 
-.dark-mode .cancel-button {
+.order-page.dark-mode .cancel-button {
   background-color: #444;
   color: #f0f0f0;
   border-color: #555;
 }
 
-.dark-mode .option-info,
-.dark-mode .option-item-cart {
+.order-page.dark-mode .option-info,
+.order-page.dark-mode .option-item-cart {
   color: #aaa;
 }
 
-.dark-mode .attribution {
+.order-page.dark-mode .attribution {
   color: #888;
 }
 
-.dark-mode .remove-button {
+.order-page.dark-mode .remove-button {
   background-color: #c0392b;
 }
 
-.dark-mode .order-button {
+.order-page.dark-mode .order-button {
   background-color: #2c8c30;
 }
 
-.dark-mode .order-button:hover {
+.order-page.dark-mode .order-button:hover {
   background-color: #1e6e22;
 }
 
-.dark-mode .confirm-button {
+.order-page.dark-mode .confirm-button {
   background-color: #27ae60;
 }
 
-.dark-mode .confirm-button:disabled {
+.order-page.dark-mode .confirm-button:disabled {
   background-color: #1e8449;
   opacity: 0.7;
-}
-
-:global(body.dark-mode) {
-  background-color: #1a1a1a;
-  color: #f0f0f0;
 }
 
 .order-cards {
