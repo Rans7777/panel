@@ -6,12 +6,12 @@ namespace App\Filament\Pages\Auth;
 
 use App\Models\LoginAttempt;
 use App\Models\User;
+use Coderflex\FilamentTurnstile\Forms\Components\Turnstile;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\TextInput;
 use Filament\Http\Responses\Auth\Contracts\LoginResponse;
 use Filament\Pages\Auth\Login as BaseLogin;
 use Illuminate\Support\Facades\Auth;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Checkbox;
-use Coderflex\FilamentTurnstile\Forms\Components\Turnstile;
 
 final class Login extends BaseLogin
 {

@@ -257,7 +257,7 @@ final class Settings extends Page implements Forms\Contracts\HasForms
             }
             $found = false;
             foreach ($envLines as $index => $line) {
-                if (mb_strpos(trim($line), '#') === 0 || trim($line) === '') {
+                if (mb_strpos(mb_trim($line), '#') === 0 || mb_trim($line) === '') {
                     continue;
                 }
 
