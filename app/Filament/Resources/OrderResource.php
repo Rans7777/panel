@@ -75,10 +75,13 @@ final class OrderResource extends Resource
 
     public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
     {
-        return $table->columns([
-            Tables\Columns\TextColumn::make('product.name')
-                ->label('商品名')
-                ->sortable(),
+        return $table
+            ->reorderable('sort')
+            ->defaultSort('sort')
+            ->columns([
+                Tables\Columns\TextColumn::make('product.name')
+                    ->label('商品名')
+                    ->sortable(),
 
             Tables\Columns\TextColumn::make('quantity')
                 ->label('個数')

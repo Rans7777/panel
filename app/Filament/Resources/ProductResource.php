@@ -87,12 +87,15 @@ final class ProductResource extends Resource
 
     public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
     {
-        return $table->columns([
-            Tables\Columns\ImageColumn::make('image')
-                ->label('商品画像')
-                ->size(50)
-                ->rounded()
-                ->placeholder('No image'),
+        return $table
+            ->reorderable('sort')
+            ->defaultSort('sort')
+            ->columns([
+                Tables\Columns\ImageColumn::make('image')
+                    ->label('商品画像')
+                    ->size(50)
+                    ->rounded()
+                    ->placeholder('No image'),
             Tables\Columns\TextColumn::make('name')
                 ->label('商品名')
                 ->sortable()
