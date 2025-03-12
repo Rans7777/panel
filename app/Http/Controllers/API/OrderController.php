@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -32,12 +32,13 @@ class OrderController extends Controller
                 $product = Product::findOrFail($item['id']);
                 if ($product->stock < $item['quantity']) {
                     DB::rollBack();
+
                     return response()->json([
                         'message' => '在庫不足: ' . $product->name,
                     ], 400);
                 }
                 $product->decrement('stock', $item['quantity']);
-                $order = Order::create([
+                Order::create([
                     'product_id' => $item['id'],
                     'quantity' => $item['quantity'],
                     'image' => $item['image'] ?? null,
@@ -46,14 +47,17 @@ class OrderController extends Controller
                 ]);
             }
             DB::commit();
+
             return response()->make(status: 201);
 
         } catch (ValidationException $e) {
             DB::rollBack();
+
             return response()->make(status: 422);
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('注文処理エラー: ' . $e->getMessage());
+
             return response()->make(status: 500);
         }
     }

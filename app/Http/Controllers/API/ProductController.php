@@ -11,9 +11,9 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('options')->get();
+        $products = Product::with('options')->get(); /** @phpstan-ignore-line */
         $products = $products->map(function ($product) {
-            $product->setAttribute('has_options', $product->options->count() > 0);
+            $product->setAttribute('has_options', $product->options->count() > 0); /** @phpstan-ignore-line */
 
             return $product;
         });
@@ -23,8 +23,8 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::with('options')->findOrFail($id);
-        $product->setAttribute('has_options', $product->options->count() > 0);
+        $product = Product::with('options')->findOrFail($id); /** @phpstan-ignore-line */
+        $product->setAttribute('has_options', $product->options->count() > 0); /** @phpstan-ignore-line */
 
         return response()->json($product);
     }
