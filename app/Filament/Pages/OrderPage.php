@@ -421,11 +421,4 @@ final class OrderPage extends Page
     {
         $this->paymentAmount = $value === '' ? 0 : (int) $value;
     }
-
-    private function formatOptions(array $options): string
-    {
-        return collect($options)->map(function ($option) {
-            return $option['option_name'].' (¥'.number_format($option['price']).')';
-        })->join("\n");
-    }
 }
