@@ -93,7 +93,7 @@
                 <td class="px-4 py-3 text-center">¥{{ item.price * item.quantity }}</td>
                 <td class="px-4 py-3 text-center">
                   <button 
-                    @click="removeFromCart(index)"
+                    @click="handleDeleteClick(index)"
                     class="px-4 py-2 rounded text-white bg-red-500 hover:bg-red-600 transition-colors"
                   >
                     削除
@@ -123,10 +123,10 @@
             <div class="flex justify-between items-start mb-2">
               <h3 class="font-bold">{{ item.name }}</h3>
               <button 
-                @click="removeFromCart(index)"
+                @click="handleDeleteClick(index)"
                 class="w-8 h-8 flex items-center justify-center rounded-full text-white bg-red-500"
               >
-                ×
+                <i class="pi pi-times"></i>
               </button>
             </div>
             <div 
@@ -286,6 +286,34 @@
         </div>
       </div>
 
+      <div v-if="showDeleteConfirmation" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div 
+          class="w-full max-w-md rounded-lg p-6"
+          :class="{ 'bg-gray-800': isDarkMode, 'bg-white': !isDarkMode }"
+        >
+          <h3 class="text-xl font-bold mb-4">商品の削除</h3>
+          <p class="mb-6">この商品をカートから削除してもよろしいですか？</p>
+          <div class="flex justify-end gap-4">
+            <button 
+              @click="cancelDelete"
+              class="px-4 py-2 rounded border transition-colors"
+              :class="{
+                'border-gray-600 bg-gray-700 hover:bg-gray-600': isDarkMode,
+                'border-gray-300 bg-gray-100 hover:bg-gray-200': !isDarkMode
+              }"
+            >
+              キャンセル
+            </button>
+            <button 
+              @click="confirmDelete"
+              class="px-4 py-2 rounded text-white bg-red-500 hover:bg-red-600 transition-colors"
+            >
+              削除する
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- テーマ切り替えボタン -->
       <button 
         @click="toggleDarkMode"
@@ -316,6 +344,8 @@ const changeAmount = ref(0);
 const message = ref('');
 const error = ref('');
 const isDarkMode = ref(false);
+const showDeleteConfirmation = ref(false);
+const deleteTargetIndex = ref(null);
 
 // システムのダークモード設定を検出
 const detectDarkMode = () => {
@@ -678,6 +708,24 @@ const confirmOrder = async () => {
       error.value = '';
     }, 3000);
   }
+};
+
+const handleDeleteClick = (index) => {
+  deleteTargetIndex.value = index;
+  showDeleteConfirmation.value = true;
+};
+
+const confirmDelete = () => {
+  if (deleteTargetIndex.value !== null) {
+    removeFromCart(deleteTargetIndex.value);
+    showDeleteConfirmation.value = false;
+    deleteTargetIndex.value = null;
+  }
+};
+
+const cancelDelete = () => {
+  showDeleteConfirmation.value = false;
+  deleteTargetIndex.value = null;
 };
 
 onMounted(() => {
