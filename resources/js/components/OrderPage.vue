@@ -6,11 +6,15 @@
       <!-- 通知 -->
       <div class="fixed top-5 right-5 z-50 w-96 max-w-[90vw]">
         <div v-if="error" class="flex items-start p-4 mb-4 rounded-lg shadow-lg bg-red-500/90 text-white border-l-4 border-red-600 backdrop-blur">
-          <div class="w-6 h-6 mr-3 flex items-center justify-center rounded-full bg-white/20">✕</div>
+          <div class="w-6 h-6 mr-3 flex items-center justify-center rounded-full bg-white/20">
+            <i class="pi pi-times"></i>
+          </div>
           <div class="flex-1 text-sm leading-5">{{ error }}</div>
         </div>
         <div v-if="message" class="flex items-start p-4 mb-4 rounded-lg shadow-lg bg-green-500/90 text-white border-l-4 border-green-600 backdrop-blur">
-          <div class="w-6 h-6 mr-3 flex items-center justify-center rounded-full bg-white/20">✓</div>
+          <div class="w-6 h-6 mr-3 flex items-center justify-center rounded-full bg-white/20">
+            <i class="pi pi-check"></i>
+          </div>
           <div class="flex-1 text-sm leading-5">{{ message }}</div>
         </div>
       </div>
@@ -18,7 +22,7 @@
       <!-- 商品カード一覧 -->
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mb-8">
         <div
-          v-for="product in products"
+          v-for="product in products.filter(p => p.stock > 0)"
           :key="product.id"
           @click="handleProductClick(product.id)"
           class="cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
@@ -51,7 +55,7 @@
         <h2 class="text-2xl font-bold mb-4 pb-2 border-b" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
           カート
         </h2>
-        
+
         <!-- デスクトップテーブル -->
         <div class="hidden md:block overflow-x-auto rounded-lg border" :class="{ 'border-gray-700 bg-gray-800': isDarkMode, 'border-gray-200 bg-white': !isDarkMode }">
           <table class="w-full">
@@ -172,7 +176,7 @@
               class="px-6 py-3 rounded text-white text-lg transition-colors"
               :class="{ 'bg-green-600 hover:bg-green-700': !isDarkMode, 'bg-green-700 hover:bg-green-800': isDarkMode }"
             >
-              注文を確定する
+              会計へ進む
             </button>
           </div>
         </div>
@@ -658,6 +662,9 @@ const confirmOrder = async () => {
       totalPrice.value = 0;
       showPaymentPopup.value = false;
       message.value = '注文が確定しました！';
+
+      await loadProducts();
+
       setTimeout(() => {
         message.value = '';
       }, 3000);
