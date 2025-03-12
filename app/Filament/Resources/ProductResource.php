@@ -96,37 +96,37 @@ final class ProductResource extends Resource
                     ->size(50)
                     ->rounded()
                     ->placeholder('No image'),
-            Tables\Columns\TextColumn::make('name')
-                ->label('商品名')
-                ->sortable()
-                ->searchable()
-                ->extraAttributes(['class' => 'font-semibold text-lg text-gray-800']),
-            Tables\Columns\TextColumn::make('price')
-                ->label('価格')
-                ->sortable()
-                ->extraAttributes(['class' => 'text-lg text-gray-700']),
-            Tables\Columns\BadgeColumn::make('stock_status')
-                ->label('在庫ステータス')
-                ->getStateUsing(function ($record): string {
-                    if ($record->stock <= 0) {
-                        return '在庫切れ (0)';
-                    }
-                    if ($record->stock <= 5) {
-                        return "残りわずか ({$record->stock})";
-                    }
+                Tables\Columns\TextColumn::make('name')
+                    ->label('商品名')
+                    ->sortable()
+                    ->searchable()
+                    ->extraAttributes(['class' => 'font-semibold text-lg text-gray-800']),
+                Tables\Columns\TextColumn::make('price')
+                    ->label('価格')
+                    ->sortable()
+                    ->extraAttributes(['class' => 'text-lg text-gray-700']),
+                Tables\Columns\BadgeColumn::make('stock_status')
+                    ->label('在庫ステータス')
+                    ->getStateUsing(function ($record): string {
+                        if ($record->stock <= 0) {
+                            return '在庫切れ (0)';
+                        }
+                        if ($record->stock <= 5) {
+                            return "残りわずか ({$record->stock})";
+                        }
 
-                    return "在庫あり ({$record->stock})";
-                })
-                ->colors([
-                    'danger' => fn ($state): bool => str_contains($state, '在庫切れ'),
-                    'warning' => fn ($state): bool => str_contains($state, '残りわずか'),
-                    'success' => fn ($state): bool => str_contains($state, '在庫あり'),
-                ]),
-            Tables\Columns\TextColumn::make('created_at')
-                ->label('登録日')
-                ->dateTime('Y年m月d日')
-                ->extraAttributes(['class' => 'text-sm text-gray-500']),
-        ])
+                        return "在庫あり ({$record->stock})";
+                    })
+                    ->colors([
+                        'danger' => fn ($state): bool => str_contains($state, '在庫切れ'),
+                        'warning' => fn ($state): bool => str_contains($state, '残りわずか'),
+                        'success' => fn ($state): bool => str_contains($state, '在庫あり'),
+                    ]),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('登録日')
+                    ->dateTime('Y年m月d日')
+                    ->extraAttributes(['class' => 'text-sm text-gray-500']),
+            ])
             ->actions([
                 EditAction::make(),
                 DeleteAction::make()
