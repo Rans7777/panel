@@ -33,9 +33,7 @@ class OrderController extends Controller
                 if ($product->stock < $item['quantity']) {
                     DB::rollBack();
 
-                    return response()->json([
-                        'message' => '在庫不足: ' . $product->name,
-                    ], 400);
+                    return response()->make(status: 400);
                 }
                 $product->decrement('stock', $item['quantity']);
                 Order::create([
