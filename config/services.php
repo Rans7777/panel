@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'turnstile' => [
+        'enable' => env('TURNSTILE_ENABLE', false),
+    ],
+
 ];
