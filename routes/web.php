@@ -10,6 +10,5 @@ Route::get('/', function () {
 Route::post('/admin/login', [Login::class, 'authenticate'])
     ->name('filament.admin.auth.login');
 Route::redirect('/','/admin/login');
-Route::get('/order', function () {
-    return view('order');
-});
+Route::get('/order', fn () => view('order'))->name('order');
+Route::get('/menu', fn () => view('menu'))->name('menu');
