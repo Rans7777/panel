@@ -56,13 +56,11 @@ final class ActivityLogs extends Page implements HasTable
         return [
             Tables\Columns\TextColumn::make('log_name')
                 ->label('ログレベル')
-                ->color(function ($state) {
-                    return match ($state) {
-                        'info' => 'primary',
-                        'warning' => 'warning',
-                        'error' => 'danger',
-                        default => null,
-                    };
+                ->color(fn ($state) => match ($state) {
+                    'info' => 'success',
+                    'warning' => 'warning',
+                    'error' => 'danger',
+                    default => 'gray',
                 }),
             Tables\Columns\TextColumn::make('description')
                 ->label('ログ')

@@ -29,44 +29,53 @@ final class UserResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->required()
-                    ->unique(ignoreRecord: true)
-                    ->label('ユーザー名'),
+                Forms\Components\Section::make('基本情報')
+                    ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->required()
+                            ->unique(ignoreRecord: true)
+                            ->label('ユーザー名'),
 
-                Forms\Components\TextInput::make('email')
-                    ->email()
-                    ->unique(ignoreRecord: true)
-                    ->label('メールアドレス'),
+                        Forms\Components\TextInput::make('email')
+                            ->email()
+                            ->unique(ignoreRecord: true)
+                            ->label('メールアドレス'),
 
-                Forms\Components\TextInput::make('password')
-                    ->password()
-                    ->dehydrated(fn ($state) => filled($state))
-                    ->dehydrateStateUsing(fn ($state) => bcrypt($state))
-                    ->required(fn ($livewire) => !isset($livewire->record) || auth()->id() !== $livewire->record->id)
-                    ->label('パスワード'),
-
-                ToggleButtons::make('is_active')
-                    ->label('アカウントの状態')
-                    ->options([
-                        'true' => '有効',
-                        'false' => '無効',
+                        Forms\Components\TextInput::make('password')
+                            ->password()
+                            ->dehydrated(fn ($state) => filled($state))
+                            ->dehydrateStateUsing(fn ($state) => bcrypt($state))
+                            ->required(fn ($livewire) => !isset($livewire->record) || auth()->id() !== $livewire->record->id)
+                            ->label('パスワード'),
                     ])
-                    ->default('true')
-                    ->inline(),
+                    ->columns(2),
 
-                Forms\Components\Select::make('roles')
-                    ->multiple()
-                    ->relationship('roles', 'name')
-                    ->preload()
-                    ->label('ロール')
-                    ->required(),
+                Forms\Components\Section::make('アカウント設定')
+                    ->schema([
+                        ToggleButtons::make('is_active')
+                            ->label('アカウントの状態')
+                            ->options([
+                                'true' => '有効',
+                                'false' => '無効',
+                            ])
+                            ->default('true')
+                            ->inline(),
+
+                        Forms\Components\Select::make('roles')
+                            ->relationship('roles', 'name')
+                            ->preload()
+                            ->label('ロール')
+                            ->required(),
+                    ])
+                    ->columns(2),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->reorderable('sort')
+            ->defaultSort('sort')
             ->columns([
                 Tables\Columns\TextColumn::make('name')->sortable()->searchable(),
                 Tables\Columns\BooleanColumn::make('is_active')->label('有効'),
