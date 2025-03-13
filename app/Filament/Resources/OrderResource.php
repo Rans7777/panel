@@ -75,37 +75,40 @@ final class OrderResource extends Resource
 
     public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
     {
-        return $table->columns([
-            Tables\Columns\TextColumn::make('product.name')
-                ->label('商品名')
-                ->sortable(),
+        return $table
+            ->reorderable('sort')
+            ->defaultSort('sort')
+            ->columns([
+                Tables\Columns\TextColumn::make('product.name')
+                    ->label('商品名')
+                    ->sortable(),
 
-            Tables\Columns\TextColumn::make('quantity')
-                ->label('個数')
-                ->sortable(),
+                Tables\Columns\TextColumn::make('quantity')
+                    ->label('個数')
+                    ->sortable(),
 
-            Tables\Columns\ImageColumn::make('image')
-                ->label('商品画像')
-                ->size(50)
-                ->sortable()
-                ->placeholder('No Image'),
+                Tables\Columns\ImageColumn::make('image')
+                    ->label('商品画像')
+                    ->size(50)
+                    ->sortable()
+                    ->placeholder('No Image'),
 
-            Tables\Columns\TextColumn::make('total_price')
-                ->label('合計金額')
-                ->sortable()
-                ->money('JPY'),
+                Tables\Columns\TextColumn::make('total_price')
+                    ->label('合計金額')
+                    ->sortable()
+                    ->money('JPY'),
 
-            Tables\Columns\TextColumn::make('options')
-                ->label('購入オプション')
-                ->formatStateUsing(function ($state) {
-                    return self::formatOptionsForTable($state);
-                }),
+                Tables\Columns\TextColumn::make('options')
+                    ->label('購入オプション')
+                    ->formatStateUsing(function ($state) {
+                        return self::formatOptionsForTable($state);
+                    }),
 
-            Tables\Columns\TextColumn::make('created_at')
-                ->label('注文日')
-                ->sortable()
-                ->date('Y年m月d日 H:i:s'),
-        ])
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('注文日')
+                    ->sortable()
+                    ->date('Y年m月d日 H:i:s'),
+            ])
             ->filters([
                 Tables\Filters\Filter::make('name')
                     ->form([
