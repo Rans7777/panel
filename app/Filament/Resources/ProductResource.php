@@ -53,7 +53,8 @@ final class ProductResource extends Resource
                         ->directory('products')
                         ->imageEditor()
                         ->nullable()
-                        ->disk('public'),
+                        ->disk('public')
+                        ->optimize('webp'),
 
                     Forms\Components\Repeater::make('options')
                         ->relationship('options')
