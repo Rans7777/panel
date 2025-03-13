@@ -18,3 +18,10 @@ updates:
       interval: "daily"
     reviewers:
       - "Rans7777"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    reviewers:
+      - "Rans7777"
