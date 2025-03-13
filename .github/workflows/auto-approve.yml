@@ -43,7 +43,7 @@ jobs:
               exit 1
             fi
 
-            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any((. != "SUCCESS") and (. != "NEUTRAL"))')
+            INCOMPLETE=$(echo "$FILTERED_CHECKS" | jq '[.[] | .state | ascii_upcase] | any((. != "SUCCESS") and (. != "NEUTRAL") and (. != "SKIPPED"))')
             if [[ "$INCOMPLETE" == "true" ]]; then
               ATTEMPT=$((ATTEMPT+1))
               sleep 10
