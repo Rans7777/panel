@@ -33,6 +33,30 @@ final class ProductResource extends Resource
                         ->maxLength(255)
                         ->columnSpan(2),
 
+                    Forms\Components\Textarea::make('description')
+                        ->label('商品概要')
+                        ->maxLength(500)
+                        ->columnSpan(2),
+
+                    Forms\Components\Section::make('アレルギー情報')
+                        ->schema([
+                            Forms\Components\CheckboxList::make('allergens')
+                                ->label('特定原材料（7品目）')
+                                ->options([
+                                    '卵' => '卵',
+                                    '乳' => '乳',
+                                    '小麦' => '小麦',
+                                    'えび' => 'えび',
+                                    'かに' => 'かに',
+                                    '落花生' => '落花生',
+                                    'そば' => 'そば',
+                                ])
+                                ->columns(3)
+                                ->gridDirection('row')
+                                ->required(),
+                        ])
+                        ->columnSpan('full'),
+
                     Forms\Components\TextInput::make('price')
                         ->label('価格')
                         ->default(0)

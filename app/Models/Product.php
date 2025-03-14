@@ -15,11 +15,17 @@ final class Product extends Model
     use HasFactory;
     use Sluggable;
 
+    protected $casts = [
+        'allergens' => 'array',
+    ];
+
     protected $fillable = [
         'name',
+        'description',
         'price',
         'stock',
         'image',
+        'allergens',
         'slug',
     ];
 

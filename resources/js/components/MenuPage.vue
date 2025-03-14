@@ -22,6 +22,25 @@
           </div>
           <div class="p-4">
             <div class="text-[1.4rem] font-bold mb-2 text-gray-800">{{ product.name }}</div>
+
+            <div v-if="product.description" class="mb-4 text-gray-600 text-sm">
+              {{ product.description }}
+            </div>
+
+            <div v-if="product.allergens && product.allergens.length > 0" class="mb-4">
+              <h3 class="text-sm font-bold mb-2 text-gray-600 flex items-center gap-2">
+                <i class="pi pi-exclamation-circle text-red-500"></i>
+                アレルギー情報
+              </h3>
+              <div class="flex flex-wrap gap-2">
+                <span v-for="allergen in product.allergens" 
+                      :key="allergen"
+                      class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                  {{ allergen }}
+                </span>
+              </div>
+            </div>
+
             <div class="flex justify-between items-center mb-4">
               <div class="text-xl text-red-600 font-bold">{{ formatPrice(product.price) }}</div>
               <div v-if="product.stock > 0" class="text-sm flex items-center gap-1 text-green-600">
