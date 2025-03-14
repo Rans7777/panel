@@ -328,7 +328,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
 const products = ref([]);
@@ -664,9 +664,12 @@ const confirmOrder = async () => {
   }
 
   try {
+    const orderUuid = crypto.randomUUID();
+
     // カートデータを整形
     const cartData = cart.value.map(item => ({
       id: item.id,
+      uuid: orderUuid,
       name: item.name,
       image: item.image,
       price: item.price,

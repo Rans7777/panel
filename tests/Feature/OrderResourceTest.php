@@ -1,6 +1,6 @@
 <?php
 
-use App\Filament\Resources\OrderResource;
+use App\Filament\Resources\OrderHistoryResource;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
@@ -15,7 +15,7 @@ beforeEach(function () {
 
 function invokePrivateStaticMethod(string $method, array $arguments = [])
 {
-    $reflection = new ReflectionClass(OrderResource::class);
+    $reflection = new ReflectionClass(OrderHistoryResource::class);
     $methodReflection = $reflection->getMethod($method);
     $methodReflection->setAccessible(true);
     return $methodReflection->invokeArgs(null, $arguments);
@@ -116,7 +116,7 @@ test('Navigation registration returns true for admin user', function () {
     $adminUser = User::factory()->create();
     $adminUser->assignRole('admin');
     auth()->setUser($adminUser);
-    $result = OrderResource::shouldRegisterNavigation();
+    $result = OrderHistoryResource::shouldRegisterNavigation();
     expect($result)->toBeTrue();
 });
 
@@ -124,7 +124,7 @@ test('Navigation registration returns false for guest user', function () {
     DB::connection()->getPdo();
 
     auth()->logout();
-    $result = OrderResource::shouldRegisterNavigation();
+    $result = OrderHistoryResource::shouldRegisterNavigation();
     expect($result)->toBeFalse();
 });
 
@@ -134,6 +134,6 @@ test('Navigation registration returns false for non-admin user', function () {
     $nonAdminUser = User::factory()->create();
     $nonAdminUser->assignRole('user');
     auth()->setUser($nonAdminUser);
-    $result = OrderResource::shouldRegisterNavigation();
+    $result = OrderHistoryResource::shouldRegisterNavigation();
     expect($result)->toBeFalse();
 });

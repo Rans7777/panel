@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\OrderResource\Pages;
+use App\Filament\Resources\OrderHistoryResource\Pages;
 use App\Models\Order;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Resources\Resource;
 use Filament\Tables;
 
-final class OrderResource extends Resource
+final class OrderHistoryResource extends Resource
 {
     protected static ?string $model = Order::class;
 
-    protected static ?string $navigationLabel = '注文履歴';
+    protected static ?string $navigationLabel = '注文履歴 (旧)';
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+
+    protected static ?string $slug = 'old-order-history';
 
     public static function form(Forms\Form $form): Forms\Form
     {

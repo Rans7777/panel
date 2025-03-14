@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Filament\Resources\OrderResource\Pages;
+namespace App\Filament\Resources\OrderHistoryResource\Pages;
 
-use App\Filament\Resources\OrderResource;
+use App\Filament\Resources\OrderHistoryResource;
 use Filament\Notifications\Notification;
 use Filament\Pages\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -13,7 +13,7 @@ use Illuminate\Http\RedirectResponse;
 
 final class ListOrder extends ListRecords
 {
-    protected static string $resource = OrderResource::class;
+    protected static string $resource = OrderHistoryResource::class;
 
     protected static ?string $title = '注文一覧';
 

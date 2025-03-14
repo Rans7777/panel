@@ -11,3 +11,4 @@ Route::post('/admin/login', [Login::class, 'authenticate'])->name('filament.admi
 Route::redirect('/','/admin/login');
 Route::get('/order', fn () => view('order'))->name('order');
 Route::get('/menu', fn () => view('menu'))->name('menu');
+Route::get('/order-history', fn () => view('order-history'))->name('order-history');

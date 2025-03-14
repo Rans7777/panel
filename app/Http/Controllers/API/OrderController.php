@@ -21,6 +21,7 @@ class OrderController extends Controller
             $validatedData = $request->validate([
                 'cart' => 'required|array',
                 'cart.*.id' => 'required|exists:products,id',
+                'cart.*.uuid' => 'required|uuid',
                 'cart.*.quantity' => 'required|integer|min:1',
                 'cart.*.price' => 'required|numeric|min:0',
                 'cart.*.options' => 'nullable|array',
@@ -38,6 +39,7 @@ class OrderController extends Controller
                 $product->decrement('stock', $item['quantity']);
                 Order::create([
                     'product_id' => $item['id'],
+                    'uuid' => $item['uuid'],
                     'quantity' => $item['quantity'],
                     'image' => $item['image'] ?? null,
                     'total_price' => $item['price'] * $item['quantity'],
@@ -50,11 +52,12 @@ class OrderController extends Controller
 
         } catch (ValidationException $e) {
             DB::rollBack();
+            Log::error($e->getMessage(), $e->getTrace());
 
             return response()->make(status: 422);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('注文処理エラー: ' . $e->getMessage());
+            Log::error($e->getMessage(), $e->getTrace());
 
             return response()->make(status: 500);
         }
