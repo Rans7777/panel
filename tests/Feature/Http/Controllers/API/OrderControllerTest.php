@@ -31,6 +31,7 @@ class OrderControllerTest extends TestCase
             'cart' => [
                 [
                     'id' => $this->product->id,
+                    'uuid' => Str::uuid(),
                     'quantity' => 2,
                     'price' => 1000,
                 ]
@@ -48,11 +49,11 @@ class OrderControllerTest extends TestCase
             'cart' => [
                 [
                     'id' => $this->product->id,
+                    'uuid' => Str::uuid(),
                     'quantity' => 2,
                     'price' => 1000,
                 ]
             ],
-            'uuid' => Str::uuid(),
             'paymentAmount' => 2000,
             'changeAmount' => 0,
         ];
@@ -68,11 +69,11 @@ class OrderControllerTest extends TestCase
             'cart' => [
                 [
                     'id' => $this->product->id,
+                    'uuid' => Str::uuid(),
                     'quantity' => 20,
                     'price' => 1000,
                 ]
             ],
-            'uuid' => Str::uuid(),
             'paymentAmount' => 20000,
             'changeAmount' => 0,
         ];
@@ -94,12 +95,12 @@ class OrderControllerTest extends TestCase
             'cart' => [
                 [
                     'id' => $this->product->id,
+                    'uuid' => Str::uuid(),
                     'quantity' => 1,
                     'price' => 1000,
                     'options' => ['size' => 'L', 'color' => 'red']
                 ]
             ],
-            'uuid' => Str::uuid(),
             'paymentAmount' => 1000,
             'changeAmount' => 0,
         ];
