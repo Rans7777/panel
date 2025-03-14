@@ -52,12 +52,12 @@ class OrderController extends Controller
 
         } catch (ValidationException $e) {
             DB::rollBack();
-            Log::error($e);
+            Log::error($e->getMessage(), $e->getTrace());
 
             return response()->make(status: 422);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error($e);
+            Log::error($e->getMessage(), $e->getTrace());
 
             return response()->make(status: 500);
         }

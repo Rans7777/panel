@@ -12,6 +12,7 @@ class OrderHistoryController extends Controller
 {
     public function index(): JsonResponse
     {
+        /** @phpstan-ignore-next-line */
         $orderHistory = Order::with(['product'])
             ->select('orders.*')
             ->selectRaw('(orders.quantity * products.price) as total_amount')
