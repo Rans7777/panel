@@ -18,6 +18,7 @@ final class ProductFactory extends Factory
             'price' => $this->faker->numberBetween(500, 2000),
             'name' => $this->faker->word,
             'image' => $this->faker->imageUrl,
+            'allergens' => ['卵', '乳'],
         ];
     }
 }

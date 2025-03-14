@@ -35,6 +35,7 @@ class ProductResourceTest extends TestCase
             ->set('data.name', 'Test Product')
             ->set('data.price', 100)
             ->set('data.stock', 10)
+            ->set('data.allergens', ['卵', '乳'])
             ->call('create')
             ->assertRedirect('/admin/products');
 
