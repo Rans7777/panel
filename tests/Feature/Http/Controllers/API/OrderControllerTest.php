@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Illuminate\Support\Str;
 
 class OrderControllerTest extends TestCase
 {
@@ -51,6 +52,7 @@ class OrderControllerTest extends TestCase
                     'price' => 1000,
                 ]
             ],
+            'uuid' => Str::uuid(),
             'paymentAmount' => 2000,
             'changeAmount' => 0,
         ];
@@ -70,6 +72,7 @@ class OrderControllerTest extends TestCase
                     'price' => 1000,
                 ]
             ],
+            'uuid' => Str::uuid(),
             'paymentAmount' => 20000,
             'changeAmount' => 0,
         ];
@@ -96,6 +99,7 @@ class OrderControllerTest extends TestCase
                     'options' => ['size' => 'L', 'color' => 'red']
                 ]
             ],
+            'uuid' => Str::uuid(),
             'paymentAmount' => 1000,
             'changeAmount' => 0,
         ];
