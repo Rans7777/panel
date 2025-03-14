@@ -14,26 +14,42 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $this->dropExistingConstraints('product_options');
-        $this->dropExistingConstraints('orders');
+        if (DB::getDriverName() === 'mariadb' || DB::getDriverName() === 'mysql') {
+            $this->dropExistingConstraints('product_options');
+            $this->dropExistingConstraints('orders');
 
-        Schema::table('product_options', function (Blueprint $table) {
-            $table->dropColumn('product_id');
-            $table->unsignedBigInteger('product_id')->after('id');
-            $table->index('product_id');
-            $table->foreign('product_id')
-                ->references('id')
-                ->on('products');
-        });
+            Schema::table('product_options', function (Blueprint $table) {
+                $table->dropColumn('product_id');
+                $table->unsignedBigInteger('product_id')->after('id');
+                $table->index('product_id');
+                $table->foreign('product_id')
+                    ->references('id')
+                    ->on('products');
+            });
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn('product_id');
-            $table->unsignedBigInteger('product_id')->after('id');
-            $table->index('product_id');
-            $table->foreign('product_id')
-                ->references('id')
-                ->on('products');
-        });
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropColumn('product_id');
+                $table->unsignedBigInteger('product_id')->after('id');
+                $table->index('product_id');
+                $table->foreign('product_id')
+                    ->references('id')
+                    ->on('products');
+            });
+        } else {
+            Schema::table('product_options', function (Blueprint $table) {
+                $table->unsignedBigInteger('product_id')->change();
+                $table->foreign('product_id')
+                    ->references('id')
+                    ->on('products');
+            });
+
+            Schema::table('orders', function (Blueprint $table) {
+                $table->unsignedBigInteger('product_id')->change();
+                $table->foreign('product_id')
+                    ->references('id')
+                    ->on('products');
+            });
+        }
     }
 
     /**
@@ -41,15 +57,25 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('product_options', function (Blueprint $table) {
-            $table->dropForeign(['product_id']);
-            $table->dropIndex(['product_id']);
-        });
+        if (DB::getDriverName() === 'mariadb' || DB::getDriverName() === 'mysql') {
+            Schema::table('product_options', function (Blueprint $table) {
+                $table->dropForeign(['product_id']);
+                $table->dropIndex(['product_id']);
+            });
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropForeign(['product_id']);
-            $table->dropIndex(['product_id']);
-        });
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropForeign(['product_id']);
+                $table->dropIndex(['product_id']);
+            });
+        } else {
+            Schema::table('product_options', function (Blueprint $table) {
+                $table->dropForeign(['product_id']);
+            });
+
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropForeign(['product_id']);
+            });
+        }
     }
 
     private function dropExistingConstraints(string $tableName): void
