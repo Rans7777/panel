@@ -11,10 +11,11 @@ final class Order extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['product_id', 'quantity', 'image', 'total_price', 'options'];
+    protected $fillable = ['product_id', 'quantity', 'image', 'total_price', 'options', 'uuid'];
 
     protected $casts = [
         'options' => 'array',
+        'uuid' => 'string',
     ];
 
     public function product()
