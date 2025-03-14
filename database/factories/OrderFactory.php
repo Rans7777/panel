@@ -28,6 +28,7 @@ final class OrderFactory extends Factory
         return [
             'total_price' => $this->faker->numberBetween(100, 5000),
             'product_id' => Product::factory(),
+            'uuid' => $this->faker->uuid,
             'created_at' => now(),
             'updated_at' => now(),
         ];
