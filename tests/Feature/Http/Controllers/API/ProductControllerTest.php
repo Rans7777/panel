@@ -30,7 +30,7 @@ class ProductControllerTest extends TestCase
         $productWithOption = Product::factory()->create();
         $productWithOption->options()->create([
             'option_name' => 'Test Option',
-            'price' => 1000
+            'price' => 1000,
         ]);
         $response = $this->actingAs($this->user)->getJson('/api/products');
         $response->assertStatus(200);
