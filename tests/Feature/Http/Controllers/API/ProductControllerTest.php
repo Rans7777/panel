@@ -35,10 +35,12 @@ class ProductControllerTest extends TestCase
         $response = $this->actingAs($this->user)->getJson('/api/products');
         $response->assertStatus(200);
         $response->assertJsonStructure([
-                'data' => [
+            'data' => [
+                '*' => [
                     'id',
                     'has_options'
                 ]
+            ]
         ]);
         $products = $response->json();
         $foundWithout = false;
