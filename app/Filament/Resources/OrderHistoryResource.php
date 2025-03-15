@@ -17,6 +17,8 @@ final class OrderHistoryResource extends Resource
 
     protected static ?string $navigationLabel = '注文履歴 (旧)';
 
+    protected static ?int $navigationSort = 4;
+
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $slug = 'old-order-history';

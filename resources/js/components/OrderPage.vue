@@ -375,13 +375,25 @@ const applyDarkMode = () => {
   if (isDarkMode.value) {
     document.documentElement.classList.add('dark-mode');
     document.body.classList.add('dark-mode');
-    document.documentElement.style.backgroundColor = '#1a1a1a';
-    document.body.style.backgroundColor = '#1a1a1a';
+    document.documentElement.style.backgroundColor = '#121827';
+    document.body.style.backgroundColor = '#121827';
+    document.documentElement.style.color = '#f3f4f6';
+    document.body.style.color = '#f3f4f6';
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.margin = '0';
+    document.body.style.margin = '0';
   } else {
     document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
     document.documentElement.style.backgroundColor = '#fff';
     document.body.style.backgroundColor = '#fff';
+    document.documentElement.style.color = '#1f2937';
+    document.body.style.color = '#1f2937';
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.margin = '0';
+    document.body.style.margin = '0';
   }
 };
 
@@ -753,5 +765,17 @@ onMounted(() => {
 
 .notification {
   animation: slideIn 0.3s ease-out forwards;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.dark-mode {
+  background-color: #121827;
+  color: #f3f4f6;
 }
 </style>

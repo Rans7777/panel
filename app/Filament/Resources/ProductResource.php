@@ -20,6 +20,8 @@ final class ProductResource extends Resource
 
     protected static ?string $navigationLabel = '商品管理';
 
+    protected static ?int $navigationSort = 5;
+
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     public static function form(\Filament\Forms\Form $form): \Filament\Forms\Form

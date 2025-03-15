@@ -1,78 +1,90 @@
 <template>
-  <div class="max-w-7xl mx-auto p-4 bg-white">
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-center my-6 text-gray-800 relative inline-block pb-2 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-1/2 after:h-[3px] after:bg-red-600">メニュー</h1>
-    </div>
-
-    <div v-if="disconnectWarning" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <i class="pi pi-exclamation-triangle text-yellow-400"></i>
-        </div>
-        <div class="ml-3">
-          <p class="text-sm text-yellow-700">
-            {{ connectionStatus }} - 自動的に再接続されます
-          </p>
-        </div>
+  <div class="min-h-screen transition-all duration-300" :class="{ 'bg-gray-900 text-gray-100': isDarkMode, 'bg-white text-gray-800': !isDarkMode }">
+    <div class="max-w-7xl mx-auto p-4">
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-center my-6 relative inline-block pb-2 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-1/2 after:h-[3px] after:bg-red-600" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">メニュー</h1>
       </div>
-    </div>
 
-    <div v-if="loading" class="flex justify-center items-center h-64">
-      <div class="w-9 h-9 border-4 border-gray-200 border-l-red-600 rounded-full animate-spin"></div>
-    </div>
-
-    <div v-else class="mt-8">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-        <div v-for="product in products" :key="product.id" class="h-full rounded-lg overflow-hidden shadow-md bg-white max-w-[450px] mx-auto w-full transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg">
-          <div class="w-full">
-            <div class="h-[200px] flex justify-center items-center overflow-hidden bg-gray-100 relative">
-              <img v-if="product.image" :src="'/storage/' + product.image" :alt="product.name" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
-              <i v-else class="pi pi-image text-[5rem] text-gray-300"></i>
-              <div v-if="product.stock <= 0" class="absolute top-0 right-0 bg-red-600/80 text-white py-1 px-3 font-bold text-sm rounded-bl-lg">
-                <span>売り切れ</span>
-              </div>
-            </div>
+      <div v-if="disconnectWarning" class="border-l-4 p-4 mb-4" :class="{ 'bg-yellow-900/30 border-yellow-600 text-yellow-200': isDarkMode, 'bg-yellow-50 border-yellow-400 text-yellow-700': !isDarkMode }">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="pi pi-exclamation-triangle" :class="{ 'text-yellow-400': !isDarkMode, 'text-yellow-300': isDarkMode }"></i>
           </div>
-          <div class="p-4">
-            <div class="text-[1.4rem] font-bold mb-2 text-gray-800">{{ product.name }}</div>
-
-            <div v-if="product.description" class="mb-4 text-gray-600 text-sm">
-              {{ product.description }}
-            </div>
-
-            <div v-if="product.allergens && product.allergens.length > 0" class="mb-4">
-              <h3 class="text-sm font-bold mb-2 text-gray-600 flex items-center gap-2">
-                <i class="pi pi-exclamation-circle text-red-500"></i>
-                アレルギー情報
-              </h3>
-              <div class="flex flex-wrap gap-2">
-                <span v-for="allergen in product.allergens" 
-                      :key="allergen"
-                      class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-                  {{ allergen }}
-                </span>
-              </div>
-            </div>
-
-            <div class="flex justify-between items-center mb-4">
-              <div class="text-xl text-red-600 font-bold">{{ formatPrice(product.price) }}</div>
-              <div v-if="product.stock > 0" class="text-sm flex items-center gap-1 text-green-600">
-                <i class="pi pi-check-circle"></i> 在庫あり
-              </div>
-              <div v-else class="text-sm flex items-center gap-1 text-gray-500">
-                <i class="pi pi-times-circle"></i> 在庫なし
-              </div>
-            </div>
-            <div v-if="product.has_options" class="mt-4 border-t border-gray-200 pt-4">
-              <h3 class="text-base font-bold mb-2 text-gray-600 relative inline-block pb-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-gray-200">オプション</h3>
-              <div v-for="option in product.options" :key="option.id" class="flex justify-between mb-1 py-2 border-b border-dashed border-gray-200 last:border-b-0">
-                <span class="text-gray-600 text-[0.95rem]">{{ option.option_name }}</span>
-                <span class="text-red-600 font-medium text-[0.95rem]">+{{ formatPrice(option.price) }}</span>
-              </div>
-            </div>
+          <div class="ml-3">
+            <p class="text-sm">
+              {{ connectionStatus }} - 自動的に再接続されます
+            </p>
           </div>
         </div>
       </div>
+
+      <div v-if="loading" class="flex justify-center items-center h-64">
+        <div class="w-9 h-9 border-4 rounded-full animate-spin" :class="{ 'border-gray-700 border-l-red-500': isDarkMode, 'border-gray-200 border-l-red-600': !isDarkMode }"></div>
+      </div>
+
+      <div v-else class="mt-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div v-for="product in products" :key="product.id" class="h-full rounded-lg overflow-hidden shadow-md max-w-[450px] mx-auto w-full transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg" :class="{ 'bg-gray-800 shadow-gray-900/30': isDarkMode, 'bg-white': !isDarkMode }">
+            <div class="w-full">
+              <div class="h-[200px] flex justify-center items-center overflow-hidden relative" :class="{ 'bg-gray-700': isDarkMode, 'bg-gray-100': !isDarkMode }">
+                <img v-if="product.image" :src="'/storage/' + product.image" :alt="product.name" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
+                <i v-else class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
+                <div v-if="product.stock <= 0" class="absolute top-0 right-0 bg-red-600/80 text-white py-1 px-3 font-bold text-sm rounded-bl-lg">
+                  <span>売り切れ</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <div class="text-[1.4rem] font-bold mb-2" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">{{ product.name }}</div>
+
+              <div v-if="product.description" class="mb-4 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">
+                {{ product.description }}
+              </div>
+
+              <div v-if="product.allergens && product.allergens.length > 0" class="mb-4">
+                <h3 class="text-sm font-bold mb-2 flex items-center gap-2" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">
+                  <i class="pi pi-exclamation-circle text-red-500"></i>
+                  アレルギー情報
+                </h3>
+                <div class="flex flex-wrap gap-2">
+                  <span v-for="allergen in product.allergens" 
+                        :key="allergen"
+                        class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium" 
+                        :class="{ 'bg-red-900/30 text-red-300 border border-red-800': isDarkMode, 'bg-red-50 text-red-700 border border-red-200': !isDarkMode }">
+                    {{ allergen }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center mb-4">
+                <div class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }">{{ formatPrice(product.price) }}</div>
+                <div v-if="product.stock > 0" class="text-sm flex items-center gap-1" :class="{ 'text-green-400': isDarkMode, 'text-green-600': !isDarkMode }">
+                  <i class="pi pi-check-circle"></i> 在庫あり
+                </div>
+                <div v-else class="text-sm flex items-center gap-1 text-gray-500">
+                  <i class="pi pi-times-circle"></i> 在庫なし
+                </div>
+              </div>
+              <div v-if="product.has_options" class="mt-4 pt-4" :class="{ 'border-t border-gray-700': isDarkMode, 'border-t border-gray-200': !isDarkMode }">
+                <h3 class="text-base font-bold mb-2 relative inline-block pb-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px]" :class="{ 'text-gray-400 after:bg-gray-700': isDarkMode, 'text-gray-600 after:bg-gray-200': !isDarkMode }">オプション</h3>
+                <div v-for="option in product.options" :key="option.id" class="flex justify-between mb-1 py-2 last:border-b-0" :class="{ 'border-b border-dashed border-gray-700': isDarkMode, 'border-b border-dashed border-gray-200': !isDarkMode }">
+                  <span :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }" class="text-[0.95rem]">{{ option.option_name }}</span>
+                  <span :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }" class="font-medium text-[0.95rem]">+{{ formatPrice(option.price) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button 
+        @click="toggleDarkMode"
+        class="fixed bottom-5 right-5 px-4 py-2 rounded-full shadow-lg transition-colors text-white"
+        :class="{ 'bg-gray-700 hover:bg-gray-600': isDarkMode, 'bg-green-600 hover:bg-green-700': !isDarkMode }"
+      >
+        <i :class="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'" class="mr-2"></i>
+        {{ isDarkMode ? 'ライトモード' : 'ダークモード' }}
+      </button>
     </div>
   </div>
 </template>
@@ -88,6 +100,66 @@ export default {
     let connectionStatus = ref('接続中');
     let disconnectWarning = ref(false);
     let remainingTime = ref(0);
+    const isDarkMode = ref(false);
+
+    const detectDarkMode = () => {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        isDarkMode.value = savedTheme === 'dark';
+      } else {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          isDarkMode.value = true;
+        }
+        if (document.documentElement.classList.contains('dark')) {
+          isDarkMode.value = true;
+        }
+      }
+      applyDarkMode();
+    };
+
+    const toggleDarkMode = () => {
+      isDarkMode.value = !isDarkMode.value;
+      localStorage.setItem('theme', isDarkMode.value ? 'dark' : 'light');
+      applyDarkMode();
+    };
+
+    const applyDarkMode = () => {
+      if (isDarkMode.value) {
+        document.documentElement.classList.add('dark-mode');
+        document.body.classList.add('dark-mode');
+        document.documentElement.style.backgroundColor = '#121827';
+        document.body.style.backgroundColor = '#121827';
+        document.documentElement.style.color = '#f3f4f6';
+        document.body.style.color = '#f3f4f6';
+        document.documentElement.style.height = '100%';
+        document.body.style.height = '100%';
+        document.documentElement.style.margin = '0';
+        document.body.style.margin = '0';
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+        document.body.classList.remove('dark-mode');
+        document.documentElement.style.backgroundColor = '#fff';
+        document.body.style.backgroundColor = '#fff';
+        document.documentElement.style.color = '#1f2937';
+        document.body.style.color = '#1f2937';
+        document.documentElement.style.height = '100%';
+        document.body.style.height = '100%';
+        document.documentElement.style.margin = '0';
+        document.body.style.margin = '0';
+      }
+    };
+
+    const watchSystemTheme = () => {
+      if (window.matchMedia) {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        mediaQuery.addEventListener('change', (e) => {
+          if (!localStorage.getItem('theme')) {
+            isDarkMode.value = e.matches;
+            applyDarkMode();
+          }
+        });
+      }
+    };
 
     const setupEventSource = () => {
       if (eventSource) {
@@ -149,6 +221,9 @@ export default {
 
     onMounted(() => {
       setupEventSource();
+      detectDarkMode();
+      watchSystemTheme();
+      applyDarkMode();
     });
 
     onUnmounted(() => {
@@ -163,8 +238,24 @@ export default {
       formatPrice,
       connectionStatus,
       disconnectWarning,
-      remainingTime
+      remainingTime,
+      isDarkMode,
+      toggleDarkMode
     };
   }
 };
 </script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.dark-mode {
+  background-color: #121827;
+  color: #f3f4f6;
+}
+</style>
