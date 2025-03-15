@@ -129,7 +129,6 @@ export default {
       if (productCache.value[productId]) {
         return productCache.value[productId];
       }
-      
       try {
         const response = await axios.get(`/api/products/${productId}`);
         productCache.value[productId] = response.data;
@@ -142,12 +141,9 @@ export default {
 
     const processOrdersWithProductInfo = async (ordersData) => {
       const processedOrders = [...ordersData];
-      
       const productIds = new Set(processedOrders.map(order => order.product_id));
-      
       const fetchPromises = Array.from(productIds).map(id => fetchProductInfo(id));
       await Promise.all(fetchPromises);
-      
       return processedOrders;
     };
 
@@ -156,8 +152,7 @@ export default {
         eventSource.close();
       }
 
-      const sseUrl = import.meta.env.VITE_ORDER_SSE_URL || 'http://localhost:8000/api/orders/stream';
-      eventSource = new EventSource(sseUrl);
+      eventSource = new EventSource(import.meta.env.VITE_ORDER_SSE_URL);
 
       eventSource.addEventListener('orders', async (event) => {
         try {
@@ -236,15 +231,23 @@ export default {
     const parseOptions = (optionsStr) => {
       if (!optionsStr) return [];
       try {
-        return JSON.parse(optionsStr);
+        const parsedOptions = JSON.parse(optionsStr);
+        if (typeof parsedOptions === 'string') {
+          return JSON.parse(parsedOptions);
+        }
+        return parsedOptions;
       } catch (error) {
-        console.error('オプションの解析に失敗しました:', error);
+        console.error('オプションの解析に失敗しました:', error, optionsStr);
         return [];
       }
     };
 
     const getProductName = (productId) => {
       return productCache.value[productId]?.name || `商品ID: ${productId}`;
+    };
+
+    const getProductOptions = (productId) => {
+      return productCache.value[productId]?.options || [];
     };
 
     onMounted(() => {
@@ -270,6 +273,7 @@ export default {
       remainingTime,
       parseOptions,
       getProductName,
+      getProductOptions,
       isDarkMode,
       toggleDarkMode
     };
