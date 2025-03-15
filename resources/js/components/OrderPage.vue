@@ -37,7 +37,7 @@
                 class="w-24 h-24 object-contain"
               />
               <div v-else class="w-12 h-12 flex items-center justify-center">
-                <i class="pi pi-shopping-cart text-4xl" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }"></i>
+                <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
               </div>
             </div>
             <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
