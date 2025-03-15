@@ -35,10 +35,10 @@ class ProductControllerTest extends TestCase
         $response = $this->actingAs($this->user)->getJson('/api/products');
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            '*' => [
-                'id',
-                'has_options'
-            ]
+                'data' => [
+                    'id',
+                    'has_options'
+                ]
         ]);
         $products = $response->json();
         $foundWithout = false;
@@ -62,8 +62,10 @@ class ProductControllerTest extends TestCase
         $response = $this->actingAs($this->user)->getJson("/api/products/{$product->id}");
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            'id',
-            'has_options'
+            'data' => [
+                'id',
+                'has_options'
+            ]
         ]);
         $responseData = $response->json();
         $this->assertFalse($responseData['data']['has_options'], 'If no options set, has_options should be false');
