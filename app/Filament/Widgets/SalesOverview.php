@@ -22,13 +22,13 @@ final class SalesOverview extends BaseWidget
 
     protected function getCards(): array
     {
-        $todayTotal = (float) Order::whereDate('created_at', now()->toDateString())->sum('total_price');
-        $yesterdayTotal = (float) Order::whereDate('created_at', now()->subDay()->toDateString())->sum('total_price');
+        $todayTotal = (int) Order::whereDate('created_at', now()->toDateString())->sum('total_price');
+        $yesterdayTotal = (int) Order::whereDate('created_at', now()->subDay()->toDateString())->sum('total_price');
 
         $percentageChange = 0;
         if ($yesterdayTotal > 0) {
             $percentageChange = (($todayTotal - $yesterdayTotal) / $yesterdayTotal) * 100;
-        } elseif ($todayTotal > 0 && $yesterdayTotal === 0.0) {
+        } elseif ($todayTotal > 0 && $yesterdayTotal === 0) {
             $percentageChange = 100;
         }
 
@@ -42,15 +42,15 @@ final class SalesOverview extends BaseWidget
 
         $cards = [
             Card::make('今日の売上', new HtmlString('¥'.number_format($todayTotal)))
-                ->description($yesterdayTotal === 0.0 ? ($todayTotal > 0 ? '+100.0%' : '±0.0%') : ($percentageChange >= 0 ? '+'.number_format($percentageChange, 1).'%' : number_format($percentageChange, 1).'%'))
-                ->descriptionIcon($yesterdayTotal === 0.0 ? ($todayTotal > 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-minus') : ($percentageChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down'))
-                ->color($yesterdayTotal === 0.0 ? ($todayTotal > 0 ? 'success' : 'gray') : ($percentageChange >= 0 ? 'success' : 'danger'))
+                ->description($yesterdayTotal === 0 ? ($todayTotal > 0 ? '+100.0%' : '±0.0%') : ($percentageChange >= 0 ? '+'.number_format($percentageChange, 1).'%' : number_format($percentageChange, 1).'%'))
+                ->descriptionIcon($yesterdayTotal === 0 ? ($todayTotal > 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-minus') : ($percentageChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down'))
+                ->color($yesterdayTotal === 0 ? ($todayTotal > 0 ? 'success' : 'gray') : ($percentageChange >= 0 ? 'success' : 'danger'))
                 ->chart($trend->pluck('total')->toArray())
-                ->chartColor($yesterdayTotal === 0.0 ? ($todayTotal > 0 ? 'success' : 'gray') : ($percentageChange >= 0 ? 'success' : 'danger')),
+                ->chartColor($yesterdayTotal === 0 ? ($todayTotal > 0 ? 'success' : 'gray') : ($percentageChange >= 0 ? 'success' : 'danger')),
 
-            Card::make('総売上', new HtmlString('¥'.number_format((float) Order::sum('total_price'))))
+            Card::make('総売上', new HtmlString('¥'.number_format((int) Order::sum('total_price'))))
                 ->chart($trend->pluck('total')->toArray())
-                ->chartColor('primary'),
+                ->chartColor(Order::sum('total_price') === 0 ? 'gray' : 'primary'),
         ];
 
         if ($yesterdayTotal > 0) {

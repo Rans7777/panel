@@ -37,7 +37,7 @@
                 class="w-24 h-24 object-contain"
               />
               <div v-else class="w-12 h-12 flex items-center justify-center">
-                <i class="pi pi-shopping-cart text-4xl" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }"></i>
+                <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
               </div>
             </div>
             <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
@@ -75,11 +75,11 @@
                   <div v-if="item.options && item.options.length > 0" class="mt-1 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-500': !isDarkMode }">
                     オプション:<br>
                     <span v-for="option in item.options" :key="option.id" class="ml-2 block italic">
-                      {{ option.option_name }} (追加料金: ¥{{ option.price }})
+                      {{ option.option_name }} (追加料金: ¥{{ parseInt(option.price) }})
                     </span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-center">¥{{ item.price }}</td>
+                <td class="px-4 py-3 text-center">¥{{ parseInt(item.price) }}</td>
                 <td class="px-4 py-3 text-center">
                   <input 
                     type="number"
@@ -90,7 +90,7 @@
                     @change="updateQuantity(index, item.quantity)"
                   />
                 </td>
-                <td class="px-4 py-3 text-center">¥{{ item.price * item.quantity }}</td>
+                <td class="px-4 py-3 text-center">¥{{ parseInt(item.price * item.quantity) }}</td>
                 <td class="px-4 py-3 text-center">
                   <button 
                     @click="handleDeleteClick(index)"
@@ -141,12 +141,12 @@
                 class="pl-2"
                 :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }"
               >
-                {{ option.option_name }} (¥{{ option.price }})
+                {{ option.option_name }} (¥{{ parseInt(option.price) }})
               </div>
             </div>
             <div class="flex justify-between items-center mt-4">
               <div class="font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
-                ¥{{ item.price }}
+                ¥{{ parseInt(item.price) }}
               </div>
               <div class="flex items-center gap-2">
                 <button 
@@ -168,7 +168,7 @@
         <!-- 合計金額と注文ボタン -->
         <div class="mt-8">
           <div class="text-right text-xl font-bold mb-4">
-            合計金額: ¥{{ totalPrice }}
+            合計金額: ¥{{ parseInt(totalPrice) }}
           </div>
           <div class="flex justify-end">
             <button 
@@ -205,7 +205,7 @@
                 class="w-4 h-4"
               />
               <label :for="`option-${option.id}`">
-                {{ option.option_name }} (追加料金: ¥{{ option.price }})
+                {{ option.option_name }} (追加料金: ¥{{ parseInt(option.price) }})
               </label>
             </div>
           </div>
@@ -243,7 +243,7 @@
         >
           <h3 class="text-xl font-bold mb-4">お支払い</h3>
           <div class="space-y-4 mb-6">
-            <p>合計金額: ¥{{ totalPrice }}</p>
+            <p>合計金額: ¥{{ parseInt(totalPrice) }}</p>
             <div class="space-y-2">
               <label for="payment-amount">お支払い金額:</label>
               <input 
@@ -261,7 +261,7 @@
                 }"
               />
             </div>
-            <p>おつり: ¥{{ changeAmount }}</p>
+            <p>おつり: ¥{{ parseInt(changeAmount) }}</p>
           </div>
           <div class="flex justify-between gap-4">
             <button 
@@ -375,13 +375,25 @@ const applyDarkMode = () => {
   if (isDarkMode.value) {
     document.documentElement.classList.add('dark-mode');
     document.body.classList.add('dark-mode');
-    document.documentElement.style.backgroundColor = '#1a1a1a';
-    document.body.style.backgroundColor = '#1a1a1a';
+    document.documentElement.style.backgroundColor = '#121827';
+    document.body.style.backgroundColor = '#121827';
+    document.documentElement.style.color = '#f3f4f6';
+    document.body.style.color = '#f3f4f6';
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.margin = '0';
+    document.body.style.margin = '0';
   } else {
     document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
     document.documentElement.style.backgroundColor = '#fff';
     document.body.style.backgroundColor = '#fff';
+    document.documentElement.style.color = '#1f2937';
+    document.body.style.color = '#1f2937';
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.margin = '0';
+    document.body.style.margin = '0';
   }
 };
 
@@ -525,9 +537,9 @@ const removeFromCart = (index) => {
 
 // カート内の商品の合計金額を計算
 const calculateTotalPrice = () => {
-  totalPrice.value = cart.value.reduce((sum, item) => {
+  totalPrice.value = parseInt(cart.value.reduce((sum, item) => {
     return sum + (item.price * item.quantity);
-  }, 0);
+  }, 0));
 };
 
 // オプション選択を確定
@@ -561,8 +573,8 @@ const confirmOptionSelection = () => {
   }
 
   // オプションの追加料金を計算
-  const additionalPrice = selectedOptions.reduce((sum, option) => sum + option.price, 0);
-  const totalItemPrice = product.price + additionalPrice;
+  const additionalPrice = parseInt(selectedOptions.reduce((sum, option) => sum + Number(option.price), 0));
+  const totalItemPrice = parseInt(Number(product.price) + additionalPrice);
 
   // 同じ商品とオプションの組み合わせがカートにあるかチェック
   for (let i = 0; i < cart.value.length; i++) {
@@ -639,7 +651,7 @@ const showPaymentModal = () => {
 
 // おつりを計算
 const calculateChange = () => {
-  changeAmount.value = paymentAmount.value - totalPrice.value;
+  changeAmount.value = parseInt(paymentAmount.value - totalPrice.value);
 };
 
 // お支払い金額の入力を検証
@@ -753,5 +765,17 @@ onMounted(() => {
 
 .notification {
   animation: slideIn 0.3s ease-out forwards;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.dark-mode {
+  background-color: #121827;
+  color: #f3f4f6;
 }
 </style>

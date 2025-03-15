@@ -7,8 +7,17 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
-    <div id="app">
-        <menu-page></menu-page>
-    </div>
+    @php
+        $guard = auth()->guard('web');
+    @endphp
+    @if ($guard->check())
+        <div id="app">
+            <menu-page></menu-page>
+        </div>
+    @else
+        <script>
+            window.location.href = "{{ route('filament.admin.auth.login') }}";
+        </script>
+    @endif
 </body>
 </html>
