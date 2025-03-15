@@ -18,7 +18,12 @@ class ProductController extends Controller
             return $product;
         });
 
-        return response()->json($products);
+        return response()->json([
+            'data' => $products,
+            'meta' => [
+                'total' => $products->count(),
+            ],
+        ]);
     }
 
     public function show($id)
@@ -26,6 +31,11 @@ class ProductController extends Controller
         $product = Product::with('options')->findOrFail($id); /** @phpstan-ignore-line */
         $product->setAttribute('has_options', $product->options->count() > 0); /** @phpstan-ignore-line */
 
-        return response()->json($product);
+        return response()->json([
+            'data' => $product,
+            'meta' => [
+                'total' => $product->count(),
+            ],
+        ]);
     }
 }

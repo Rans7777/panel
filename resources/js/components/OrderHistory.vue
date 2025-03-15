@@ -131,8 +131,8 @@ export default {
       }
       try {
         const response = await axios.get(`/api/products/${productId}`);
-        productCache.value[productId] = response.data;
-        return response.data;
+        productCache.value[productId] = response.data.data;
+        return response.data.data;
       } catch (error) {
         console.error(`商品情報の取得に失敗しました (ID: ${productId}):`, error);
         return null;
@@ -243,7 +243,7 @@ export default {
     };
 
     const getProductName = (productId) => {
-      return productCache.value[productId]?.name || `商品ID: ${productId}`;
+      return productCache.value[productId]?.name || `${productId}`;
     };
 
     const getProductOptions = (productId) => {

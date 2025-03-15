@@ -414,7 +414,7 @@ const watchSystemTheme = () => {
 const loadProducts = async () => {
   try {
     const response = await axios.get('/api/products');
-    products.value = response.data;
+    products.value = response.data.data;
   } catch (err) {
     error.value = '製品情報の取得に失敗しました';
   }
