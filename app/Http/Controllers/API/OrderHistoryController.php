@@ -20,6 +20,11 @@ class OrderHistoryController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return response()->json($orderHistory);
+        return response()->json([
+            'data' => $orderHistory,
+            'meta' => [
+                'total' => $orderHistory->count(),
+            ],
+        ]);
     }
 }
