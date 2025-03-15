@@ -46,11 +46,11 @@ class ProductControllerTest extends TestCase
         $foundWithout = false;
         $foundWith = false;
         foreach ($products as $product) {
-            if ($product['data']['id'] === $productWithoutOption->id) {
-                $this->assertFalse($product['data']['has_options'], 'If product has no options, has_options should be false');
+            if ($product['id'] === $productWithoutOption->id) {
+                $this->assertFalse($product['has_options'], 'If product has no options, has_options should be false');
                 $foundWithout = true;
-            } elseif ($product['data']['id'] === $productWithOption->id) {
-                $this->assertTrue($product['data']['has_options'], 'If product has options, has_options should be true');
+            } elseif ($product['id'] === $productWithOption->id) {
+                $this->assertTrue($product['has_options'], 'If product has options, has_options should be true');
                 $foundWith = true;
             }
         }
