@@ -44,11 +44,11 @@ class ProductControllerTest extends TestCase
         $foundWithout = false;
         $foundWith = false;
         foreach ($products as $product) {
-            if ($product['id'] === $productWithoutOption->id) {
-                $this->assertFalse($product['has_options'], 'If product has no options, has_options should be false');
+            if ($product['data']['id'] === $productWithoutOption->id) {
+                $this->assertFalse($product['data']['has_options'], 'If product has no options, has_options should be false');
                 $foundWithout = true;
-            } elseif ($product['id'] === $productWithOption->id) {
-                $this->assertTrue($product['has_options'], 'If product has options, has_options should be true');
+            } elseif ($product['data']['id'] === $productWithOption->id) {
+                $this->assertTrue($product['data']['has_options'], 'If product has options, has_options should be true');
                 $foundWith = true;
             }
         }
@@ -66,7 +66,7 @@ class ProductControllerTest extends TestCase
             'has_options'
         ]);
         $responseData = $response->json();
-        $this->assertFalse($responseData['has_options'], 'If no options set, has_options should be false');
+        $this->assertFalse($responseData['data']['has_options'], 'If no options set, has_options should be false');
     }
 
     public function test_unauthenticated_user_cannot_access_single_product()
