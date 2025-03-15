@@ -4,6 +4,19 @@
       <h1 class="text-3xl font-bold text-center my-6 text-gray-800 relative inline-block pb-2 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-1/2 after:h-[3px] after:bg-red-600">メニュー</h1>
     </div>
 
+    <div v-if="disconnectWarning" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <i class="pi pi-exclamation-triangle text-yellow-400"></i>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm text-yellow-700">
+            {{ connectionStatus }} - 自動的に再接続されます
+          </p>
+        </div>
+      </div>
+    </div>
+
     <div v-if="loading" class="flex justify-center items-center h-64">
       <div class="w-9 h-9 border-4 border-gray-200 border-l-red-600 rounded-full animate-spin"></div>
     </div>
@@ -66,32 +79,65 @@
 
 <script>
 import { ref, onMounted, onUnmounted } from 'vue';
-import axios from 'axios';
 
 export default {
   setup() {
     const products = ref([]);
     const loading = ref(true);
-    let refreshInterval = null;
-    const refreshTime = 60000;
+    let eventSource = null;
+    let connectionStatus = ref('接続中');
+    let disconnectWarning = ref(false);
+    let remainingTime = ref(0);
 
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get('/api/products');
-        products.value = response.data;
-      } catch (error) {
-        console.error('商品の取得に失敗しました:', error);
-      } finally {
-        loading.value = false;
+    const setupEventSource = () => {
+      if (eventSource) {
+        eventSource.close();
       }
-    };
 
-    const startAutoRefresh = () => {
-      loading.value = true;
-      fetchProducts();
-      refreshInterval = setInterval(() => {
-        fetchProducts();
-      }, refreshTime);
+      eventSource = new EventSource(import.meta.env.VITE_PRODUCT_SSE_URL);
+      disconnectWarning.value = false;
+
+      eventSource.addEventListener('products', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          products.value = data;
+          loading.value = false;
+        } catch (error) {
+          console.error('製品データの解析に失敗しました:', error);
+        }
+      });
+
+      eventSource.addEventListener('disconnect_warning', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          disconnectWarning.value = true;
+          remainingTime.value = parseInt(data.message.match(/\d+/)[0]);
+          connectionStatus.value = `接続は${remainingTime.value}秒後に切断されます`;
+        } catch (error) {
+          console.error('切断警告の解析に失敗しました:', error);
+        }
+      });
+      eventSource.addEventListener('close', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          connectionStatus.value = 'サーバーとの接続が終了しました';
+          eventSource.close();
+          setTimeout(() => {
+            setupEventSource();
+          }, 5000);
+        } catch (error) {
+          console.error('接続終了メッセージの解析に失敗しました:', error);
+        }
+      });
+
+      eventSource.onerror = (error) => {
+        console.error('SSE接続エラー:', error);
+        connectionStatus.value = '接続エラー - 再接続中...';
+        eventSource.close();
+        setTimeout(() => {
+          setupEventSource();
+        }, 5000);
+      };
     };
 
     const formatPrice = (price) => {
@@ -102,19 +148,22 @@ export default {
     };
 
     onMounted(() => {
-      startAutoRefresh();
+      setupEventSource();
     });
 
     onUnmounted(() => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
+      if (eventSource) {
+        eventSource.close();
       }
     });
 
     return {
       products,
       loading,
-      formatPrice
+      formatPrice,
+      connectionStatus,
+      disconnectWarning,
+      remainingTime
     };
   }
 };
