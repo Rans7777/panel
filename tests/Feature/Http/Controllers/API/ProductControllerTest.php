@@ -42,7 +42,8 @@ class ProductControllerTest extends TestCase
                 ]
             ]
         ]);
-        $products = $response->json();
+        $responseData = $response->json();
+        $products = $responseData['data'];
         $foundWithout = false;
         $foundWith = false;
         foreach ($products as $product) {
