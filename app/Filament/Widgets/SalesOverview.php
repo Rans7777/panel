@@ -50,7 +50,7 @@ final class SalesOverview extends BaseWidget
 
             Card::make('総売上', new HtmlString('¥'.number_format(Order::sum('total_price'))))
                 ->chart($trend->pluck('total')->toArray())
-                ->chartColor(Order::sum('total_price') === 0 ? 'gray' : 'primary')
+                ->chartColor(Order::sum('total_price') === 0 ? 'gray' : 'primary'),
         ];
 
         if ($yesterdayTotal > 0) {
