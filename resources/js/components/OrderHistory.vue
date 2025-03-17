@@ -78,6 +78,9 @@ export default {
     let warningTimer = null;
     let remainingTime = ref(0);
     const isDarkMode = ref(false);
+    let currentToken = ref(null);
+    let tokenRetryCount = ref(0);
+    let tokenRetryTimer = null;
 
     const showWarning = (message, duration = 0) => {
       if (warningTimer) {
@@ -153,6 +156,76 @@ export default {
       }
     };
 
+    const tokenValidityCache = ref({});
+
+    const getSavedToken = () => {
+      const savedToken = localStorage.getItem('access_token');
+      const savedTokenTime = localStorage.getItem('access_token_time');
+      if (savedToken && savedTokenTime) {
+        const tokenTime = parseInt(savedTokenTime);
+        const currentTime = Date.now();
+        const fiveMinutesInMs = 5 * 60 * 1000;
+        if (currentTime - tokenTime < fiveMinutesInMs) {
+          return savedToken;
+        }
+      }
+      return null;
+    };
+    const saveToken = (token) => {
+      localStorage.setItem('access_token', token);
+      localStorage.setItem('access_token_time', Date.now().toString());
+    };
+    const getOrValidateToken = async () => {
+      if (currentToken.value) {
+        return currentToken.value;
+      }
+      const savedToken = getSavedToken();
+      if (savedToken) {
+        currentToken.value = savedToken;
+        return savedToken;
+      }
+      try {
+        const response = await axios.get('/api/create-access-token');
+        const newToken = response.data.access_token;
+        currentToken.value = newToken;
+        saveToken(newToken);
+        tokenRetryCount.value = 0;
+        return newToken;
+      } catch (error) {
+        tokenRetryCount.value++;
+        return null;
+      }
+    };
+
+    const validateTokenAfterError = async (token) => {
+      if (!token) return false;
+
+      if (tokenValidityCache.value[token]) {
+        const cachedResult = tokenValidityCache.value[token];
+        const currentTime = Date.now();
+        const cacheTime = 30 * 1000;
+
+        if (currentTime - cachedResult.timestamp < cacheTime) {
+          return cachedResult.valid;
+        }
+      }
+      try {
+        const response = await axios.get(`/api/access-token/${token}/validity`);
+        const isValid = response.data.valid;
+        tokenValidityCache.value[token] = {
+          valid: isValid,
+          timestamp: Date.now()
+        };
+        return isValid;
+      } catch (error) {
+        tokenValidityCache.value[token] = {
+          valid: false,
+          timestamp: Date.now()
+        };
+        return false;
+      }
+    };
+
     const fetchProductInfo = async (productId) => {
       if (productCache.value[productId]) {
         return productCache.value[productId];
@@ -175,100 +248,117 @@ export default {
       return processedOrders;
     };
 
-    const setupEventSource = () => {
+    const setupEventSource = async () => {
       if (eventSource) {
         eventSource.close();
       }
 
+      if (tokenRetryTimer) {
+        clearTimeout(tokenRetryTimer);
+        tokenRetryTimer = null;
+      }
+
       showWarning('接続中...', 0);
 
-      axios.get('/api/create-access-token')
-        .then(response => {
-          const token = response.data.access_token;
+      const token = await getOrValidateToken();
+      
+      if (!token) {
+        const retryDelay = Math.min(30000 + (tokenRetryCount.value * 10000), 60000);
+        showWarning(`APIトークンの取得に失敗しました - ${Math.round(retryDelay/1000)}秒後に再試行します`, 0);
+        tokenRetryTimer = setTimeout(() => {
+          setupEventSource();
+        }, retryDelay);
+        return;
+      }
 
-          const fetchOrdersWithToken = async () => {
-            try {
-              const response = await fetch(import.meta.env.VITE_ORDER_SSE_URL, {
-                headers: {
-                  'Authorization': `Bearer ${token}`
+      const fetchOrdersWithToken = async () => {
+        try {
+          const response = await fetch(import.meta.env.VITE_ORDER_SSE_URL, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              const eventLines = line.split('\n');
+              let eventName = 'message';
+              let data = '';
+              for (const eventLine of eventLines) {
+                if (eventLine.startsWith('event:')) {
+                  eventName = eventLine.slice(6).trim();
+                } else if (eventLine.startsWith('data:')) {
+                  data = eventLine.slice(5).trim();
                 }
-              });
-
-              if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
               }
-
-              const reader = response.body.getReader();
-              const decoder = new TextDecoder();
-              let buffer = '';
-
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n\n');
-                for (const line of lines) {
-                  if (!line.trim()) continue;
-                  const eventLines = line.split('\n');
-                  let eventName = 'message';
-                  let data = '';
-                  for (const eventLine of eventLines) {
-                    if (eventLine.startsWith('event:')) {
-                      eventName = eventLine.slice(6).trim();
-                    } else if (eventLine.startsWith('data:')) {
-                      data = eventLine.slice(5).trim();
-                    }
+              if (eventName === 'orders') {
+                try {
+                  const parsedData = JSON.parse(data);
+                  const processedData = await processOrdersWithProductInfo(parsedData);
+                  orders.value = processedData;
+                  loading.value = false;
+                  if (disconnectWarning.value && connectionStatus.value === '接続中...') {
+                    showWarning('接続成功', 3000);
                   }
-                  if (eventName === 'orders') {
-                    try {
-                      const parsedData = JSON.parse(data);
-                      const processedData = await processOrdersWithProductInfo(parsedData);
-                      orders.value = processedData;
-                      loading.value = false;
-                      if (disconnectWarning.value && connectionStatus.value === '接続中...') {
-                        showWarning('接続成功', 3000);
-                      }
-                    } catch (error) {
-                      showWarning('注文データの解析に失敗しました:', 0);
-                    }
-                  } else if (eventName === 'disconnect_warning') {
-                    try {
-                      const parsedData = JSON.parse(data);
-                      remainingTime.value = parseInt(parsedData.message.match(/\d+/)[0]);
-                      if (remainingTime.value <= 10) {
-                        reader.cancel();
-                        setTimeout(() => {
-                          setupEventSource();
-                        }, 1000);
-                        return;
-                      }
-                    } catch (error) {
-                      showWarning('切断警告の解析に失敗しました:', 0);
-                    }
-                  } else if (eventName === 'close') {
+                } catch (error) {
+                  showWarning('注文データの解析に失敗しました:', 0);
+                }
+              } else if (eventName === 'disconnect_warning') {
+                try {
+                  const parsedData = JSON.parse(data);
+                  remainingTime.value = parseInt(parsedData.message.match(/\d+/)[0]);
+                  showWarning(`接続は${remainingTime.value}秒後に切断されます - 自動的に再接続されます`, 0);
+                  if (remainingTime.value <= 10) {
+                    reader.cancel();
+                    showWarning('再接続中...', 0);
+                    currentToken.value = null;
                     setTimeout(() => {
                       setupEventSource();
-                    }, 5000);
+                    }, 1000);
                     return;
                   }
+                } catch (error) {
+                  showWarning('切断警告の解析に失敗しました:', 0);
                 }
+              } else if (eventName === 'close') {
+                showWarning('サーバーとの接続が終了しました - 再接続中...', 0);
+                setTimeout(() => {
+                  setupEventSource();
+                }, 5000);
+                return;
               }
-            } catch (error) {
-              showWarning('サーバーとの接続に失敗しました。', 5000);
-              setTimeout(() => {
-                setupEventSource();
-              }, 5000);
             }
-          };
-          fetchOrdersWithToken();
-        })
-        .catch(() => {
-          showWarning('APIトークンの取得に失敗しました。', 5000);
+          }
+        } catch (error) {
+          const isTokenValid = await validateTokenAfterError(token);
+          if (!isTokenValid) {
+            currentToken.value = null;
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('access_token_time');
+          }
+          showWarning('接続エラー - 再接続中...', 0);
           setTimeout(() => {
             setupEventSource();
           }, 5000);
-        });
+        }
+      };
+      
+      fetchOrdersWithToken();
     };
 
     const groupedOrders = computed(() => {
@@ -335,6 +425,12 @@ export default {
     onUnmounted(() => {
       if (eventSource) {
         eventSource.close();
+      }
+      if (warningTimer) {
+        clearTimeout(warningTimer);
+      }
+      if (tokenRetryTimer) {
+        clearTimeout(tokenRetryTimer);
       }
     });
 

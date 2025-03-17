@@ -19,4 +19,28 @@ class AccessToken extends Controller
         ]);
         return response()->json(['access_token' => $accessToken]);
     }
+
+    public function get()
+    {
+        $accessToken = DB::table('access_tokens')->orderBy('created_at', 'desc')->first();
+        return response()->json(['access_token' => $accessToken->access_token]);
+    }
+
+    public function expiry($token)
+    {
+        $currentTime = Carbon::now(config('app.timezone'));
+        $validTime = $currentTime->copy()->subMinutes(5);
+        $accessToken = DB::table('access_tokens')
+            ->where('access_token', $token)
+            ->where('created_at', '>=', $validTime)
+            ->first();
+        if ($accessToken) {
+            return response()->json([
+                'valid' => true
+            ]);
+        }
+        return response()->json([
+            'valid' => false,
+        ], 401);
+    }
 }
