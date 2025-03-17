@@ -1,6 +1,5 @@
-aiomysql==0.2.0
+asyncmy==0.2.10
 fastapi==0.115.11
 loguru==0.7.3
-PyMySQL==1.1.1
 python-dotenv==1.0.1
 pytz==2025.1

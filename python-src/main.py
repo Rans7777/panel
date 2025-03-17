@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 import uvicorn
-import aiomysql
+import asyncmy
 import json
 import asyncio
 import os
@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 load_dotenv()
-logger.add('app.log', enqueue=True, format="{level} {message}", level="INFO")
+logger.add('app.log', enqueue=True, level="INFO")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,12 +42,12 @@ async def delete_token() -> None:
     while True:
         try:
             query = "DELETE FROM access_tokens WHERE created_at < %s"
-            async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
-                async with connection.cursor(aiomysql.DictCursor) as cursor:
+            async with asyncmy.connect(host=os.getenv("DB_HOST"), user=os.getenv("DB_USERNAME"), password=os.getenv("DB_PASSWORD"), db=os.getenv("DB_DATABASE"), port=int(os.getenv("DB_PORT"))) as connection:
+                async with connection.cursor(asyncmy.cursors.DictCursor) as cursor:
                     await cursor.execute(query, (datetime.now(timezone) - timedelta(minutes=5),))
                     if cursor.rowcount > 0:
                         logger.info(f"Deleted {cursor.rowcount} expired tokens")
-        except aiomysql.Error as e:
+        except asyncmy.errors.Error as e:
             logger.error(f"Database error in delete_token: {str(e)}")
         try:
             await asyncio.sleep(300)
@@ -62,22 +62,22 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> str:
     valid_time = current_time - timedelta(minutes=5)
     query = "SELECT * FROM access_tokens WHERE access_token = %s AND created_at >= %s"
     try:
-        async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
-            async with connection.cursor(aiomysql.DictCursor) as cursor:
+        async with asyncmy.connect(host=os.getenv("DB_HOST"), user=os.getenv("DB_USERNAME"), password=os.getenv("DB_PASSWORD"), db=os.getenv("DB_DATABASE"), port=int(os.getenv("DB_PORT"))) as connection:
+            async with connection.cursor(asyncmy.cursors.DictCursor) as cursor:
                 await cursor.execute(query, (token, valid_time))
                 result = await cursor.fetchone()
             if not result:
                 raise HTTPException(status_code=401, detail="Invalid or expired token")
             return token
-    except aiomysql.Error as e:
+    except asyncmy.errors.Error as e:
         logger.error(f"Database error in verify_token: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 async def get_products() -> list[dict]:
     try:
         query = "SELECT name, description, price, stock, image, allergens, created_at FROM products"
-        async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
-            async with connection.cursor(aiomysql.DictCursor) as cursor:
+        async with asyncmy.connect(host=os.getenv("DB_HOST"), user=os.getenv("DB_USERNAME"), password=os.getenv("DB_PASSWORD"), db=os.getenv("DB_DATABASE"), port=int(os.getenv("DB_PORT"))) as connection:
+            async with connection.cursor(asyncmy.cursors.DictCursor) as cursor:
                 await cursor.execute(query)
                 products = await cursor.fetchall()
                 for product in products:
@@ -87,19 +87,19 @@ async def get_products() -> list[dict]:
                         except json.JSONDecodeError:
                             pass
                 return products
-    except aiomysql.Error as e:
+    except asyncmy.errors.Error as e:
         logger.error(f"Database error in get_products: {str(e)}")
         return []
 
 async def get_orders() -> list[dict]:
     try:
         query = "SELECT uuid, product_id, quantity, image, options, created_at FROM orders"
-        async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
-            async with connection.cursor(aiomysql.DictCursor) as cursor:
+        async with asyncmy.connect(host=os.getenv("DB_HOST"), user=os.getenv("DB_USERNAME"), password=os.getenv("DB_PASSWORD"), db=os.getenv("DB_DATABASE"), port=int(os.getenv("DB_PORT"))) as connection:
+            async with connection.cursor(asyncmy.cursors.DictCursor) as cursor:
                 await cursor.execute(query)
                 orders = await cursor.fetchall()
                 return orders
-    except aiomysql.Error as e:
+    except asyncmy.errors.Error as e:
         logger.error(f"Database error in get_orders: {str(e)}")
         return []
 
