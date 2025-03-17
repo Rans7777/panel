@@ -1,28 +1,32 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
-class AccessToken extends Controller
+class AccessTokenController extends Controller
 {
     public function index()
     {
-        $accessToken = str_replace('-', '', Str::uuid());
+        $accessToken = str_replace('-', '', Str::uuid()->toString());
         $createdAt = Carbon::now(config('app.timezone'));
         DB::table('access_tokens')->insert([
             'access_token' => $accessToken,
             'created_at' => $createdAt,
         ]);
+
         return response()->json(['access_token' => $accessToken]);
     }
 
     public function get()
     {
         $accessToken = DB::table('access_tokens')->orderBy('created_at', 'desc')->first();
+
         return response()->json(['access_token' => $accessToken->access_token]);
     }
 
@@ -36,9 +40,10 @@ class AccessToken extends Controller
             ->first();
         if ($accessToken) {
             return response()->json([
-                'valid' => true
+                'valid' => true,
             ]);
         }
+
         return response()->json([
             'valid' => false,
         ], 401);
