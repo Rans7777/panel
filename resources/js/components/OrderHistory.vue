@@ -3,10 +3,6 @@
     <div class="order-history max-w-7xl mx-auto p-4">
       <h2 class="text-2xl font-bold mb-4" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">注文履歴</h2>
 
-      <div v-if="loading" class="flex justify-center items-center h-64">
-        <div class="w-9 h-9 border-4 rounded-full animate-spin" :class="{ 'border-gray-700 border-l-red-500': isDarkMode, 'border-gray-200 border-l-red-600': !isDarkMode }"></div>
-      </div>
-
       <div v-if="disconnectWarning" class="border-l-4 p-4 mb-4" :class="{ 'bg-yellow-900/30 border-yellow-600 text-yellow-200': isDarkMode, 'bg-yellow-50 border-yellow-400 text-yellow-700': !isDarkMode }">
         <div class="flex items-center">
           <div class="flex-shrink-0">
@@ -18,6 +14,10 @@
             </p>
           </div>
         </div>
+      </div>
+
+      <div v-if="loading" class="flex justify-center items-center h-64">
+        <div class="w-9 h-9 border-4 rounded-full animate-spin" :class="{ 'border-gray-700 border-l-red-500': isDarkMode, 'border-gray-200 border-l-red-600': !isDarkMode }"></div>
       </div>
 
       <div v-else>
