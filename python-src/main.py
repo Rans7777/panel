@@ -1,15 +1,31 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, Header
 import uvicorn
 import aiomysql
 import json
 import asyncio
 import os
+import pytz
 from dotenv import load_dotenv
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime, timedelta
+from typing import Optional
+from contextlib import asynccontextmanager
 
 load_dotenv()
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    token_task = asyncio.create_task(delete_token())
+    yield
+    token_task.cancel()
+    try:
+        await token_task
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(lifespan=lifespan)
+timezone = pytz.timezone(os.getenv('APP_TIMEZONE'))
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,7 +36,33 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-async def get_products():
+async def delete_token() -> None:
+    while True:
+        query = "DELETE FROM access_tokens WHERE created_at < %s"
+        async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
+            async with connection.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute(query, (datetime.now(timezone) - timedelta(minutes=5),))
+        await asyncio.sleep(300)
+
+async def verify_token(authorization: Optional[str] = Header(None)) -> str:
+    if authorization is None:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
+    current_time = datetime.now(timezone)
+    valid_time = current_time - timedelta(minutes=5)
+    query = "SELECT * FROM access_tokens WHERE access_token = %s AND created_at >= %s"
+    try:
+        async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
+            async with connection.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute(query, (token, valid_time))
+                result = await cursor.fetchone()
+            if not result:
+                raise HTTPException(status_code=401, detail="Invalid or expired token")
+            return token
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+async def get_products() -> list[dict]:
     query = "SELECT name, description, price, stock, image, allergens, created_at FROM products"
     async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
         async with connection.cursor(aiomysql.DictCursor) as cursor:
@@ -34,7 +76,7 @@ async def get_products():
                         pass
             return products
 
-async def get_orders():
+async def get_orders() -> list[dict]:
     query = "SELECT uuid, product_id, quantity, image, options, created_at FROM orders"
     async with aiomysql.connect(os.getenv("DB_HOST"), os.getenv("DB_USERNAME"), os.getenv("DB_PASSWORD"), os.getenv("DB_DATABASE"), int(os.getenv("DB_PORT"))) as connection:
         async with connection.cursor(aiomysql.DictCursor) as cursor:
@@ -43,7 +85,7 @@ async def get_orders():
             return orders
 
 @app.get("/api/products/stream")
-async def stream_products() -> StreamingResponse:
+async def stream_products(token: str = Depends(verify_token)) -> StreamingResponse:
     async def event_generator():
         start_time = asyncio.get_event_loop().time()
         max_duration = 300
@@ -69,7 +111,7 @@ async def stream_products() -> StreamingResponse:
     )
 
 @app.get("/api/orders/stream")
-async def stream_orders() -> StreamingResponse:
+async def stream_orders(token: str = Depends(verify_token)) -> StreamingResponse:
     async def event_generator():
         start_time = asyncio.get_event_loop().time()
         max_duration = 300

@@ -12,7 +12,7 @@
           </div>
           <div class="ml-3">
             <p class="text-sm">
-              {{ connectionStatus }} - 自動的に再接続されます
+              {{ connectionStatus }}
             </p>
           </div>
         </div>
@@ -91,6 +91,7 @@
 
 <script>
 import { ref, onMounted, onUnmounted } from 'vue';
+import axios from 'axios';
 
 export default {
   setup() {
@@ -101,6 +102,22 @@ export default {
     let disconnectWarning = ref(false);
     let remainingTime = ref(0);
     const isDarkMode = ref(false);
+    let warningTimer = null;
+
+    const showWarning = (message, duration = 0) => {
+      if (warningTimer) {
+        clearTimeout(warningTimer);
+        warningTimer = null;
+      }
+      disconnectWarning.value = true;
+      connectionStatus.value = message;
+      if (duration > 0) {
+        warningTimer = setTimeout(() => {
+          disconnectWarning.value = false;
+          warningTimer = null;
+        }, duration);
+      }
+    };
 
     const detectDarkMode = () => {
       const savedTheme = localStorage.getItem('theme');
@@ -166,50 +183,98 @@ export default {
         eventSource.close();
       }
 
-      eventSource = new EventSource(import.meta.env.VITE_PRODUCT_SSE_URL);
-      disconnectWarning.value = false;
+      showWarning('接続中...', 0);
 
-      eventSource.addEventListener('products', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          products.value = data;
-          loading.value = false;
-        } catch (error) {
-          console.error('製品データの解析に失敗しました:', error);
-        }
-      });
+      axios.get('/api/create-access-token')
+        .then(response => {
+          const token = response.data.access_token;
 
-      eventSource.addEventListener('disconnect_warning', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          disconnectWarning.value = true;
-          remainingTime.value = parseInt(data.message.match(/\d+/)[0]);
-          connectionStatus.value = `接続は${remainingTime.value}秒後に切断されます`;
-        } catch (error) {
-          console.error('切断警告の解析に失敗しました:', error);
-        }
-      });
-      eventSource.addEventListener('close', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          connectionStatus.value = 'サーバーとの接続が終了しました';
-          eventSource.close();
+          const fetchProductsWithToken = async () => {
+            try {
+              const response = await fetch(import.meta.env.VITE_PRODUCT_SSE_URL, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+              }
+
+              const reader = response.body.getReader();
+              const decoder = new TextDecoder();
+              let buffer = '';
+
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                  if (!line.trim()) continue;
+                  const eventLines = line.split('\n');
+                  let eventName = 'message';
+                  let data = '';
+                  for (const eventLine of eventLines) {
+                    if (eventLine.startsWith('event:')) {
+                      eventName = eventLine.slice(6).trim();
+                    } else if (eventLine.startsWith('data:')) {
+                      data = eventLine.slice(5).trim();
+                    }
+                  }
+                  if (eventName === 'products') {
+                    try {
+                      const parsedData = JSON.parse(data);
+                      products.value = parsedData;
+                      loading.value = false;
+                      if (disconnectWarning.value && connectionStatus.value === '接続中...') {
+                        showWarning('接続成功', 3000);
+                      }
+                    } catch (error) {
+                      showWarning('製品データの解析に失敗しました:', 0);
+                    }
+                  } else if (eventName === 'disconnect_warning') {
+                    try {
+                      const parsedData = JSON.parse(data);
+                      remainingTime.value = parseInt(parsedData.message.match(/\d+/)[0]);
+                      showWarning(`接続は${remainingTime.value}秒後に切断されます - 自動的に再接続されます`, 0);
+                      if (remainingTime.value <= 10) {
+                        reader.cancel();
+                        showWarning('再接続中...', 0);
+                        setTimeout(() => {
+                          setupEventSource();
+                        }, 1000);
+                        return;
+                      }
+                    } catch (error) {
+                      showWarning('切断警告の解析に失敗しました:', 0);
+                    }
+                  } else if (eventName === 'close') {
+                    showWarning('サーバーとの接続が終了しました - 再接続中...', 0);
+                    setTimeout(() => {
+                      setupEventSource();
+                    }, 5000);
+                    return;
+                  }
+                }
+              }
+            } catch (error) {
+              showWarning('接続エラー - 再接続中...', 0);
+              setTimeout(() => {
+                setupEventSource();
+              }, 5000);
+            }
+          };
+          fetchProductsWithToken();
+        })
+        .catch(() => {
+          showWarning('APIトークンの取得に失敗しました - 再試行中...', 0);
           setTimeout(() => {
             setupEventSource();
           }, 5000);
-        } catch (error) {
-          console.error('接続終了メッセージの解析に失敗しました:', error);
-        }
-      });
-
-      eventSource.onerror = (error) => {
-        console.error('SSE接続エラー:', error);
-        connectionStatus.value = '接続エラー - 再接続中...';
-        eventSource.close();
-        setTimeout(() => {
-          setupEventSource();
-        }, 5000);
-      };
+        });
     };
 
     const formatPrice = (price) => {
@@ -229,6 +294,9 @@ export default {
     onUnmounted(() => {
       if (eventSource) {
         eventSource.close();
+      }
+      if (warningTimer) {
+        clearTimeout(warningTimer);
       }
     });
 

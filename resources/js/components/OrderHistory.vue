@@ -6,9 +6,20 @@
       <div v-if="loading" class="flex justify-center items-center h-64">
         <div class="w-9 h-9 border-4 rounded-full animate-spin" :class="{ 'border-gray-700 border-l-red-500': isDarkMode, 'border-gray-200 border-l-red-600': !isDarkMode }"></div>
       </div>
-      <div v-else-if="error" class="text-red-600">
-        <p>{{ error }}</p>
+
+      <div v-if="disconnectWarning" class="border-l-4 p-4 mb-4" :class="{ 'bg-yellow-900/30 border-yellow-600 text-yellow-200': isDarkMode, 'bg-yellow-50 border-yellow-400 text-yellow-700': !isDarkMode }">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <i class="pi pi-exclamation-triangle" :class="{ 'text-yellow-400': !isDarkMode, 'text-yellow-300': isDarkMode }"></i>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm">
+              {{ connectionStatus }}
+            </p>
+          </div>
+        </div>
       </div>
+
       <div v-else>
         <div v-if="groupedOrders.length === 0" class="text-center" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">
           <p>注文履歴がありません</p>
@@ -60,11 +71,28 @@ export default {
   setup() {
     const orders = ref([]);
     const loading = ref(true);
-    const error = ref(null);
     const productCache = ref({});
+    let disconnectWarning = ref(false);
+    let connectionStatus = ref('接続中');
     let eventSource = null;
+    let warningTimer = null;
     let remainingTime = ref(0);
     const isDarkMode = ref(false);
+
+    const showWarning = (message, duration = 0) => {
+      if (warningTimer) {
+        clearTimeout(warningTimer);
+        warningTimer = null;
+      }
+      disconnectWarning.value = true;
+      connectionStatus.value = message;
+      if (duration > 0) {
+        warningTimer = setTimeout(() => {
+          disconnectWarning.value = false;
+          warningTimer = null;
+        }, duration);
+      }
+    };
 
     const detectDarkMode = () => {
       const savedTheme = localStorage.getItem('theme');
@@ -134,7 +162,7 @@ export default {
         productCache.value[productId] = response.data.data;
         return response.data.data;
       } catch (error) {
-        console.error(`商品情報の取得に失敗しました (ID: ${productId}):`, error);
+        showWarning(`商品情報の取得に失敗しました (ID: ${productId}):`, 0);
         return null;
       }
     };
@@ -152,48 +180,95 @@ export default {
         eventSource.close();
       }
 
-      eventSource = new EventSource(import.meta.env.VITE_ORDER_SSE_URL);
+      showWarning('接続中...', 0);
 
-      eventSource.addEventListener('orders', async (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const processedData = await processOrdersWithProductInfo(data);
-          orders.value = processedData;
-          loading.value = false;
-        } catch (error) {
-          console.error('注文データの解析に失敗しました:', error);
-          error.value = '注文履歴の取得に失敗しました。';
-        }
-      });
+      axios.get('/api/create-access-token')
+        .then(response => {
+          const token = response.data.access_token;
 
-      eventSource.addEventListener('disconnect_warning', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          remainingTime.value = parseInt(data.message.match(/\d+/)[0]);
-        } catch (error) {
-          console.error('切断警告の解析に失敗しました:', error);
-        }
-      });
+          const fetchOrdersWithToken = async () => {
+            try {
+              const response = await fetch(import.meta.env.VITE_ORDER_SSE_URL, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
 
-      eventSource.addEventListener('close', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          eventSource.close();
+              if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+              }
+
+              const reader = response.body.getReader();
+              const decoder = new TextDecoder();
+              let buffer = '';
+
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                for (const line of lines) {
+                  if (!line.trim()) continue;
+                  const eventLines = line.split('\n');
+                  let eventName = 'message';
+                  let data = '';
+                  for (const eventLine of eventLines) {
+                    if (eventLine.startsWith('event:')) {
+                      eventName = eventLine.slice(6).trim();
+                    } else if (eventLine.startsWith('data:')) {
+                      data = eventLine.slice(5).trim();
+                    }
+                  }
+                  if (eventName === 'orders') {
+                    try {
+                      const parsedData = JSON.parse(data);
+                      const processedData = await processOrdersWithProductInfo(parsedData);
+                      orders.value = processedData;
+                      loading.value = false;
+                      if (disconnectWarning.value && connectionStatus.value === '接続中...') {
+                        showWarning('接続成功', 3000);
+                      }
+                    } catch (error) {
+                      showWarning('注文データの解析に失敗しました:', 0);
+                    }
+                  } else if (eventName === 'disconnect_warning') {
+                    try {
+                      const parsedData = JSON.parse(data);
+                      remainingTime.value = parseInt(parsedData.message.match(/\d+/)[0]);
+                      if (remainingTime.value <= 10) {
+                        reader.cancel();
+                        setTimeout(() => {
+                          setupEventSource();
+                        }, 1000);
+                        return;
+                      }
+                    } catch (error) {
+                      showWarning('切断警告の解析に失敗しました:', 0);
+                    }
+                  } else if (eventName === 'close') {
+                    setTimeout(() => {
+                      setupEventSource();
+                    }, 5000);
+                    return;
+                  }
+                }
+              }
+            } catch (error) {
+              showWarning('サーバーとの接続に失敗しました。', 5000);
+              setTimeout(() => {
+                setupEventSource();
+              }, 5000);
+            }
+          };
+          fetchOrdersWithToken();
+        })
+        .catch(() => {
+          showWarning('APIトークンの取得に失敗しました。', 5000);
           setTimeout(() => {
             setupEventSource();
           }, 5000);
-        } catch (error) {
-          console.error('接続終了メッセージの解析に失敗しました:', error);
-        }
-      });
-
-      eventSource.onerror = (error) => {
-        console.error('SSE接続エラー:', error);
-        eventSource.close();
-        setTimeout(() => {
-          setupEventSource();
-        }, 5000);
-      };
+        });
     };
 
     const groupedOrders = computed(() => {
@@ -237,7 +312,7 @@ export default {
         }
         return parsedOptions;
       } catch (error) {
-        console.error('オプションの解析に失敗しました:', error, optionsStr);
+        showWarning('オプションの解析に失敗しました:', 0);
         return [];
       }
     };
@@ -266,7 +341,8 @@ export default {
     return {
       orders,
       loading,
-      error,
+      disconnectWarning,
+      connectionStatus,
       groupedOrders,
       formatDate,
       calculateGroupTotal,
