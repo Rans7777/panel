@@ -92,6 +92,7 @@
 <script>
 import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
+import Cache from '../utils/Cache';
 
 export default {
   setup() {
@@ -181,7 +182,7 @@ export default {
       }
     };
 
-    const tokenValidityCache = ref({});
+    const tokenValidityCache = new Cache(30 * 1000, true);
 
     const getSavedToken = () => {
       const savedToken = localStorage.getItem('access_token');
@@ -225,28 +226,21 @@ export default {
     };
     const validateTokenAfterError = async (token) => {
       if (!token) return false;
-      if (tokenValidityCache.value[token]) {
-        const cachedResult = tokenValidityCache.value[token];
-        const currentTime = Date.now();
-        const cacheTime = 30 * 1000;
-
-        if (currentTime - cachedResult.timestamp < cacheTime) {
-          return cachedResult.valid;
+      try {
+        const cachedResult = await tokenValidityCache.get(token);
+        if (cachedResult !== undefined) {
+          return cachedResult;
         }
+      } catch (error) {
+        showWarning('トークンの検証に失敗しました:', 2000);
       }
       try {
         const response = await axios.get(`/api/access-token/${token}/validity`);
         const isValid = response.data.valid;
-        tokenValidityCache.value[token] = {
-          valid: isValid,
-          timestamp: Date.now()
-        };
+        await tokenValidityCache.set(token, isValid);
         return isValid;
       } catch (error) {
-        tokenValidityCache.value[token] = {
-          valid: false,
-          timestamp: Date.now()
-        };
+        await tokenValidityCache.set(token, false);
         return false;
       }
     };
@@ -375,6 +369,7 @@ export default {
     onUnmounted(() => {
       if (eventSource) {
         eventSource.close();
+        productCache.clear();
       }
       if (warningTimer) {
         clearTimeout(warningTimer);

@@ -33,7 +33,15 @@
             <div class="space-y-4">
               <div v-for="order in orderGroup.orders" :key="order.product_id" class="flex justify-between items-start border-b last:border-b-0 pb-4 last:pb-0" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
                 <div>
-                  <h3 class="font-semibold" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">商品名: {{ getProductName(order.product_id) }}</h3>
+                  <h3 class="font-semibold" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
+                    <template v-if="productNames[order.product_id]">
+                      商品名: {{ productNames[order.product_id] }}
+                    </template>
+                    <template v-else>
+                      商品名: {{ order.product_id }}
+                      <span class="text-xs text-gray-500">（読み込み中...）</span>
+                    </template>
+                  </h3>
                   <p :class="{ 'text-gray-400': isDarkMode, 'text-gray-700': !isDarkMode }" class="mt-2">数量: {{ order.quantity }}個</p>
                   <div v-if="order.options" class="mt-2 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">
                     <p class="font-medium">オプション:</p>
@@ -65,13 +73,15 @@
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
+import Cache from '../utils/Cache';
 
 export default {
   name: 'OrderHistory',
   setup() {
     const orders = ref([]);
     const loading = ref(true);
-    const productCache = ref({});
+    const productCache = new Cache(60 * 5 * 1000, true);
+    const productNames = ref({});
     let disconnectWarning = ref(false);
     let connectionStatus = ref('接続中');
     let eventSource = null;
@@ -156,7 +166,7 @@ export default {
       }
     };
 
-    const tokenValidityCache = ref({});
+    const tokenValidityCache = new Cache(30 * 1000, true);
 
     const getSavedToken = () => {
       const savedToken = localStorage.getItem('access_token');
@@ -171,10 +181,12 @@ export default {
       }
       return null;
     };
+
     const saveToken = (token) => {
       localStorage.setItem('access_token', token);
       localStorage.setItem('access_token_time', Date.now().toString());
     };
+
     const getOrValidateToken = async () => {
       if (currentToken.value) {
         return currentToken.value;
@@ -200,40 +212,35 @@ export default {
     const validateTokenAfterError = async (token) => {
       if (!token) return false;
 
-      if (tokenValidityCache.value[token]) {
-        const cachedResult = tokenValidityCache.value[token];
-        const currentTime = Date.now();
-        const cacheTime = 30 * 1000;
-
-        if (currentTime - cachedResult.timestamp < cacheTime) {
-          return cachedResult.valid;
+      try {
+        const cachedResult = await tokenValidityCache.get(token);
+        if (cachedResult !== undefined) {
+          return cachedResult;
         }
+      } catch (error) {
+        showWarning('トークンの検証に失敗しました:', 2000);
       }
       try {
         const response = await axios.get(`/api/access-token/${token}/validity`);
         const isValid = response.data.valid;
-        tokenValidityCache.value[token] = {
-          valid: isValid,
-          timestamp: Date.now()
-        };
+        await tokenValidityCache.set(token, isValid);
         return isValid;
       } catch (error) {
-        tokenValidityCache.value[token] = {
-          valid: false,
-          timestamp: Date.now()
-        };
+        await tokenValidityCache.set(token, false);
         return false;
       }
     };
 
     const fetchProductInfo = async (productId) => {
-      if (productCache.value[productId]) {
-        return productCache.value[productId];
-      }
       try {
+        const cachedProduct = await productCache.get(`product_${productId}`);
+        if (cachedProduct) {
+          return cachedProduct;
+        }
         const response = await axios.get(`/api/products/${productId}`);
-        productCache.value[productId] = response.data.data;
-        return response.data.data;
+        const productData = response.data.data;
+        await productCache.set(`product_${productId}`, productData);
+        return productData;
       } catch (error) {
         showWarning(`商品情報の取得に失敗しました (ID: ${productId}):`, 0);
         return null;
@@ -243,7 +250,15 @@ export default {
     const processOrdersWithProductInfo = async (ordersData) => {
       const processedOrders = [...ordersData];
       const productIds = new Set(processedOrders.map(order => order.product_id));
-      const fetchPromises = Array.from(productIds).map(id => fetchProductInfo(id));
+      const fetchPromises = Array.from(productIds).map(async id => {
+        const product = await fetchProductInfo(id);
+        if (product && product.name) {
+          productNames.value[id] = product.name;
+        } else {
+          productNames.value[id] = `${id}`;
+        }
+      });
+
       await Promise.all(fetchPromises);
       return processedOrders;
     };
@@ -261,7 +276,7 @@ export default {
       showWarning('接続中...', 0);
 
       const token = await getOrValidateToken();
-      
+
       if (!token) {
         const retryDelay = Math.min(30000 + (tokenRetryCount.value * 10000), 60000);
         showWarning(`APIトークンの取得に失敗しました - ${Math.round(retryDelay/1000)}秒後に再試行します`, 0);
@@ -357,7 +372,6 @@ export default {
           }, 5000);
         }
       };
-      
       fetchOrdersWithToken();
     };
 
@@ -407,12 +421,22 @@ export default {
       }
     };
 
-    const getProductName = (productId) => {
-      return productCache.value[productId]?.name || `${productId}`;
+    const getProductName = async (productId) => {
+      try {
+        const product = await productCache.get(`product_${productId}`);
+        return product?.name || `${productId}`;
+      } catch (error) {
+        return `${productId}`;
+      }
     };
 
-    const getProductOptions = (productId) => {
-      return productCache.value[productId]?.options || [];
+    const getProductOptions = async (productId) => {
+      try {
+        const product = await productCache.get(`product_${productId}`);
+        return product?.options || [];
+      } catch (error) {
+        return [];
+      }
     };
 
     onMounted(() => {
@@ -425,6 +449,7 @@ export default {
     onUnmounted(() => {
       if (eventSource) {
         eventSource.close();
+        productCache.clear();
       }
       if (warningTimer) {
         clearTimeout(warningTimer);
@@ -447,7 +472,8 @@ export default {
       getProductName,
       getProductOptions,
       isDarkMode,
-      toggleDarkMode
+      toggleDarkMode,
+      productNames
     };
   }
 };
