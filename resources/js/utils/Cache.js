@@ -1,6 +1,6 @@
 /**
- * ブラウザ対応の圧縮機能付きキャッシュクラス
- * TTLベースでキャッシュアイテムを管理し、Compression Streams APIで圧縮する
+ * シンプルなキャッシュクラス
+ * TTLベースでキャッシュアイテムを管理
  */
 export default class Cache {
     /**

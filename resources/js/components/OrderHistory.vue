@@ -168,39 +168,14 @@ export default {
 
     const tokenValidityCache = new Cache(30 * 1000, true);
 
-    const getSavedToken = () => {
-      const savedToken = localStorage.getItem('access_token');
-      const savedTokenTime = localStorage.getItem('access_token_time');
-      if (savedToken && savedTokenTime) {
-        const tokenTime = parseInt(savedTokenTime);
-        const currentTime = Date.now();
-        const fiveMinutesInMs = 5 * 60 * 1000;
-        if (currentTime - tokenTime < fiveMinutesInMs) {
-          return savedToken;
-        }
-      }
-      return null;
-    };
-
-    const saveToken = (token) => {
-      localStorage.setItem('access_token', token);
-      localStorage.setItem('access_token_time', Date.now().toString());
-    };
-
     const getOrValidateToken = async () => {
       if (currentToken.value) {
         return currentToken.value;
-      }
-      const savedToken = getSavedToken();
-      if (savedToken) {
-        currentToken.value = savedToken;
-        return savedToken;
       }
       try {
         const response = await axios.get('/api/create-access-token');
         const newToken = response.data.access_token;
         currentToken.value = newToken;
-        saveToken(newToken);
         tokenRetryCount.value = 0;
         return newToken;
       } catch (error) {
@@ -446,10 +421,11 @@ export default {
       applyDarkMode();
     });
 
-    onUnmounted(() => {
+    onUnmounted(async () => {
       if (eventSource) {
         eventSource.close();
-        productCache.clear();
+        await productCache.clear();
+        await tokenValidityCache.clear();
       }
       if (warningTimer) {
         clearTimeout(warningTimer);
