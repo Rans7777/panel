@@ -7,14 +7,69 @@ export default class Cache {
      * キャッシュを初期化
      * @param {number} ttl デフォルトのTTL（ミリ秒）
      * @param {boolean} useCompression 圧縮を使用するかどうか
+     * @param {boolean} useLocalStorage localStorageを使用するかどうか
+     * @param {string} storagePrefix localStorageのキー接頭辞
      */
-    constructor(ttl = 60000, useCompression = false) {
+    constructor(ttl = 60000, useCompression = false, useLocalStorage = false, storagePrefix = 'cache_') {
         this.cache = {};
         this.defaultTtl = ttl;
         this.useCompression = useCompression;
+        this.useLocalStorage = useLocalStorage;
+        this.storagePrefix = storagePrefix;
+        if (this.useLocalStorage && typeof localStorage !== 'undefined') {
+            this.#loadFromLocalStorage();
+        }
     }
 
-    async compress(data) {
+    #loadFromLocalStorage() {
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(this.storagePrefix)) {
+                    const originalKey = key.slice(this.storagePrefix.length);
+                    const item = JSON.parse(localStorage.getItem(key));
+                    if (item && Date.now() <= item.expires) {
+                        this.cache[originalKey] = item;
+                    } else {
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+        } catch (error) {
+            //pass
+        }
+    }
+
+    #saveToLocalStorage(key, item) {
+        try {
+            if (this.useLocalStorage && typeof localStorage !== 'undefined') {
+                localStorage.setItem(`${this.storagePrefix}${key}`, JSON.stringify(item));
+            }
+        } catch (error) {
+            this.#clearOldLocalStorageItems();
+        }
+    }
+
+    #clearOldLocalStorageItems() {
+        try {
+            if (typeof localStorage !== 'undefined') {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(this.storagePrefix)) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+            }
+        } catch (error) {
+            //pass
+        }
+    }
+
+    async #compress(data) {
         if (!this.useCompression) {
             return data;
         }
@@ -30,7 +85,7 @@ export default class Cache {
         return btoa(binaryString);
     }
 
-    async decompress(compressedData) {
+    async #decompress(compressedData) {
         const { unzlibSync } = await import('fflate');
         const binaryString = atob(compressedData);
         const uint8Array = new Uint8Array(binaryString.length);
@@ -55,13 +110,17 @@ export default class Cache {
         const isCompressed = this.useCompression;
         let storedValue = value;
         if (isCompressed) {
-            storedValue = await this.compress(value);
+            storedValue = await this.#compress(value);
         }
-        this.cache[key] = { 
+        const item = { 
             value: storedValue, 
             expires,
             compressed: isCompressed
         };
+        this.cache[key] = item;
+        if (this.useLocalStorage) {
+            this.#saveToLocalStorage(key, item);
+        }
         return value;
     }
 
@@ -75,10 +134,13 @@ export default class Cache {
         if (!item) return undefined;
         if (Date.now() > item.expires) {
             delete this.cache[key];
+            if (this.useLocalStorage) {
+                this.del(key);
+            }
             return undefined;
         }
         if (item.compressed) {
-            return await this.decompress(item.value);
+            return await this.#decompress(item.value);
         }
         return item.value;
     }
@@ -90,15 +152,43 @@ export default class Cache {
      */
     async del(key) {
         delete this.cache[key];
+        if (this.useLocalStorage) {
+            localStorage.removeItem(`${this.storagePrefix}${key}`);
+        }
         return true;
     }
 
     /**
      * キャッシュを完全にクリア
-     * @returns {Promise<boolean>} 常にtrue
+     * @returns {Promise<boolean>}
      */
     async clear() {
         this.cache = {};
+        if (this.useLocalStorage && typeof localStorage !== 'undefined') {
+            try {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(this.storagePrefix)) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => {
+                    localStorage.removeItem(key);
+                });
+            } catch (error) {
+                return false;
+            }
+        }
         return true;
+    }
+
+    /**
+     * キャッシュの存在を確認
+     * @param {string} key キャッシュのキー
+     * @returns {boolean} キャッシュが存在する場合はtrue、存在しない場合はfalse
+     */
+    has(key) {
+        return this.cache[key] !== undefined;
     }
 }

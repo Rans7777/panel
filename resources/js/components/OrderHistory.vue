@@ -80,7 +80,7 @@ export default {
   setup() {
     const orders = ref([]);
     const loading = ref(true);
-    const productCache = new Cache(60 * 5 * 1000, true);
+    const productCache = new Cache(60 * 5 * 1000, true, true, 'product_');
     const productNames = ref({});
     let disconnectWarning = ref(false);
     let connectionStatus = ref('接続中');
@@ -166,7 +166,7 @@ export default {
       }
     };
 
-    const tokenValidityCache = new Cache(30 * 1000, true);
+    const tokenValidityCache = new Cache(30 * 1000, true, true, 'token_');
 
     const getOrValidateToken = async () => {
       if (currentToken.value) {
@@ -184,11 +184,14 @@ export default {
       }
     };
 
+    const hashKey = async (str) => {
+      return crypto.createHash('md5').update(str).digest('hex');
+    };
+
     const validateTokenAfterError = async (token) => {
       if (!token) return false;
-
       try {
-        const cachedResult = await tokenValidityCache.get(token);
+        const cachedResult = await tokenValidityCache.get(hashKey(token));
         if (cachedResult !== undefined) {
           return cachedResult;
         }
@@ -198,23 +201,23 @@ export default {
       try {
         const response = await axios.get(`/api/access-token/${token}/validity`);
         const isValid = response.data.valid;
-        await tokenValidityCache.set(token, isValid);
+        await tokenValidityCache.set(hashKey(token), isValid);
         return isValid;
       } catch (error) {
-        await tokenValidityCache.set(token, false);
+        await tokenValidityCache.set(hashKey(token), false);
         return false;
       }
     };
 
     const fetchProductInfo = async (productId) => {
       try {
-        const cachedProduct = await productCache.get(`product_${productId}`);
+        const cachedProduct = await productCache.get(hashKey(`product_${productId}`));
         if (cachedProduct) {
           return cachedProduct;
         }
         const response = await axios.get(`/api/products/${productId}`);
         const productData = response.data.data;
-        await productCache.set(`product_${productId}`, productData);
+        await productCache.set(hashKey(`product_${productId}`), productData);
         return productData;
       } catch (error) {
         showWarning(`商品情報の取得に失敗しました (ID: ${productId}):`, 0);
@@ -242,16 +245,12 @@ export default {
       if (eventSource) {
         eventSource.close();
       }
-
       if (tokenRetryTimer) {
         clearTimeout(tokenRetryTimer);
         tokenRetryTimer = null;
       }
-
       showWarning('接続中...', 0);
-
       const token = await getOrValidateToken();
-
       if (!token) {
         const retryDelay = Math.min(30000 + (tokenRetryCount.value * 10000), 60000);
         showWarning(`APIトークンの取得に失敗しました - ${Math.round(retryDelay/1000)}秒後に再試行します`, 0);
@@ -398,7 +397,7 @@ export default {
 
     const getProductName = async (productId) => {
       try {
-        const product = await productCache.get(`product_${productId}`);
+        const product = await productCache.get(hashKey(`product_${productId}`));
         return product?.name || `${productId}`;
       } catch (error) {
         return `${productId}`;
@@ -407,7 +406,7 @@ export default {
 
     const getProductOptions = async (productId) => {
       try {
-        const product = await productCache.get(`product_${productId}`);
+        const product = await productCache.get(hashKey(`product_${productId}`));
         return product?.options || [];
       } catch (error) {
         return [];

@@ -182,7 +182,7 @@ export default {
       }
     };
 
-    const tokenValidityCache = new Cache(30 * 1000, true);
+    const tokenValidityCache = new Cache(30 * 1000, true, true, 'token_');
 
     const getOrValidateToken = async () => {
       if (currentToken.value) {
@@ -199,10 +199,15 @@ export default {
         return null;
       }
     };
+
+    const hashKey = async (str) => {
+      return crypto.createHash('md5').update(str).digest('hex');
+    };
+
     const validateTokenAfterError = async (token) => {
       if (!token) return false;
       try {
-        const cachedResult = await tokenValidityCache.get(token);
+        const cachedResult = await tokenValidityCache.get(hashKey(token));
         if (cachedResult !== undefined) {
           return cachedResult;
         }
@@ -212,10 +217,10 @@ export default {
       try {
         const response = await axios.get(`/api/access-token/${token}/validity`);
         const isValid = response.data.valid;
-        await tokenValidityCache.set(token, isValid);
+        await tokenValidityCache.set(hashKey(token), isValid);
         return isValid;
       } catch (error) {
-        await tokenValidityCache.set(token, false);
+        await tokenValidityCache.set(hashKey(token), false);
         return false;
       }
     };
@@ -246,19 +251,15 @@ export default {
               'Authorization': `Bearer ${token}`
             }
           });
-
           if (!response.ok) {
             throw new Error(`HTTP error ${response.status}`);
           }
-
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
-
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n\n');
             buffer = lines.pop() || '';

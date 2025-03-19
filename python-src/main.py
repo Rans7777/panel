@@ -31,7 +31,7 @@ timezone = pytz.timezone(os.getenv('APP_TIMEZONE'))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[os.getenv("APP_URL")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
