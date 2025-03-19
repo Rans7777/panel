@@ -74,6 +74,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import Cache from '../utils/Cache';
+import API from '../utils/API';
+import General from '../utils/General';
 
 export default {
   name: 'OrderHistory',
@@ -91,6 +93,8 @@ export default {
     let currentToken = ref(null);
     let tokenRetryCount = ref(0);
     let tokenRetryTimer = null;
+    const api = new API();
+    const general = new General();
 
     const showWarning = (message, duration = 0) => {
       if (warningTimer) {
@@ -168,56 +172,36 @@ export default {
 
     const tokenValidityCache = new Cache(30 * 1000, true, true, 'token_');
 
-    const getOrValidateToken = async () => {
-      if (currentToken.value) {
-        return currentToken.value;
-      }
-      try {
-        const response = await axios.get('/api/create-access-token');
-        const newToken = response.data.access_token;
-        currentToken.value = newToken;
-        tokenRetryCount.value = 0;
-        return newToken;
-      } catch (error) {
-        tokenRetryCount.value++;
-        return null;
-      }
-    };
-
-    const hashKey = async (str) => {
-      return crypto.createHash('md5').update(str).digest('hex');
-    };
-
     const validateTokenAfterError = async (token) => {
       if (!token) return false;
       try {
-        const cachedResult = await tokenValidityCache.get(hashKey(token));
+        const cachedResult = await tokenValidityCache.get(general.hashKey(token));
         if (cachedResult !== undefined) {
           return cachedResult;
         }
       } catch (error) {
-        showWarning('トークンの検証に失敗しました:', 2000);
+        showWarning('トークンの検証に失敗しました:', 0);
       }
       try {
         const response = await axios.get(`/api/access-token/${token}/validity`);
         const isValid = response.data.valid;
-        await tokenValidityCache.set(hashKey(token), isValid);
+        await tokenValidityCache.set(general.hashKey(token), isValid);
         return isValid;
       } catch (error) {
-        await tokenValidityCache.set(hashKey(token), false);
+        await tokenValidityCache.set(general.hashKey(token), false);
         return false;
       }
     };
 
     const fetchProductInfo = async (productId) => {
       try {
-        const cachedProduct = await productCache.get(hashKey(`product_${productId}`));
+        const cachedProduct = await productCache.get(general.hashKey(`product_${productId}`));
         if (cachedProduct) {
           return cachedProduct;
         }
         const response = await axios.get(`/api/products/${productId}`);
         const productData = response.data.data;
-        await productCache.set(hashKey(`product_${productId}`), productData);
+        await productCache.set(general.hashKey(`product_${productId}`), productData);
         return productData;
       } catch (error) {
         showWarning(`商品情報の取得に失敗しました (ID: ${productId}):`, 0);
@@ -250,8 +234,12 @@ export default {
         tokenRetryTimer = null;
       }
       showWarning('接続中...', 0);
-      const token = await getOrValidateToken();
-      if (!token) {
+      const token = await api.getAccessToken();
+      if (token === 429) {
+        showWarning('アクセス制限中です。しばらく待ってから画面を更新してください。', 0);
+        return;
+      }
+      if (typeof token === 'number') {
         const retryDelay = Math.min(30000 + (tokenRetryCount.value * 10000), 60000);
         showWarning(`APIトークンの取得に失敗しました - ${Math.round(retryDelay/1000)}秒後に再試行します`, 0);
         tokenRetryTimer = setTimeout(() => {
@@ -397,7 +385,7 @@ export default {
 
     const getProductName = async (productId) => {
       try {
-        const product = await productCache.get(hashKey(`product_${productId}`));
+        const product = await productCache.get(general.hashKey(`product_${productId}`));
         return product?.name || `${productId}`;
       } catch (error) {
         return `${productId}`;
@@ -406,7 +394,7 @@ export default {
 
     const getProductOptions = async (productId) => {
       try {
-        const product = await productCache.get(hashKey(`product_${productId}`));
+        const product = await productCache.get(general.hashKey(`product_${productId}`));
         return product?.options || [];
       } catch (error) {
         return [];

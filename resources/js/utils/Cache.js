@@ -103,7 +103,7 @@ export default class Cache {
      * @param {string} key キャッシュのキー
      * @param {any} value キャッシュする値
      * @param {number} ttl TTL（ミリ秒）、指定しない場合はデフォルト値
-     * @returns {Promise<any>} キャッシュした元の値
+     * @return {Promise<any>} キャッシュした元の値
      */
     async set(key, value, ttl = this.defaultTtl) {
         const expires = Date.now() + ttl;
@@ -127,7 +127,7 @@ export default class Cache {
     /**
      * キャッシュから値を取得
      * @param {string} key キャッシュのキー
-     * @returns {Promise<any|undefined>} キャッシュされた値、存在しない場合はundefined
+     * @return {Promise<any|undefined>} キャッシュされた値、存在しない場合はundefined
      */
     async get(key) {
         const item = this.cache[key];
@@ -148,7 +148,7 @@ export default class Cache {
     /**
      * キャッシュからキーを削除
      * @param {string} key キャッシュのキー
-     * @returns {Promise<boolean>} 常にtrue
+     * @return {Promise<boolean>} 常にtrue
      */
     async del(key) {
         delete this.cache[key];
@@ -160,7 +160,7 @@ export default class Cache {
 
     /**
      * キャッシュを完全にクリア
-     * @returns {Promise<boolean>}
+     * @return {Promise<boolean>}
      */
     async clear() {
         this.cache = {};
@@ -186,7 +186,7 @@ export default class Cache {
     /**
      * キャッシュの存在を確認
      * @param {string} key キャッシュのキー
-     * @returns {boolean} キャッシュが存在する場合はtrue、存在しない場合はfalse
+     * @return {boolean} キャッシュが存在する場合はtrue、存在しない場合はfalse
      */
     has(key) {
         return this.cache[key] !== undefined;
