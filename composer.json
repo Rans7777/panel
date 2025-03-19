@@ -15,7 +15,6 @@
         "laravel/prompts": "^0.3.5",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
-        "plesk/ext-laravel-integration": "*",
         "spatie/laravel-activitylog": "^4.10",
         "spatie/laravel-permission": "^6.14",
         "symfony/intl": "^7.2"
