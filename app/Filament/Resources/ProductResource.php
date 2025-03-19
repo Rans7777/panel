@@ -92,6 +92,7 @@ final class ProductResource extends Resource
                                 ->imageEditor()
                                 ->nullable()
                                 ->disk('public')
+                                ->preserveFilenames()
                                 ->optimize('webp'),
                         ]),
 
