@@ -12,57 +12,35 @@ export default class Cache {
         this.cache = {};
         this.defaultTtl = ttl;
         this.useCompression = useCompression;
-        this.compressionAvailable = this.checkCompressionAvailability();
-    }
-
-    checkCompressionAvailability() {
-        return typeof CompressionStream !== 'undefined' && 
-               typeof DecompressionStream !== 'undefined';
     }
 
     async compress(data) {
-        if (!this.useCompression || !this.compressionAvailable) {
+        if (!this.useCompression) {
             return data;
         }
-        try {
-            const jsonString = JSON.stringify(data);
-            const encoder = new TextEncoder();
-            const uint8Array = encoder.encode(jsonString);
-            const compressedStream = new Blob([uint8Array])
-                .stream()
-                .pipeThrough(new CompressionStream('gzip'));
-            const compressedBlob = await new Response(compressedStream).blob();
-            const compressedBuffer = await compressedBlob.arrayBuffer();
-            const compressedArray = new Uint8Array(compressedBuffer);
-            let binaryString = '';
-            compressedArray.forEach(byte => {
-                binaryString += String.fromCharCode(byte);
-            });
-            return btoa(binaryString);
-        } catch (error) {
-            return data;
-        }
+        const { zlibSync } = await import('fflate');
+        const jsonString = JSON.stringify(data);
+        const encoder = new TextEncoder();
+        const uint8Array = encoder.encode(jsonString);
+        const compressedArray = zlibSync(uint8Array);
+        let binaryString = '';
+        compressedArray.forEach(byte => {
+            binaryString += String.fromCharCode(byte);
+        });
+        return btoa(binaryString);
     }
 
     async decompress(compressedData) {
-        if (!this.compressionAvailable) {
-            return compressedData;
+        const { unzlibSync } = await import('fflate');
+        const binaryString = atob(compressedData);
+        const uint8Array = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            uint8Array[i] = binaryString.charCodeAt(i);
         }
-        try {
-            const binaryString = atob(compressedData);
-            const uint8Array = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                uint8Array[i] = binaryString.charCodeAt(i);
-            }
-            const decompressedStream = new Blob([uint8Array])
-                .stream()
-                .pipeThrough(new DecompressionStream('gzip'));
-            const decompressedBlob = await new Response(decompressedStream).blob();
-            const decompressedText = await decompressedBlob.text();
-            return JSON.parse(decompressedText);
-        } catch (error) {
-            return compressedData;
-        }
+        const decompressedArray = unzlibSync(uint8Array);
+        const decoder = new TextDecoder();
+        const decompressedText = decoder.decode(decompressedArray);
+        return JSON.parse(decompressedText);
     }
 
     /**
@@ -74,7 +52,7 @@ export default class Cache {
      */
     async set(key, value, ttl = this.defaultTtl) {
         const expires = Date.now() + ttl;
-        const isCompressed = this.useCompression && this.compressionAvailable;
+        const isCompressed = this.useCompression;
         let storedValue = value;
         if (isCompressed) {
             storedValue = await this.compress(value);
