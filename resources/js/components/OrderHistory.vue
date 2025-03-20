@@ -72,7 +72,6 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import axios from 'axios';
 import Cache from '../utils/Cache';
 import API from '../utils/API';
 import General from '../utils/General';
@@ -183,8 +182,7 @@ export default {
         showWarning('トークンの検証に失敗しました:', 0);
       }
       try {
-        const response = await axios.get(`/api/access-token/${token}/validity`);
-        const isValid = response.data.valid;
+        const isValid = await api.checkToken(token);
         await tokenValidityCache.set(general.hashKey(token), isValid);
         return isValid;
       } catch (error) {
@@ -199,8 +197,7 @@ export default {
         if (cachedProduct) {
           return cachedProduct;
         }
-        const response = await axios.get(`/api/products/${productId}`);
-        const productData = response.data.data;
+        const productData = await api.getProductInfo(productId);
         await productCache.set(general.hashKey(`product_${productId}`), productData);
         return productData;
       } catch (error) {
