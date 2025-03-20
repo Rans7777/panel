@@ -441,7 +441,6 @@ const handleProductClick = async (productId) => {
       addToCart(productId);
     }
   } catch (err) {
-    console.error('商品クリック処理エラー:', err);
     error.value = '商品の処理に失敗しました';
   }
 };
@@ -702,9 +701,7 @@ const confirmOrder = async () => {
       totalPrice.value = 0;
       showPaymentPopup.value = false;
       message.value = '注文が確定しました！';
-
       await loadProducts();
-
       setTimeout(() => {
         message.value = '';
       }, 3000);
@@ -716,7 +713,6 @@ const confirmOrder = async () => {
       }, 3000);
     }
   } catch (err) {
-    console.error('注文確定エラー:', err);
     error.value = err.response?.data?.message || '注文の確定に失敗しました';
     showPaymentPopup.value = false;
     setTimeout(() => {
