@@ -27,7 +27,14 @@ updates:
       - "Rans7777"
 
   - package-ecosystem: "pip"
-    directory: "/"
+    directory: "/API/python-src"
+    schedule:
+      interval: "daily"
+    reviewers:
+      - "Rans7777"
+
+  - package-ecosystem: "gomod"
+    directory: "/API/go-src"
     schedule:
       interval: "daily"
     reviewers:

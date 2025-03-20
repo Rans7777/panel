@@ -27,3 +27,24 @@ jobs:
       run: npm ci
     - name: Run build
       run: npm run build
+
+  build-go:
+    name: Go Build
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+    - name: Install dependencies
+      run: |
+        cd API/go-src
+        go mod download
+    - name: Build test
+      run: |
+        cd API/go-src
+        go build -v ./...
