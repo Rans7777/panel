@@ -5,14 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	_ "modernc.org/sqlite"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 )
@@ -63,33 +66,75 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
-		log.SetOutput(file)
+		mw := io.MultiWriter(os.Stdout, file)
+		log.SetOutput(mw)
 	}
 	log.SetLevel(log.InfoLevel)
 
-	err = godotenv.Load()
+	err = godotenv.Load(".env")
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("Error loading .env file: ", err)
 		os.Exit(1)
 	}
 
-	timezone, err = time.LoadLocation(os.Getenv("APP_TIMEZONE"))
-	if err != nil {
-		log.Warn("Warning default timezone is UTC")
+	timezoneStr := os.Getenv("APP_TIMEZONE")
+	if timezoneStr == "" {
+		log.Warn("Warning: APP_TIMEZONE is not set. Using UTC")
 		timezone = time.UTC
+	} else {
+		timezone, err = time.LoadLocation(timezoneStr)
+		if err != nil {
+			log.Warnf("Warning: timezone '%s' is invalid. Using UTC: %v", timezoneStr, err)
+			timezone = time.UTC
+		}
 	}
 
-	dbHost := os.Getenv("DB_HOST")
-	dbUsername := os.Getenv("DB_USERNAME")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_DATABASE")
-	dbPort := os.Getenv("DB_PORT")
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUsername, dbPassword, dbHost, dbPort, dbName)
+	dbType := os.Getenv("DB_CONNECTION")
+	log.Infof("DB_CONNECTION: %s", dbType)
 
-	db, err = sql.Open("mysql", dsn)
-	if err != nil {
-		log.Fatal("Failed to connect to database: ", err)
+	if dbType == "sqlite" {
+		dbPath := os.Getenv("DB_DATABASE")
+
+		if dbPath == "" {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				log.Fatal("Failed to get user home directory: ", err)
+			}
+			dbPath = fmt.Sprintf("%s/database/database.sqlite", homeDir)
+			log.Infof("Using default Laravel SQLite path: %s", dbPath)
+		}
+
+		if !filepath.IsAbs(dbPath) {
+			log.Fatalf("SQLiteデータベースパスは絶対パスである必要があります: %s", dbPath)
+		}
+
+		_, err = os.Stat(dbPath)
+		if os.IsNotExist(err) {
+			dbDir := filepath.Dir(dbPath)
+			if err := os.MkdirAll(dbDir, 0755); err != nil {
+				log.Fatalf("データベースディレクトリを作成できません: %v", err)
+			}
+			log.Warnf("データベースファイルが存在しません。新しいデータベースが作成されます: %s", dbPath)
+		}
+
+		db, err = sql.Open("sqlite", dbPath)
+		if err != nil {
+			log.Fatal("Failed to connect to SQLite database: ", err)
+		}
+	} else {
+		dbHost := os.Getenv("DB_HOST")
+		dbUsername := os.Getenv("DB_USERNAME")
+		dbPassword := os.Getenv("DB_PASSWORD")
+		dbName := os.Getenv("DB_DATABASE")
+		dbPort := os.Getenv("DB_PORT")
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUsername, dbPassword, dbHost, dbPort, dbName)
+
+		db, err = sql.Open("mysql", dsn)
+		if err != nil {
+			log.Fatal("Failed to connect to MySQL database: ", err)
+		}
 	}
+
 	db.SetConnMaxLifetime(time.Minute * 3)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(10)
@@ -123,11 +168,13 @@ func deleteExpiredTokens() {
 		query := "DELETE FROM access_tokens WHERE created_at < ?"
 		result, err := db.Exec(query, expiryTime)
 		if err != nil {
-			log.Errorf("Database error in deleteExpiredTokens: %v", err)
+			log.Errorf("トークン削除中にデータベースエラーが発生しました: %v", err)
 		} else {
-			rowsAffected, _ := result.RowsAffected()
-			if rowsAffected > 0 {
-				log.Infof("Deleted %d expired tokens", rowsAffected)
+			rowsAffected, err := result.RowsAffected()
+			if err != nil {
+				log.Errorf("影響を受けた行数の取得に失敗しました: %v", err)
+			} else if rowsAffected > 0 {
+				log.Infof("%d 件の期限切れトークンを削除しました", rowsAffected)
 			}
 		}
 		time.Sleep(5 * time.Minute)
