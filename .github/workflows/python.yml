@@ -18,4 +18,6 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install test dependencies
-        run: pip install -r requirements.txt
+        run: |
+          cd API/python-src
+          pip install -r requirements.txt
