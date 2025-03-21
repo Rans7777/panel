@@ -1,4 +1,4 @@
-import md5 from "js-md5";
+import md5 from "https://cdn.jsdelivr.net/npm/js-md5@0.8.3/src/md5.min.js";
 
 export default class General {
     /**
