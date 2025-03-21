@@ -1,3 +1,5 @@
+import md5 from "js-md5";
+
 export default class General {
     /**
      * ハッシュキーを生成
@@ -5,6 +7,6 @@ export default class General {
      * @return {string} ハッシュキー
      */
     hashKey(str) {
-        return crypto.createHash('md5').update(str).digest('hex');
+        return md5(str);
     }
 }
