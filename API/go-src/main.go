@@ -162,7 +162,8 @@ func init() {
 }
 
 func main() {
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{os.Getenv("APP_URL")},
 		AllowMethods:     []string{"GET"},
@@ -171,6 +172,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+	r.SetTrustedProxies([]string{os.Getenv("APP_URL")})
 	go deleteExpiredTokens()
 	api := r.Group("/api")
 	{
