@@ -15,9 +15,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	_ "modernc.org/sqlite"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
+	_ "modernc.org/sqlite"
 )
 
 var db *sql.DB
@@ -57,9 +57,27 @@ type Order struct {
 	UUID      string          `json:"uuid"`
 	ProductID int             `json:"product_id"`
 	Quantity  int             `json:"quantity"`
-	Image     string          `json:"image"`
+	Image     sql.NullString  `json:"image"`
 	Options   json.RawMessage `json:"options"`
 	CreatedAt time.Time       `json:"created_at"`
+}
+
+func (o Order) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		UUID      string          `json:"uuid"`
+		ProductID int             `json:"product_id"`
+		Quantity  int             `json:"quantity"`
+		Image     string          `json:"image"`
+		Options   json.RawMessage `json:"options"`
+		CreatedAt time.Time       `json:"created_at"`
+	}{
+		UUID:      o.UUID,
+		ProductID: o.ProductID,
+		Quantity:  o.Quantity,
+		Image:     o.Image.String,
+		Options:   o.Options,
+		CreatedAt: o.CreatedAt,
+	})
 }
 
 func init() {
