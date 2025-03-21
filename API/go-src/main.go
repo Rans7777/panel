@@ -62,24 +62,6 @@ type Order struct {
 	CreatedAt time.Time       `json:"created_at"`
 }
 
-func (o Order) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		UUID      string          `json:"uuid"`
-		ProductID int             `json:"product_id"`
-		Quantity  int             `json:"quantity"`
-		Image     string          `json:"image"`
-		Options   json.RawMessage `json:"options"`
-		CreatedAt time.Time       `json:"created_at"`
-	}{
-		UUID:      o.UUID,
-		ProductID: o.ProductID,
-		Quantity:  o.Quantity,
-		Image:     o.Image.String,
-		Options:   o.Options,
-		CreatedAt: o.CreatedAt,
-	})
-}
-
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
