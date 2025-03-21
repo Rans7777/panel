@@ -15,9 +15,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	_ "modernc.org/sqlite"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
+	_ "modernc.org/sqlite"
 )
 
 var db *sql.DB
@@ -57,7 +57,7 @@ type Order struct {
 	UUID      string          `json:"uuid"`
 	ProductID int             `json:"product_id"`
 	Quantity  int             `json:"quantity"`
-	Image     string          `json:"image"`
+	Image     sql.NullString  `json:"image"`
 	Options   json.RawMessage `json:"options"`
 	CreatedAt time.Time       `json:"created_at"`
 }
@@ -144,7 +144,8 @@ func init() {
 }
 
 func main() {
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{os.Getenv("APP_URL")},
 		AllowMethods:     []string{"GET"},
@@ -153,6 +154,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+	r.SetTrustedProxies([]string{os.Getenv("APP_URL")})
 	go deleteExpiredTokens()
 	api := r.Group("/api")
 	{
