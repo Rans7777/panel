@@ -169,27 +169,8 @@ export default {
       }
     };
 
-    const tokenValidityCache = new Cache(30 * 1000, true, true, 'token_');
-
-    const validateTokenAfterError = async (token) => {
-      if (!token) return false;
-      try {
-        const cachedResult = await tokenValidityCache.get(general.hashKey(token));
-        if (cachedResult !== undefined) {
-          return cachedResult;
-        }
-      } catch (error) {
-        showWarning('トークンの検証に失敗しました:', 0);
-      }
-      try {
-        const isValid = await api.checkToken(token);
-        await tokenValidityCache.set(general.hashKey(token), isValid);
-        return isValid;
-      } catch (error) {
-        await tokenValidityCache.set(general.hashKey(token), false);
-        return false;
-      }
-    };
+    const tokenCache = new Cache(5 * 60 * 1000, true, true, 'token_');
+    const tokenValidityCache = new Cache(30 * 1000, true, true, 'tokenvalidity_');
 
     const fetchProductInfo = async (productId) => {
       try {
@@ -231,7 +212,13 @@ export default {
         tokenRetryTimer = null;
       }
       showWarning('接続中...', 0);
-      const token = await api.getAccessToken();
+      let token = await tokenCache.get('OrderHistoryToken');
+      if (!token) {
+        token = await api.getAccessToken();
+        if (token && typeof token !== 'number') {
+          await tokenCache.set('OrderHistoryToken', token);
+        }
+      }
       if (token === 429) {
         showWarning('アクセス制限中です。しばらく待ってから画面を更新してください。', 0);
         return;
@@ -244,7 +231,6 @@ export default {
         }, retryDelay);
         return;
       }
-
       const fetchOrdersWithToken = async () => {
         try {
           const response = await fetch(import.meta.env.VITE_ORDER_SSE_URL, {
@@ -252,19 +238,15 @@ export default {
               'Authorization': `Bearer ${token}`
             }
           });
-
           if (!response.ok) {
             throw new Error(`HTTP error ${response.status}`);
           }
-
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let buffer = '';
-
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n\n');
             buffer = lines.pop() || '';
@@ -319,11 +301,10 @@ export default {
             }
           }
         } catch (error) {
-          const isTokenValid = await validateTokenAfterError(token);
+          const isTokenValid = api.validateTokenAfterError(token, tokenValidityCache, 'OrderHistoryTokenValidity');
           if (!isTokenValid) {
             currentToken.value = null;
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('access_token_time');
+            await tokenCache.del('OrderHistoryToken');
           }
           showWarning('接続エラー - 再接続中...', 0);
           setTimeout(() => {
@@ -409,6 +390,7 @@ export default {
       if (eventSource) {
         eventSource.close();
         await productCache.clear();
+        await tokenCache.clear();
         await tokenValidityCache.clear();
       }
       if (warningTimer) {

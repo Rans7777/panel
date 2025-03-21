@@ -189,6 +189,12 @@ export default class Cache {
      * @return {boolean} キャッシュが存在する場合はtrue、存在しない場合はfalse
      */
     has(key) {
-        return this.cache[key] !== undefined;
+        const item = this.cache[key];
+        if (!item) return false;
+        if (Date.now() > item.expires) {
+            this.del(key);
+            return false;
+        }
+        return true;
     }
 }

@@ -5,6 +5,6 @@ export default class General {
      * @return {string} ハッシュキー
      */
     hashKey(str) {
-        return crypto.createHash('md5').update(str).digest('hex');
+        return window.md5(str);
     }
 }

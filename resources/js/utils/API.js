@@ -17,14 +17,33 @@ export default class API {
      * トークンの有効性を確認する
      * @param {string} token トークン
      * @return {Promise<boolean>} 有効性
-     * @return {Error} 失敗したときのステータスコード
      */
     async checkToken(token) {
+        const response = await axios.get(`/api/access-token/${token}/validity`);
+        return response.data.valid;
+    }
+
+    /**
+     * トークンの有効性を確認
+     * @param {string} token トークン
+     * @param {Cache} tokenValidityCache トークン有効性キャッシュ
+     * @return {boolean} トークンが有効ならtrue、無効ならfalse
+     */
+    async validateTokenAfterError(token, tokenValidityCache, cacheKey) {
+        if (!token) return false;
         try {
-            const response = await axios.get(`/api/access-token/${token}/validity`);
-            return response.data.valid;
+            const cachedValidity = await tokenValidityCache.get(cacheKey);
+            if (cachedValidity !== undefined && cachedValidity !== null) {
+                return cachedValidity;
+            }
+            const isValid = await this.checkToken(token);
+            if (isValid) {
+                await tokenValidityCache.set(cacheKey, true);
+                return true;
+            }
+            return false;
         } catch (error) {
-            return error.response.status;
+            return false;
         }
     }
 
