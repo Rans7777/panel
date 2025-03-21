@@ -105,16 +105,16 @@ func init() {
 		}
 
 		if !filepath.IsAbs(dbPath) {
-			log.Fatalf("SQLiteデータベースパスは絶対パスである必要があります: %s", dbPath)
+			log.Fatalf("SQLite database path must be absolute: %s", dbPath)
 		}
 
 		_, err = os.Stat(dbPath)
 		if os.IsNotExist(err) {
 			dbDir := filepath.Dir(dbPath)
 			if err := os.MkdirAll(dbDir, 0755); err != nil {
-				log.Fatalf("データベースディレクトリを作成できません: %v", err)
+				log.Fatalf("Failed to create database directory: %v", err)
 			}
-			log.Warnf("データベースファイルが存在しません。新しいデータベースが作成されます: %s", dbPath)
+			log.Warnf("Database file does not exist. A new database will be created: %s", dbPath)
 		}
 
 		db, err = sql.Open("sqlite", dbPath)
@@ -168,13 +168,13 @@ func deleteExpiredTokens() {
 		query := "DELETE FROM access_tokens WHERE created_at < ?"
 		result, err := db.Exec(query, expiryTime)
 		if err != nil {
-			log.Errorf("トークン削除中にデータベースエラーが発生しました: %v", err)
+			log.Errorf("Database error occurred while deleting tokens: %v", err)
 		} else {
 			rowsAffected, err := result.RowsAffected()
 			if err != nil {
-				log.Errorf("影響を受けた行数の取得に失敗しました: %v", err)
+				log.Errorf("Failed to get number of affected rows: %v", err)
 			} else if rowsAffected > 0 {
-				log.Infof("%d 件の期限切れトークンを削除しました", rowsAffected)
+				log.Infof("Deleted %d expired tokens", rowsAffected)
 			}
 		}
 		time.Sleep(5 * time.Minute)
