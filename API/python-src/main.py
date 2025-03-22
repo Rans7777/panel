@@ -189,12 +189,12 @@ async def get_orders() -> list[dict]:
         else:
             conn = await get_db_connection()
             try:
-                cursor = await conn.cursor(asyncmy.cursors.DictCursor)
-                await cursor.execute(query)
-                orders = await cursor.fetchall()
-                for order in orders:
-                    if order['created_at']:
-                        order['created_at'] = order['created_at'].strftime("%Y-%m-%dT%H:%M:%SZ")
+                async with conn.cursor(asyncmy.cursors.DictCursor) as cursor:
+                    await cursor.execute(query)
+                    orders = await cursor.fetchall()
+                    for order in orders:
+                        if order['created_at']:
+                            order['created_at'] = order['created_at'].strftime("%Y-%m-%dT%H:%M:%SZ")
                 return orders
             finally:
                 conn.close()
