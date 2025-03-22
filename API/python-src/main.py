@@ -143,6 +143,8 @@ async def get_products() -> list[dict]:
                             product['allergens'] = json.loads(product['allergens'])
                         except json.JSONDecodeError:
                             pass
+                    if product['created_at']:
+                        product['created_at'] = product['created_at'].strftime("%Y-%m-%dT%H:%M:%SZ")
                 return products
             finally:
                 await conn.close()
@@ -158,6 +160,8 @@ async def get_products() -> list[dict]:
                                 product['allergens'] = json.loads(product['allergens'])
                             except json.JSONDecodeError:
                                 pass
+                        if product['created_at']:
+                            product['created_at'] = product['created_at'].strftime("%Y-%m-%dT%H:%M:%SZ")
                     return products
             finally:
                 conn.close()
@@ -176,6 +180,9 @@ async def get_orders() -> list[dict]:
                 cursor = await conn.execute(query)
                 rows = await cursor.fetchall()
                 orders = [dict(row) for row in rows]
+                for order in orders:
+                    if order['created_at']:
+                        order['created_at'] = order['created_at'].strftime("%Y-%m-%dT%H:%M:%SZ")
                 return orders
             finally:
                 await conn.close()
@@ -185,7 +192,10 @@ async def get_orders() -> list[dict]:
                 async with conn.cursor(asyncmy.cursors.DictCursor) as cursor:
                     await cursor.execute(query)
                     orders = await cursor.fetchall()
-                    return orders
+                    for order in orders:
+                        if order['created_at']:
+                            order['created_at'] = order['created_at'].strftime("%Y-%m-%dT%H:%M:%SZ")
+                return orders
             finally:
                 conn.close()
     except Exception as e:
