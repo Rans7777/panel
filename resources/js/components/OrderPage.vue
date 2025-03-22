@@ -346,6 +346,30 @@ const error = ref('');
 const isDarkMode = ref(false);
 const showDeleteConfirmation = ref(false);
 const deleteTargetIndex = ref(null);
+const messageTimer = ref(null);
+const errorTimer = ref(null);
+
+// メッセージ通知を表示する関数
+const showMessage = (msg) => {
+  if (messageTimer.value) {
+    clearTimeout(messageTimer.value);
+  }
+  message.value = msg;
+  messageTimer.value = setTimeout(() => {
+    message.value = '';
+  }, 3000);
+};
+
+// エラー通知を表示する関数
+const showError = (err) => {
+  if (errorTimer.value) {
+    clearTimeout(errorTimer.value);
+  }
+  error.value = err;
+  errorTimer.value = setTimeout(() => {
+    error.value = '';
+  }, 3000);
+};
 
 // システムのダークモード設定を検出
 const detectDarkMode = () => {
@@ -416,7 +440,7 @@ const loadProducts = async () => {
     const response = await axios.get('/api/products');
     products.value = response.data.data;
   } catch (err) {
-    error.value = '製品情報の取得に失敗しました';
+    showError('商品情報の取得に失敗しました');
   }
 };
 
@@ -427,7 +451,7 @@ const handleProductClick = async (productId) => {
     const product = products.value.find(p => p.id === productId);
 
     if (!product) {
-      error.value = '商品情報が見つかりません';
+      showError('商品情報が見つかりません');
       return;
     }
 
@@ -441,7 +465,7 @@ const handleProductClick = async (productId) => {
       addToCart(productId);
     }
   } catch (err) {
-    error.value = '商品の処理に失敗しました';
+    showError('商品の処理に失敗しました');
   }
 };
 
@@ -451,13 +475,13 @@ const addToCart = (productId) => {
   const product = products.value.find(p => p.id === productId);
 
   if (!product) {
-    error.value = '商品情報が見つかりません';
+    showError('商品情報が見つかりません');
     return;
   }
 
   // 在庫チェック
   if (product.stock <= 0) {
-    error.value = '在庫がありません: ' + product.name;
+    showError('在庫がありません: ' + product.name);
     return;
   }
 
@@ -467,13 +491,10 @@ const addToCart = (productId) => {
       if (cart.value[i].quantity < product.stock) {
         cart.value[i].quantity++;
       } else {
-        error.value = '在庫数を超えています: ' + product.name;
+        showError('在庫数を超えています: ' + product.name);
       }
       calculateTotalPrice();
-      message.value = '商品がカートに追加されました';
-      setTimeout(() => {
-        message.value = '';
-      }, 3000);
+      showMessage('商品がカートに追加されました');
       return;
     }
   }
@@ -487,16 +508,13 @@ const addToCart = (productId) => {
   });
 
   calculateTotalPrice();
-  message.value = '商品がカートに追加されました';
-  setTimeout(() => {
-    message.value = '';
-  }, 3000);
+  showMessage('商品がカートに追加されました');
 };
 
 // カート内の商品数量を更新
 const updateQuantity = (index, quantity) => {
   if (!cart.value[index]) {
-    error.value = 'カートに該当する商品が存在しません';
+    showError('カートに該当する商品が存在しません');
     return;
   }
 
@@ -508,13 +526,13 @@ const updateQuantity = (index, quantity) => {
   const product = products.value.find(p => p.id === cart.value[index].id);
 
   if (!product) {
-    error.value = '商品が存在しません';
+    showError('商品が存在しません');
     removeFromCart(index);
     return;
   }
 
   if (quantity > product.stock) {
-    error.value = '在庫数を超えています: ' + product.name;
+    showError('在庫数を超えています: ' + product.name);
     cart.value[index].quantity = product.stock;
   } else {
     cart.value[index].quantity = quantity;
@@ -526,7 +544,7 @@ const updateQuantity = (index, quantity) => {
 // カートから商品を削除
 const removeFromCart = (index) => {
   if (!cart.value[index]) {
-    error.value = 'カートに該当する商品が存在しません';
+    showError('カートに該当する商品が存在しません');
     return;
   }
 
@@ -544,14 +562,14 @@ const calculateTotalPrice = () => {
 // オプション選択を確定
 const confirmOptionSelection = () => {
   if (!selectedProductId.value) {
-    error.value = '商品が選択されていません';
+    showError('商品が選択されていません');
     return;
   }
 
   const product = products.value.find(p => p.id === selectedProductId.value);
 
   if (!product) {
-    error.value = '商品情報が見つかりません';
+    showError('商品情報が見つかりません');
     resetOptionSelection();
     return;
   }
@@ -567,7 +585,7 @@ const confirmOptionSelection = () => {
   );
 
   if (selectedOptions.length === 0) {
-    error.value = '選択されたオプションが存在しません';
+    showError('選択されたオプションが存在しません');
     return;
   }
 
@@ -588,17 +606,13 @@ const confirmOptionSelection = () => {
         if (item.quantity < product.stock) {
           item.quantity++;
         } else {
-          error.value = '在庫数を超えています: ' + product.name;
+          showError('在庫数を超えています: ' + product.name);
         }
 
         calculateTotalPrice();
         resetOptionSelection();
 
-        message.value = '商品とオプションがカートに追加されました';
-        setTimeout(() => {
-          message.value = '';
-        }, 3000);
-
+        showMessage('商品とオプションがカートに追加されました');
         return;
       }
     }
@@ -616,10 +630,7 @@ const confirmOptionSelection = () => {
   calculateTotalPrice();
   resetOptionSelection();
 
-  message.value = '商品とオプションがカートに追加されました';
-  setTimeout(() => {
-    message.value = '';
-  }, 3000);
+  showMessage('商品とオプションがカートに追加されました');
 };
 
 const cancelOptionSelection = () => {
@@ -635,10 +646,7 @@ const resetOptionSelection = () => {
 // 支払いモーダルを表示
 const showPaymentModal = () => {
   if (cart.value.length === 0) {
-    error.value = 'カートが空です';
-    setTimeout(() => {
-      error.value = '';
-    }, 3000);
+    showError('カートが空です');
     return;
   }
 
@@ -670,7 +678,7 @@ const validatePaymentInput = (event) => {
 // 注文を確定
 const confirmOrder = async () => {
   if (paymentAmount.value < totalPrice.value) {
-    error.value = '支払い金額が不足しています';
+    showError('支払い金額が不足しています');
     return;
   }
 
@@ -700,24 +708,15 @@ const confirmOrder = async () => {
       cart.value = [];
       totalPrice.value = 0;
       showPaymentPopup.value = false;
-      message.value = '注文が確定しました！';
+      showMessage('注文が確定しました！');
       await loadProducts();
-      setTimeout(() => {
-        message.value = '';
-      }, 3000);
     } else {
-      error.value = '注文の確定に失敗しました';
+      showError('注文の確定に失敗しました');
       showPaymentPopup.value = false;
-      setTimeout(() => {
-        error.value = '';
-      }, 3000);
     }
   } catch (err) {
-    error.value = err.response?.data?.message || '注文の確定に失敗しました';
+    showError(err.response?.data?.message || '注文の確定に失敗しました');
     showPaymentPopup.value = false;
-    setTimeout(() => {
-      error.value = '';
-    }, 3000);
   }
 };
 
@@ -731,6 +730,7 @@ const confirmDelete = () => {
     removeFromCart(deleteTargetIndex.value);
     showDeleteConfirmation.value = false;
     deleteTargetIndex.value = null;
+    showMessage('商品をカートから削除しました');
   }
 };
 
