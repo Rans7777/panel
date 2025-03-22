@@ -37,7 +37,7 @@
                 class="w-24 h-24 object-contain"
               />
               <div v-else class="w-12 h-12 flex items-center justify-center">
-                <i class="pi pi-shopping-cart text-4xl" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }"></i>
+                <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
               </div>
             </div>
             <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
@@ -75,11 +75,11 @@
                   <div v-if="item.options && item.options.length > 0" class="mt-1 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-500': !isDarkMode }">
                     オプション:<br>
                     <span v-for="option in item.options" :key="option.id" class="ml-2 block italic">
-                      {{ option.option_name }} (追加料金: ¥{{ option.price }})
+                      {{ option.option_name }} (追加料金: ¥{{ parseInt(option.price) }})
                     </span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-center">¥{{ item.price }}</td>
+                <td class="px-4 py-3 text-center">¥{{ parseInt(item.price) }}</td>
                 <td class="px-4 py-3 text-center">
                   <input 
                     type="number"
@@ -90,7 +90,7 @@
                     @change="updateQuantity(index, item.quantity)"
                   />
                 </td>
-                <td class="px-4 py-3 text-center">¥{{ item.price * item.quantity }}</td>
+                <td class="px-4 py-3 text-center">¥{{ parseInt(item.price * item.quantity) }}</td>
                 <td class="px-4 py-3 text-center">
                   <button 
                     @click="handleDeleteClick(index)"
@@ -141,12 +141,12 @@
                 class="pl-2"
                 :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }"
               >
-                {{ option.option_name }} (¥{{ option.price }})
+                {{ option.option_name }} (¥{{ parseInt(option.price) }})
               </div>
             </div>
             <div class="flex justify-between items-center mt-4">
               <div class="font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
-                ¥{{ item.price }}
+                ¥{{ parseInt(item.price) }}
               </div>
               <div class="flex items-center gap-2">
                 <button 
@@ -168,7 +168,7 @@
         <!-- 合計金額と注文ボタン -->
         <div class="mt-8">
           <div class="text-right text-xl font-bold mb-4">
-            合計金額: ¥{{ totalPrice }}
+            合計金額: ¥{{ parseInt(totalPrice) }}
           </div>
           <div class="flex justify-end">
             <button 
@@ -205,7 +205,7 @@
                 class="w-4 h-4"
               />
               <label :for="`option-${option.id}`">
-                {{ option.option_name }} (追加料金: ¥{{ option.price }})
+                {{ option.option_name }} (追加料金: ¥{{ parseInt(option.price) }})
               </label>
             </div>
           </div>
@@ -243,7 +243,7 @@
         >
           <h3 class="text-xl font-bold mb-4">お支払い</h3>
           <div class="space-y-4 mb-6">
-            <p>合計金額: ¥{{ totalPrice }}</p>
+            <p>合計金額: ¥{{ parseInt(totalPrice) }}</p>
             <div class="space-y-2">
               <label for="payment-amount">お支払い金額:</label>
               <input 
@@ -261,7 +261,7 @@
                 }"
               />
             </div>
-            <p>おつり: ¥{{ changeAmount }}</p>
+            <p>おつり: ¥{{ parseInt(changeAmount) }}</p>
           </div>
           <div class="flex justify-between gap-4">
             <button 
@@ -346,6 +346,30 @@ const error = ref('');
 const isDarkMode = ref(false);
 const showDeleteConfirmation = ref(false);
 const deleteTargetIndex = ref(null);
+const messageTimer = ref(null);
+const errorTimer = ref(null);
+
+// メッセージ通知を表示する関数
+const showMessage = (msg) => {
+  if (messageTimer.value) {
+    clearTimeout(messageTimer.value);
+  }
+  message.value = msg;
+  messageTimer.value = setTimeout(() => {
+    message.value = '';
+  }, 3000);
+};
+
+// エラー通知を表示する関数
+const showError = (err) => {
+  if (errorTimer.value) {
+    clearTimeout(errorTimer.value);
+  }
+  error.value = err;
+  errorTimer.value = setTimeout(() => {
+    error.value = '';
+  }, 3000);
+};
 
 // システムのダークモード設定を検出
 const detectDarkMode = () => {
@@ -375,13 +399,25 @@ const applyDarkMode = () => {
   if (isDarkMode.value) {
     document.documentElement.classList.add('dark-mode');
     document.body.classList.add('dark-mode');
-    document.documentElement.style.backgroundColor = '#1a1a1a';
-    document.body.style.backgroundColor = '#1a1a1a';
+    document.documentElement.style.backgroundColor = '#121827';
+    document.body.style.backgroundColor = '#121827';
+    document.documentElement.style.color = '#f3f4f6';
+    document.body.style.color = '#f3f4f6';
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.margin = '0';
+    document.body.style.margin = '0';
   } else {
     document.documentElement.classList.remove('dark-mode');
     document.body.classList.remove('dark-mode');
     document.documentElement.style.backgroundColor = '#fff';
     document.body.style.backgroundColor = '#fff';
+    document.documentElement.style.color = '#1f2937';
+    document.body.style.color = '#1f2937';
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    document.documentElement.style.margin = '0';
+    document.body.style.margin = '0';
   }
 };
 
@@ -402,9 +438,9 @@ const watchSystemTheme = () => {
 const loadProducts = async () => {
   try {
     const response = await axios.get('/api/products');
-    products.value = response.data;
+    products.value = response.data.data;
   } catch (err) {
-    error.value = '製品情報の取得に失敗しました';
+    showError('商品情報の取得に失敗しました');
   }
 };
 
@@ -415,7 +451,7 @@ const handleProductClick = async (productId) => {
     const product = products.value.find(p => p.id === productId);
 
     if (!product) {
-      error.value = '商品情報が見つかりません';
+      showError('商品情報が見つかりません');
       return;
     }
 
@@ -429,8 +465,7 @@ const handleProductClick = async (productId) => {
       addToCart(productId);
     }
   } catch (err) {
-    console.error('商品クリック処理エラー:', err);
-    error.value = '商品の処理に失敗しました';
+    showError('商品の処理に失敗しました');
   }
 };
 
@@ -440,13 +475,13 @@ const addToCart = (productId) => {
   const product = products.value.find(p => p.id === productId);
 
   if (!product) {
-    error.value = '商品情報が見つかりません';
+    showError('商品情報が見つかりません');
     return;
   }
 
   // 在庫チェック
   if (product.stock <= 0) {
-    error.value = '在庫がありません: ' + product.name;
+    showError('在庫がありません: ' + product.name);
     return;
   }
 
@@ -456,13 +491,10 @@ const addToCart = (productId) => {
       if (cart.value[i].quantity < product.stock) {
         cart.value[i].quantity++;
       } else {
-        error.value = '在庫数を超えています: ' + product.name;
+        showError('在庫数を超えています: ' + product.name);
       }
       calculateTotalPrice();
-      message.value = '商品がカートに追加されました';
-      setTimeout(() => {
-        message.value = '';
-      }, 3000);
+      showMessage('商品がカートに追加されました');
       return;
     }
   }
@@ -476,16 +508,13 @@ const addToCart = (productId) => {
   });
 
   calculateTotalPrice();
-  message.value = '商品がカートに追加されました';
-  setTimeout(() => {
-    message.value = '';
-  }, 3000);
+  showMessage('商品がカートに追加されました');
 };
 
 // カート内の商品数量を更新
 const updateQuantity = (index, quantity) => {
   if (!cart.value[index]) {
-    error.value = 'カートに該当する商品が存在しません';
+    showError('カートに該当する商品が存在しません');
     return;
   }
 
@@ -497,13 +526,13 @@ const updateQuantity = (index, quantity) => {
   const product = products.value.find(p => p.id === cart.value[index].id);
 
   if (!product) {
-    error.value = '商品が存在しません';
+    showError('商品が存在しません');
     removeFromCart(index);
     return;
   }
 
   if (quantity > product.stock) {
-    error.value = '在庫数を超えています: ' + product.name;
+    showError('在庫数を超えています: ' + product.name);
     cart.value[index].quantity = product.stock;
   } else {
     cart.value[index].quantity = quantity;
@@ -515,7 +544,7 @@ const updateQuantity = (index, quantity) => {
 // カートから商品を削除
 const removeFromCart = (index) => {
   if (!cart.value[index]) {
-    error.value = 'カートに該当する商品が存在しません';
+    showError('カートに該当する商品が存在しません');
     return;
   }
 
@@ -525,22 +554,22 @@ const removeFromCart = (index) => {
 
 // カート内の商品の合計金額を計算
 const calculateTotalPrice = () => {
-  totalPrice.value = cart.value.reduce((sum, item) => {
+  totalPrice.value = parseInt(cart.value.reduce((sum, item) => {
     return sum + (item.price * item.quantity);
-  }, 0);
+  }, 0));
 };
 
 // オプション選択を確定
 const confirmOptionSelection = () => {
   if (!selectedProductId.value) {
-    error.value = '商品が選択されていません';
+    showError('商品が選択されていません');
     return;
   }
 
   const product = products.value.find(p => p.id === selectedProductId.value);
 
   if (!product) {
-    error.value = '商品情報が見つかりません';
+    showError('商品情報が見つかりません');
     resetOptionSelection();
     return;
   }
@@ -556,13 +585,13 @@ const confirmOptionSelection = () => {
   );
 
   if (selectedOptions.length === 0) {
-    error.value = '選択されたオプションが存在しません';
+    showError('選択されたオプションが存在しません');
     return;
   }
 
   // オプションの追加料金を計算
-  const additionalPrice = selectedOptions.reduce((sum, option) => sum + option.price, 0);
-  const totalItemPrice = product.price + additionalPrice;
+  const additionalPrice = parseInt(selectedOptions.reduce((sum, option) => sum + Number(option.price), 0));
+  const totalItemPrice = parseInt(Number(product.price) + additionalPrice);
 
   // 同じ商品とオプションの組み合わせがカートにあるかチェック
   for (let i = 0; i < cart.value.length; i++) {
@@ -577,17 +606,13 @@ const confirmOptionSelection = () => {
         if (item.quantity < product.stock) {
           item.quantity++;
         } else {
-          error.value = '在庫数を超えています: ' + product.name;
+          showError('在庫数を超えています: ' + product.name);
         }
 
         calculateTotalPrice();
         resetOptionSelection();
 
-        message.value = '商品とオプションがカートに追加されました';
-        setTimeout(() => {
-          message.value = '';
-        }, 3000);
-
+        showMessage('商品とオプションがカートに追加されました');
         return;
       }
     }
@@ -605,10 +630,7 @@ const confirmOptionSelection = () => {
   calculateTotalPrice();
   resetOptionSelection();
 
-  message.value = '商品とオプションがカートに追加されました';
-  setTimeout(() => {
-    message.value = '';
-  }, 3000);
+  showMessage('商品とオプションがカートに追加されました');
 };
 
 const cancelOptionSelection = () => {
@@ -624,10 +646,7 @@ const resetOptionSelection = () => {
 // 支払いモーダルを表示
 const showPaymentModal = () => {
   if (cart.value.length === 0) {
-    error.value = 'カートが空です';
-    setTimeout(() => {
-      error.value = '';
-    }, 3000);
+    showError('カートが空です');
     return;
   }
 
@@ -639,7 +658,7 @@ const showPaymentModal = () => {
 
 // おつりを計算
 const calculateChange = () => {
-  changeAmount.value = paymentAmount.value - totalPrice.value;
+  changeAmount.value = parseInt(paymentAmount.value - totalPrice.value);
 };
 
 // お支払い金額の入力を検証
@@ -659,7 +678,7 @@ const validatePaymentInput = (event) => {
 // 注文を確定
 const confirmOrder = async () => {
   if (paymentAmount.value < totalPrice.value) {
-    error.value = '支払い金額が不足しています';
+    showError('支払い金額が不足しています');
     return;
   }
 
@@ -689,27 +708,15 @@ const confirmOrder = async () => {
       cart.value = [];
       totalPrice.value = 0;
       showPaymentPopup.value = false;
-      message.value = '注文が確定しました！';
-
+      showMessage('注文が確定しました！');
       await loadProducts();
-
-      setTimeout(() => {
-        message.value = '';
-      }, 3000);
     } else {
-      error.value = '注文の確定に失敗しました';
+      showError('注文の確定に失敗しました');
       showPaymentPopup.value = false;
-      setTimeout(() => {
-        error.value = '';
-      }, 3000);
     }
   } catch (err) {
-    console.error('注文確定エラー:', err);
-    error.value = err.response?.data?.message || '注文の確定に失敗しました';
+    showError(err.response?.data?.message || '注文の確定に失敗しました');
     showPaymentPopup.value = false;
-    setTimeout(() => {
-      error.value = '';
-    }, 3000);
   }
 };
 
@@ -723,6 +730,7 @@ const confirmDelete = () => {
     removeFromCart(deleteTargetIndex.value);
     showDeleteConfirmation.value = false;
     deleteTargetIndex.value = null;
+    showMessage('商品をカートから削除しました');
   }
 };
 
@@ -753,5 +761,17 @@ onMounted(() => {
 
 .notification {
   animation: slideIn 0.3s ease-out forwards;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.dark-mode {
+  background-color: #121827;
+  color: #f3f4f6;
 }
 </style>

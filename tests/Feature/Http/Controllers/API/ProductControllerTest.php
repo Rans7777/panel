@@ -35,12 +35,15 @@ class ProductControllerTest extends TestCase
         $response = $this->actingAs($this->user)->getJson('/api/products');
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            '*' => [
-                'id',
-                'has_options'
+            'data' => [
+                '*' => [
+                    'id',
+                    'has_options'
+                ]
             ]
         ]);
-        $products = $response->json();
+        $responseData = $response->json();
+        $products = $responseData['data'];
         $foundWithout = false;
         $foundWith = false;
         foreach ($products as $product) {
@@ -62,11 +65,13 @@ class ProductControllerTest extends TestCase
         $response = $this->actingAs($this->user)->getJson("/api/products/{$product->id}");
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            'id',
-            'has_options'
+            'data' => [
+                'id',
+                'has_options'
+            ]
         ]);
         $responseData = $response->json();
-        $this->assertFalse($responseData['has_options'], 'If no options set, has_options should be false');
+        $this->assertFalse($responseData['data']['has_options'], 'If no options set, has_options should be false');
     }
 
     public function test_unauthenticated_user_cannot_access_single_product()

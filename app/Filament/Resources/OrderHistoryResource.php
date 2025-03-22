@@ -17,6 +17,8 @@ final class OrderHistoryResource extends Resource
 
     protected static ?string $navigationLabel = '注文履歴 (旧)';
 
+    protected static ?int $navigationSort = 4;
+
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $slug = 'old-order-history';
@@ -89,7 +91,7 @@ final class OrderHistoryResource extends Resource
                     ->label('個数')
                     ->sortable(),
 
-                Tables\Columns\ImageColumn::make('image')
+                Tables\Columns\ImageColumn::make('product.image')
                     ->label('商品画像')
                     ->size(50)
                     ->sortable()
@@ -131,17 +133,16 @@ final class OrderHistoryResource extends Resource
                         DatePicker::make('until')
                             ->label('終了日'),
                     ])
-                    ->query(function ($query, array $data): mixed {
-                        return $query
-                            ->when(
-                                $data['from'],
-                                fn ($query) => $query->whereDate('created_at', '>=', $data['from'])
-                            )
-                            ->when(
-                                $data['until'],
-                                fn ($query) => $query->whereDate('created_at', '<=', $data['until'])
-                            );
-                    }),
+                    ->query(fn ($query, array $data): mixed => $query
+                        ->when(
+                            $data['from'],
+                            fn ($query) => $query->whereDate('created_at', '>=', $data['from'])
+                        )
+                        ->when(
+                            $data['until'],
+                            fn ($query) => $query->whereDate('created_at', '<=', $data['until'])
+                        )
+                    ),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

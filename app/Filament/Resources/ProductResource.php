@@ -27,18 +27,24 @@ final class ProductResource extends Resource
         return $form->schema([
             Forms\Components\Card::make()
                 ->schema([
-                    Forms\Components\TextInput::make('name')
-                        ->label('商品名')
-                        ->required()
-                        ->maxLength(255)
-                        ->columnSpan(2),
+                    Forms\Components\Section::make('基本情報')
+                        ->schema([
+                            Forms\Components\TextInput::make('name')
+                                ->label('商品名')
+                                ->required()
+                                ->maxLength(255)
+                                ->placeholder('例：チョコレートケーキ')
+                                ->columnSpan(2),
 
-                    Forms\Components\Textarea::make('description')
-                        ->label('商品概要')
-                        ->maxLength(500)
-                        ->columnSpan(2),
+                            Forms\Components\Textarea::make('description')
+                                ->label('商品概要')
+                                ->maxLength(500)
+                                ->placeholder('商品の説明を入力してください')
+                                ->columnSpan(2),
+                        ]),
 
                     Forms\Components\Section::make('アレルギー情報')
+                        ->description('該当するアレルギー品目を選択してください')
                         ->schema([
                             Forms\Components\CheckboxList::make('allergens')
                                 ->label('特定原材料（7品目）')
@@ -52,60 +58,74 @@ final class ProductResource extends Resource
                                     'そば' => 'そば',
                                 ])
                                 ->columns(3)
-                                ->gridDirection('row')
-                                ->required(),
+                                ->gridDirection('row'),
                         ])
                         ->columnSpan('full'),
 
-                    Forms\Components\TextInput::make('price')
-                        ->label('価格')
-                        ->default(0)
-                        ->minValue(0)
-                        ->numeric()
-                        ->required(),
-
-                    Forms\Components\TextInput::make('stock')
-                        ->label('在庫数')
-                        ->default(0)
-                        ->minValue(0)
-                        ->numeric()
-                        ->required(),
-
-                    Forms\Components\FileUpload::make('image')
-                        ->label('商品画像')
-                        ->image()
-                        ->directory('products')
-                        ->imageEditor()
-                        ->nullable()
-                        ->disk('public')
-                        ->optimize('webp'),
-
-                    Forms\Components\Repeater::make('options')
-                        ->relationship('options')
-                        ->default([])
-                        ->label('オプション')
-                        ->collapsible()
-                        ->collapsed()
-                        ->itemLabel(fn (?array $state = null): string => $state
-                            ? (($state['option_name'] ?? 'オプション').' - '.($state['price'] ?? ''))
-                            : 'オプション'
-                        )
+                    Forms\Components\Section::make('在庫・価格情報')
                         ->schema([
-                            Forms\Components\TextInput::make('option_name')
-                                ->label('オプション名')
-                                ->required()
-                                ->maxLength(255),
                             Forms\Components\TextInput::make('price')
-                                ->label('値段')
+                                ->label('価格')
+                                ->prefix('¥')
                                 ->default(0)
                                 ->minValue(0)
-                                ->numeric(),
+                                ->numeric()
+                                ->required(),
+
+                            Forms\Components\TextInput::make('stock')
+                                ->label('在庫数')
+                                ->suffix('個')
+                                ->default(0)
+                                ->minValue(0)
+                                ->numeric()
+                                ->required(),
                         ])
-                        ->columns(2)
-                        ->minItems(0)
-                        ->createItemButtonLabel('オプションを追加'),
+                        ->columns(2),
+
+                    Forms\Components\Section::make('商品画像')
+                        ->schema([
+                            Forms\Components\FileUpload::make('image')
+                                ->label('商品画像')
+                                ->helperText('WebP形式に最適化されます。')
+                                ->image()
+                                ->directory('products')
+                                ->imageEditor()
+                                ->nullable()
+                                ->disk('public')
+                                ->preserveFilenames()
+                                ->optimize('webp'),
+                        ]),
+
+                    Forms\Components\Section::make('オプション設定')
+                        ->schema([
+                            Forms\Components\Repeater::make('options')
+                                ->relationship('options')
+                                ->default([])
+                                ->label('オプション')
+                                ->collapsible()
+                                ->itemLabel(fn (?array $state = null): string => $state
+                                    ? (($state['option_name'] ?? 'オプション').' - ¥'.($state['price'] ?? ''))
+                                    : 'オプション'
+                                )
+                                ->schema([
+                                    Forms\Components\TextInput::make('option_name')
+                                        ->label('オプション名')
+                                        ->required()
+                                        ->placeholder('例：サイズアップ')
+                                        ->maxLength(255),
+                                    Forms\Components\TextInput::make('price')
+                                        ->label('追加料金')
+                                        ->prefix('¥')
+                                        ->default(0)
+                                        ->minValue(0)
+                                        ->numeric(),
+                                ])
+                                ->live()
+                                ->columns(2)
+                                ->minItems(0)
+                                ->createItemButtonLabel('オプションを追加'),
+                        ]),
                 ])
-                ->columns(2)
                 ->columnSpan('full'),
         ]);
     }

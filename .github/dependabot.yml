@@ -25,3 +25,17 @@ updates:
       interval: "daily"
     reviewers:
       - "Rans7777"
+
+  - package-ecosystem: "pip"
+    directory: "/API/python-src"
+    schedule:
+      interval: "daily"
+    reviewers:
+      - "Rans7777"
+
+  - package-ecosystem: "gomod"
+    directory: "/API/go-src"
+    schedule:
+      interval: "daily"
+    reviewers:
+      - "Rans7777"

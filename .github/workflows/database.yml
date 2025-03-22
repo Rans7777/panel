@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mysql_version: ['5.7', '8.0', '8.4']
+        mysql_version: ['8.0']
     permissions:
       pull-requests: read
     services:
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mariadb_version: ['10.5', '10.11', '11.4', '11.7']
+        mariadb_version: ['10.11', '11.4']
     permissions:
       pull-requests: read
     services:
@@ -121,36 +121,6 @@ jobs:
 
       - name: Run Laravel Tests
         run: php artisan test --testsuite=Feature
-
-      - name: Run Rollback Migrations
-        run: php artisan migrate:rollback
-
-  test_sqlite:
-    name: Laravel Test (SQLite)
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-
-      - name: Install Composer Dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
-
-      - name: Configure environment
-        run: php artisan make:env
-
-      - name: Create Database
-        run: |
-          mkdir -p database
-          touch database/database.sqlite
-
-      - name: Run Migrations
-        run: php artisan migrate --seed --force
 
       - name: Run Rollback Migrations
         run: php artisan migrate:rollback

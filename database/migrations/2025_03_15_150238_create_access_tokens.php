@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->char('uuid', 36)->after('id')->defaul(uuid_create());
+        Schema::create('access_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->string('access_token')->unique();
+            $table->timestamp('created_at');
         });
     }
 
@@ -21,8 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn('uuid');
-        });
+        Schema::dropIfExists('access_tokens');
     }
 };
