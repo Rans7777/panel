@@ -36,6 +36,7 @@ class AccessTokenController extends Controller
                 'valid' => true,
             ]);
         }
+
         return response()->json([
             'valid' => false,
         ], 401);
