@@ -23,13 +23,6 @@ class AccessTokenController extends Controller
         return response()->json(['access_token' => $accessToken]);
     }
 
-    public function get()
-    {
-        $accessToken = DB::table('access_tokens')->orderBy('created_at', 'desc')->first();
-
-        return response()->json(['access_token' => $accessToken->access_token]);
-    }
-
     public function expiry($token)
     {
         $currentTime = Carbon::now(config('app.timezone'));

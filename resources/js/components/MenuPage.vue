@@ -223,6 +223,10 @@ export default {
             }
           });
           if (!response.ok) {
+            if (response.status === 401) {
+              currentToken.value = null;
+              await tokenCache.del('MenuPageToken');
+            }
             throw new Error(`HTTP error ${response.status}`);
           }
           const reader = response.body.getReader();
