@@ -2,5 +2,5 @@ aiosqlite==0.21.0
 asyncmy==0.2.10
 fastapi==0.115.12
 loguru==0.7.3
-python-dotenv==1.0.1
+pyaml==25.1.0
 pytz==2025.1

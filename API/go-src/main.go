@@ -15,13 +15,25 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
+	"github.com/goccy/go-yaml"
 	log "github.com/sirupsen/logrus"
 	_ "modernc.org/sqlite"
 )
 
 var db *sql.DB
 var timezone *time.Location
+var config Config
+
+type Config struct {
+	DBConnection string `yaml:"DB_CONNECTION"`
+	DBHost       string `yaml:"DB_HOST"`
+	DBPort       string `yaml:"DB_PORT"`
+	DBDatabase   string `yaml:"DB_DATABASE"`
+	DBUsername   string `yaml:"DB_USERNAME"`
+	DBPassword   string `yaml:"DB_PASSWORD"`
+	AppTimezone  string `yaml:"APP_TIMEZONE"`
+	AppUrl       string `yaml:"APP_URL"`
+}
 
 type Product struct {
 	Name        sql.NullString  `json:"name"`
@@ -71,29 +83,33 @@ func init() {
 	}
 	log.SetLevel(log.InfoLevel)
 
-	err = godotenv.Load(".env")
+	configData, err := os.ReadFile("config.yml")
 	if err != nil {
-		log.Fatal("Error loading .env file: ", err)
+		log.Fatal("Error loading config.yml file: ", err)
 		os.Exit(1)
 	}
 
-	timezoneStr := os.Getenv("APP_TIMEZONE")
-	if timezoneStr == "" {
+	if err := yaml.Unmarshal(configData, &config); err != nil {
+		log.Fatal("Error parsing config.yml: ", err)
+		os.Exit(1)
+	}
+
+	if config.AppTimezone == "" {
 		log.Warn("Warning: APP_TIMEZONE is not set. Using UTC")
 		timezone = time.UTC
 	} else {
-		timezone, err = time.LoadLocation(timezoneStr)
+		timezone, err = time.LoadLocation(config.AppTimezone)
 		if err != nil {
-			log.Warnf("Warning: timezone '%s' is invalid. Using UTC: %v", timezoneStr, err)
+			log.Warnf("Warning: timezone '%s' is invalid. Using UTC: %v", config.AppTimezone, err)
 			timezone = time.UTC
 		}
 	}
 
-	dbType := os.Getenv("DB_CONNECTION")
+	dbType := config.DBConnection
 	log.Infof("DB_CONNECTION: %s", dbType)
 
 	if dbType == "sqlite" {
-		dbPath := os.Getenv("DB_DATABASE")
+		dbPath := config.DBDatabase
 
 		if dbPath == "" {
 			homeDir, err := os.UserHomeDir()
@@ -122,11 +138,11 @@ func init() {
 			log.Fatal("Failed to connect to SQLite database: ", err)
 		}
 	} else {
-		dbHost := os.Getenv("DB_HOST")
-		dbUsername := os.Getenv("DB_USERNAME")
-		dbPassword := os.Getenv("DB_PASSWORD")
-		dbName := os.Getenv("DB_DATABASE")
-		dbPort := os.Getenv("DB_PORT")
+		dbHost := config.DBHost
+		dbUsername := config.DBUsername
+		dbPassword := config.DBPassword
+		dbName := config.DBDatabase
+		dbPort := config.DBPort
 		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUsername, dbPassword, dbHost, dbPort, dbName)
 
 		db, err = sql.Open("mysql", dsn)
@@ -147,40 +163,20 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{os.Getenv("APP_URL")},
+		AllowOrigins:     []string{config.AppUrl},
 		AllowMethods:     []string{"GET"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length", "Authorization"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-	r.SetTrustedProxies([]string{os.Getenv("APP_URL")})
-	go deleteExpiredTokens()
+	r.SetTrustedProxies([]string{config.AppUrl})
 	api := r.Group("/api")
 	{
 		api.GET("/products/stream", verifyToken(), streamProducts)
 		api.GET("/orders/stream", verifyToken(), streamOrders)
 	}
 	r.Run(":8000")
-}
-
-func deleteExpiredTokens() {
-	for {
-		expiryTime := time.Now().In(timezone).Add(-5 * time.Minute)
-		query := "DELETE FROM access_tokens WHERE created_at < ?"
-		result, err := db.Exec(query, expiryTime)
-		if err != nil {
-			log.Errorf("Database error occurred while deleting tokens: %v", err)
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				log.Errorf("Failed to get number of affected rows: %v", err)
-			} else if rowsAffected > 0 {
-				log.Infof("Deleted %d expired tokens", rowsAffected)
-			}
-		}
-		time.Sleep(5 * time.Minute)
-	}
 }
 
 func verifyToken() gin.HandlerFunc {
