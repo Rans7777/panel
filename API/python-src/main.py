@@ -11,7 +11,6 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
 from typing import Optional
-from contextlib import asynccontextmanager
 from loguru import logger
 
 def load_config():
@@ -60,19 +59,7 @@ async def close_db_pool():
             await db_pool.wait_closed()
         db_pool = None
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db_pool()
-    token_task = asyncio.create_task(delete_token())
-    yield
-    token_task.cancel()
-    try:
-        await token_task
-    except asyncio.CancelledError:
-        pass
-    await close_db_pool()
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 timezone = pytz.timezone(config.get('APP_TIMEZONE', 'UTC'))
 
 app.add_middleware(
@@ -88,34 +75,6 @@ async def get_db_connection():
     if not db_pool:
         await init_db_pool()
     return db_pool
-
-async def delete_token() -> None:
-    while True:
-        try:
-            db_connection = config["DB_CONNECTION"]
-            expiry_time = datetime.now(timezone) - timedelta(minutes=5)
-            if db_connection == "sqlite":
-                conn = await get_db_connection()
-                try:
-                    cursor = await conn.execute("DELETE FROM access_tokens WHERE created_at < ?", (expiry_time.strftime("%Y-%m-%d %H:%M:%S"),))
-                    await conn.commit()
-                    rows_affected = cursor.rowcount
-                    if rows_affected > 0:
-                        logger.info(f"Deleted {rows_affected} expired tokens")
-                finally:
-                    await conn.close()
-            else:
-                pool = await get_db_connection()
-                async with pool.acquire() as conn:
-                    async with conn.cursor() as cursor:
-                        await cursor.execute("DELETE FROM access_tokens WHERE created_at < %s", (expiry_time,))
-                    await conn.commit()
-        except Exception as e:
-            logger.error(f"Database error in delete_token: {str(e)}")
-        try:
-            await asyncio.sleep(300)
-        except asyncio.CancelledError:
-            break
 
 async def verify_token(authorization: Optional[str] = Header(None)) -> str:
     if authorization is None:

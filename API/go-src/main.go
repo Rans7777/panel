@@ -171,32 +171,12 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	r.SetTrustedProxies([]string{config.AppUrl})
-	go deleteExpiredTokens()
 	api := r.Group("/api")
 	{
 		api.GET("/products/stream", verifyToken(), streamProducts)
 		api.GET("/orders/stream", verifyToken(), streamOrders)
 	}
 	r.Run(":8000")
-}
-
-func deleteExpiredTokens() {
-	for {
-		expiryTime := time.Now().In(timezone).Add(-5 * time.Minute)
-		query := "DELETE FROM access_tokens WHERE created_at < ?"
-		result, err := db.Exec(query, expiryTime)
-		if err != nil {
-			log.Errorf("Database error occurred while deleting tokens: %v", err)
-		} else {
-			rowsAffected, err := result.RowsAffected()
-			if err != nil {
-				log.Errorf("Failed to get number of affected rows: %v", err)
-			} else if rowsAffected > 0 {
-				log.Infof("Deleted %d expired tokens", rowsAffected)
-			}
-		}
-		time.Sleep(5 * time.Minute)
-	}
 }
 
 func verifyToken() gin.HandlerFunc {
