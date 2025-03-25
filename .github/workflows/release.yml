@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build Go
+        run: |
+          cd API/go-src
+          go build -o main -v ./...
+          cd ../..
+
+      - name: Build Node.js
+        run: |
+          npm install
+          npm run build
+
+      - name: Create API release archive
+        run: |
+          cd API
+          tar -czvf api-release.tar.gz python-src go-src/main
+          mv api-release.tar.gz ../
+          cd ..
+
+      - name: Create web release archive
+        run: |
+          rm -rf tests node_modules API
+          tar --exclude='api-release.tar.gz' -czvf web-release.tar.gz *
+
+      - name: sumcheck
+        run: |
+          sha256sum api-release.tar.gz > api-release.tar.gz.sha256
+          sha256sum web-release.tar.gz > web-release.tar.gz.sha256
+
+      - name: Generate Release Notes
+        run: |
+          echo "WEB_CHECKSUM=$(cat web-release.tar.gz.sha256)" >> $GITHUB_ENV
+          echo "API_CHECKSUM=$(cat api-release.tar.gz.sha256)" >> $GITHUB_ENV
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          LAST_TAG=$(git describe --tags --abbrev=0 ${CURRENT_TAG}^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          git log ${LAST_TAG}..${CURRENT_TAG} --pretty=format:"- %s%n" > changelog.txt
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          cat changelog.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            web-release.tar.gz
+            web-release.tar.gz.sha256
+            api-release.tar.gz
+            api-release.tar.gz.sha256
+          body: |
+            ## リリースノート
+
+            ### 変更履歴
+            ${{ env.CHANGELOG }}
+
+            ### チェックサム
+            ```
+            Web: ${{ env.WEB_CHECKSUM }}
+            API: ${{ env.API_CHECKSUM }}
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
