@@ -6,7 +6,7 @@ import json
 import asyncio
 import os
 import pytz
-from dotenv import load_dotenv
+import yaml
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
@@ -14,18 +14,21 @@ from typing import Optional
 from contextlib import asynccontextmanager
 from loguru import logger
 
-load_dotenv()
+def load_config():
+    config_path = os.path.join('config.yml')
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
+config = load_config()
 logger.add('app.log', enqueue=True, level="INFO")
 
-DB_POOL_SIZE = 10
-DB_POOL_TIMEOUT = 30
 db_pool = None
 
 async def init_db_pool():
     global db_pool
-    db_connection = os.getenv("DB_CONNECTION", "mysql")
+    db_connection = config.get("DB_CONNECTION", "mysql")
     if db_connection == "sqlite":
-        db_path = os.getenv("DB_DATABASE")
+        db_path = config.get("DB_DATABASE")
         if not db_path:
             home_dir = os.path.expanduser("~")
             db_path = f"{home_dir}/database/database.sqlite"
@@ -37,14 +40,14 @@ async def init_db_pool():
         db_pool = await aiosqlite.connect(db_path)
     else:
         db_pool = await asyncmy.create_pool(
-            host=os.getenv("DB_HOST"),
-            user=os.getenv("DB_USERNAME"),
-            password=os.getenv("DB_PASSWORD"),
-            db=os.getenv("DB_DATABASE"),
-            port=int(os.getenv("DB_PORT")),
+            host=config["DB_HOST"],
+            user=config["DB_USERNAME"],
+            password=config["DB_PASSWORD"],
+            db=config["DB_DATABASE"],
+            port=int(config["DB_PORT"]),
             minsize=1,
-            maxsize=DB_POOL_SIZE,
-            pool_recycle=DB_POOL_TIMEOUT
+            maxsize=10,
+            pool_recycle=3
         )
 
 async def close_db_pool():
@@ -70,11 +73,11 @@ async def lifespan(app: FastAPI):
     await close_db_pool()
 
 app = FastAPI(lifespan=lifespan)
-timezone = pytz.timezone(os.getenv('APP_TIMEZONE'))
+timezone = pytz.timezone(config.get('APP_TIMEZONE', 'UTC'))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("APP_URL")],
+    allow_origins=[config.get("APP_URL", "*")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,7 +92,7 @@ async def get_db_connection():
 async def delete_token() -> None:
     while True:
         try:
-            db_connection = os.getenv("DB_CONNECTION", "mysql")
+            db_connection = config["DB_CONNECTION"]
             expiry_time = datetime.now(timezone) - timedelta(minutes=5)
             if db_connection == "sqlite":
                 conn = await get_db_connection()
@@ -120,7 +123,7 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> str:
     token = authorization.replace("Bearer ", "") if authorization.startswith("Bearer ") else authorization
     current_time = datetime.now(timezone)
     valid_time = current_time - timedelta(minutes=5)
-    db_connection = os.getenv("DB_CONNECTION", "mysql")
+    db_connection = config["DB_CONNECTION"]
     try:
         if db_connection == "sqlite":
             conn = await get_db_connection()
@@ -149,7 +152,7 @@ async def verify_token(authorization: Optional[str] = Header(None)) -> str:
 
 async def get_products() -> list[dict]:
     try:
-        db_connection = os.getenv("DB_CONNECTION", "mysql")
+        db_connection = config["DB_CONNECTION"]
         query = "SELECT name, description, price, stock, image, allergens, created_at FROM products"
         if db_connection == "sqlite":
             conn = await get_db_connection()
@@ -190,7 +193,7 @@ async def get_products() -> list[dict]:
 
 async def get_orders() -> list[dict]:
     try:
-        db_connection = os.getenv("DB_CONNECTION", "mysql")
+        db_connection = config["DB_CONNECTION"]
         query = "SELECT uuid, product_id, quantity, image, options, created_at FROM orders"
         if db_connection == "sqlite":
             conn = await get_db_connection()
