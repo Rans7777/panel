@@ -8,7 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.0
 	github.com/goccy/go-yaml v1.16.0
 	github.com/sirupsen/logrus v1.9.3
-	modernc.org/sqlite v1.36.1
+	modernc.org/sqlite v1.36.2
 )
 
 require (
