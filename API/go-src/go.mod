@@ -5,7 +5,7 @@ go 1.24.1
 require (
 	github.com/gin-contrib/cors v1.7.4
 	github.com/gin-gonic/gin v1.10.0
-	github.com/go-sql-driver/mysql v1.9.1
+	github.com/go-sql-driver/mysql v1.9.2
 	github.com/goccy/go-yaml v1.16.0
 	github.com/sirupsen/logrus v1.9.3
 	modernc.org/sqlite v1.36.2
