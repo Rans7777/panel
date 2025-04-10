@@ -716,7 +716,7 @@ const confirmOrder = async () => {
       showPaymentPopup.value = false;
     }
   } catch (err) {
-    showError(err.response?.data?.message || '注文の確定に失敗しました');
+    showError(err.response?.data?.message || '内部処理に失敗しました');
     showPaymentPopup.value = false;
   }
 };
