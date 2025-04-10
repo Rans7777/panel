@@ -233,7 +233,7 @@ export default {
       }
       const fetchOrdersWithToken = async () => {
         try {
-          const response = await fetch(import.meta.env.VITE_ORDER_SSE_URL, {
+          const response = await fetch(import.meta.env.VITE_SSE_URL+'/api/orders/stream', {
             headers: {
               'Authorization': `Bearer ${token}`
             }

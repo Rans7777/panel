@@ -217,7 +217,7 @@ export default {
 
       const fetchProductsWithToken = async () => {
         try {
-          const response = await fetch(import.meta.env.VITE_PRODUCT_SSE_URL, {
+          const response = await fetch(import.meta.env.VITE_SSE_URL+'/api/products/stream', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
