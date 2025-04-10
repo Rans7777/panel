@@ -330,6 +330,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 
 const products = ref([]);
 const productOptions = ref([]);
@@ -683,7 +684,7 @@ const confirmOrder = async () => {
   }
 
   try {
-    const orderUuid = crypto.randomUUID();
+    const orderUuid = uuidv4();
 
     // カートデータを整形
     const cartData = cart.value.map(item => ({
