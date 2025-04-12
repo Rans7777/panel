@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen transition-all duration-300" 
+  <div class="min-h-screen transition-all duration-300 overflow-hidden" 
        :class="{ 
          'bg-gray-900 text-gray-100': isDarkMode && !isRainbowMode, 
          'bg-white text-gray-800': !isDarkMode && !isRainbowMode,
@@ -11,7 +11,9 @@
             :class="{ 
               'text-gray-100 after:bg-red-600': isDarkMode && !isRainbowMode, 
               'text-gray-800 after:bg-red-600': !isDarkMode && !isRainbowMode,
-              'rainbow-text': isRainbowMode 
+              'rainbow-text': isRainbowMode,
+              'raging-text': isRagingMode,
+              'fly-element': isFlyMode 
             }">メニュー</h1>
       </div>
 
@@ -51,7 +53,9 @@
                  'bg-white': !isDarkMode && !isRainbowMode,
                  'animate-spin-slow': isHiddenMode === 'rotate',
                  'rainbow-border': isRainbowMode,
-                 'rainbow-bg': isRainbowMode
+                 'rainbow-bg': isRainbowMode,
+                 'raging-text': isRagingMode,
+                 'fly-element': isFlyMode 
                }">
             <div class="w-full">
               <div class="h-[200px] flex justify-center items-center overflow-hidden relative" :class="{ 'bg-gray-700': isDarkMode, 'bg-gray-100': !isDarkMode }">
@@ -63,9 +67,21 @@
               </div>
             </div>
             <div class="p-4">
-              <div class="text-[1.4rem] font-bold mb-2" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">{{ product.name }}</div>
+              <div class="text-[1.4rem] font-bold mb-2" 
+                   :class="{ 
+                     'text-gray-100': isDarkMode && !isRainbowMode, 
+                     'text-gray-800': !isDarkMode && !isRainbowMode,
+                     'text-white': isRainbowMode,
+                     'raging-text': isRagingMode 
+                   }">{{ product.name }}</div>
 
-              <div v-if="product.description" class="mb-4 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">
+              <div v-if="product.description" class="mb-4 text-sm" 
+                   :class="{ 
+                     'text-gray-400': isDarkMode && !isRainbowMode, 
+                     'text-gray-600': !isDarkMode && !isRainbowMode,
+                     'text-white': isRainbowMode,
+                     'raging-text': isRagingMode 
+                   }">
                 {{ product.description }}
               </div>
 
@@ -85,7 +101,13 @@
               </div>
 
               <div class="flex justify-between items-center mb-4">
-                <div class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }">{{ General.formatPrice(product.price) }}</div>
+                <div class="text-xl font-bold" 
+                     :class="{ 
+                       'text-red-400': isDarkMode && !isRainbowMode, 
+                       'text-red-600': !isDarkMode && !isRainbowMode,
+                       'text-white': isRainbowMode,
+                       'raging-text': isRagingMode 
+                     }">{{ General.formatPrice(product.price) }}</div>
                 <div v-if="product.stock > 0" class="text-sm flex items-center gap-1" :class="{ 'text-green-400': isDarkMode, 'text-green-600': !isDarkMode }">
                   <span v-if="product.stock <= 10" class="text-yellow-500">
                     <i class="pi pi-exclamation-triangle"></i> 残りわずか
@@ -116,7 +138,9 @@
         :class="{ 
           'bg-gray-700 hover:bg-gray-600': isDarkMode && !isRainbowMode, 
           'bg-green-600 hover:bg-green-700': !isDarkMode && !isRainbowMode,
-          'rainbow-bg': isRainbowMode 
+          'rainbow-bg': isRainbowMode,
+          'raging-text': isRagingMode,
+          'fly-element': isFlyMode 
         }"
       >
         <i :class="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'" class="mr-2"></i>
@@ -148,6 +172,8 @@ export default {
     const api = new API();
     const isHiddenMode = ref('');
     const isRainbowMode = ref(false);
+    const isRagingMode = ref(false);
+    const isFlyMode = ref(false);
 
     const showWarning = (message, duration = 0) => {
       if (warningTimer) {
@@ -349,6 +375,8 @@ export default {
       const hiddenParam = urlParams.get('hidden');
       isHiddenMode.value = hiddenParam;
       isRainbowMode.value = hiddenParam === 'rainbow';
+      isRagingMode.value = hiddenParam === 'raging';
+      isFlyMode.value = hiddenParam === 'fly';
     };
 
     onMounted(() => {
@@ -383,7 +411,9 @@ export default {
       toggleDarkMode,
       General,
       isHiddenMode,
-      isRainbowMode
+      isRainbowMode,
+      isRagingMode,
+      isFlyMode
     };
   }
 };
@@ -458,5 +488,70 @@ html, body {
 .rainbow-border {
   border: 4px solid transparent;
   animation: rainbow-border 3s linear infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-2px, -2px) rotate(-1deg); }
+  20% { transform: translate(2px, 2px) rotate(1deg); }
+  30% { transform: translate(-2px, 2px) rotate(-1deg); }
+  40% { transform: translate(2px, -2px) rotate(1deg); }
+  50% { transform: translate(-2px, 2px) rotate(-1deg); }
+  60% { transform: translate(2px, -2px) rotate(1deg); }
+  70% { transform: translate(-2px, -2px) rotate(-1deg); }
+  80% { transform: translate(2px, 2px) rotate(1deg); }
+  90% { transform: translate(-2px, 2px) rotate(-1deg); }
+}
+
+.raging-text {
+  animation: shake 0.5s infinite;
+  display: inline-block;
+  transform-origin: center;
+}
+
+.raging-text:hover {
+  animation: shake 0.2s infinite;
+}
+
+@keyframes fly {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  20% { transform: translate(calc(90vw * 0.7), calc(-90vh * 0.4)) rotate(72deg) scale(1.2); }
+  40% { transform: translate(calc(-90vw * 0.5), calc(90vh * 0.5)) rotate(144deg) scale(0.8); }
+  60% { transform: translate(calc(90vw * 0.3), calc(90vh * 0.6)) rotate(216deg) scale(1.1); }
+  80% { transform: translate(calc(-90vw * 0.6), calc(-90vh * 0.3)) rotate(288deg) scale(0.9); }
+  100% { transform: translate(0, 0) rotate(360deg) scale(1); }
+}
+
+.fly-element {
+  animation: fly 5s infinite;
+  position: relative;
+  z-index: 1;
+  will-change: transform;
+  transform-origin: center;
+  perspective: 1000px;
+}
+
+.fly-element:nth-child(2n) {
+  animation-delay: 1s;
+  animation-duration: 6s;
+}
+
+.fly-element:nth-child(3n) {
+  animation-delay: 2s;
+  animation-duration: 7s;
+}
+
+.fly-element:nth-child(4n) {
+  animation-delay: 3s;
+  animation-duration: 8s;
+}
+
+.fly-element:nth-child(5n) {
+  animation-delay: 4s;
+  animation-duration: 9s;
+}
+
+.fly-element:hover {
+  animation-play-state: paused;
 }
 </style>
