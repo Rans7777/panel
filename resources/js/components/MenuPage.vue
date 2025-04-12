@@ -59,7 +59,12 @@
               <div class="flex justify-between items-center mb-4">
                 <div class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }">{{ General.formatPrice(product.price) }}</div>
                 <div v-if="product.stock > 0" class="text-sm flex items-center gap-1" :class="{ 'text-green-400': isDarkMode, 'text-green-600': !isDarkMode }">
-                  <i class="pi pi-check-circle"></i> 在庫あり
+                  <span v-if="product.stock <= 10" class="text-yellow-500">
+                    <i class="pi pi-exclamation-triangle"></i> 残りわずか
+                  </span>
+                  <span v-else>
+                    <i class="pi pi-check-circle"></i> 在庫あり
+                  </span>
                 </div>
                 <div v-else class="text-sm flex items-center gap-1 text-gray-500">
                   <i class="pi pi-times-circle"></i> 在庫なし
