@@ -327,13 +327,13 @@ async def stream_orders(request: Request, token: str = Depends(verify_token)) ->
         return GzipStreamingResponse(
             event_generator(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive"}
+            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive", "Content-Type": "text/event-stream"}
         )
     else:
         return StreamingResponse(
             event_generator(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive", "Content-Type": "text/event-stream"}
         )
 
 if __name__ == "__main__":
