@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
+use Illuminate\Support\Str;
 use App\Filament\Resources\OrderHistoryResource\Pages;
 use App\Models\Order;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Resources\Resource;
 use Filament\Tables;
 
@@ -37,6 +39,9 @@ final class OrderHistoryResource extends Resource
                                     ->required(),
                                 DatePicker::make('created_at')
                                     ->label('注文日')
+                                    ->required(),
+                                Hidden::make('uuid')
+                                    ->default(fn () => (string)Str::uuid())
                                     ->required(),
                             ]),
                         ]),
