@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException, Header, Request
 import uvicorn
 import asyncmy
 import aiosqlite
@@ -7,10 +7,12 @@ import asyncio
 import os
 import pytz
 import yaml
+import gzip
+import io
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Dict
 from loguru import logger
 
 def load_config():
@@ -181,63 +183,117 @@ async def get_orders() -> list[dict]:
         logger.error(f"Database error in get_orders: {str(e)}")
         return []
 
+class GzipStreamingResponse(StreamingResponse):
+    def __init__(self, content, status_code: int = 200, headers: Dict[str, str] = None, media_type: str = None):
+        super().__init__(content, status_code, headers, media_type)
+        self.headers["Content-Encoding"] = "gzip"
+        self.headers["Transfer-Encoding"] = "chunked"
+        self.headers["X-Accel-Buffering"] = "no"
+
+    async def stream_response(self, send):
+        gz = gzip.GzipFile(fileobj=io.BytesIO(), mode='wb')
+        async for chunk in self.body_iterator:
+            gz.write(chunk.encode() if isinstance(chunk, str) else chunk)
+            gz.flush()
+            await send({"type": "http.response.body", "body": gz.fileobj.getvalue()})
+            gz.fileobj = io.BytesIO()
+        gz.close()
+
 @app.get("/api/products/stream")
-async def stream_products(token: str = Depends(verify_token)) -> StreamingResponse:
+async def stream_products(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
+    logger.debug("Starting: Product stream broadcast")
+    accept_encoding = request.headers.get("Accept-Encoding", "")
+    use_gzip = "gzip" in accept_encoding
+
     async def event_generator():
         try:
+            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to products stream'})}\n\n"
+            
             start_time = asyncio.get_event_loop().time()
             max_duration = 300
             disconnect_warning_time = 240
+            
             while True:
                 current_time = asyncio.get_event_loop().time()
                 elapsed_time = current_time - start_time
+                
                 if elapsed_time >= max_duration:
                     yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'})}\n\n"
                     break
+                    
                 if elapsed_time >= disconnect_warning_time and elapsed_time < max_duration:
                     remaining = int(max_duration - elapsed_time)
                     yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'})}\n\n"
+                
                 products = await get_products()
                 data = json.dumps(products, default=str)
                 yield f"event: products\ndata: {data}\n\n"
-                await asyncio.sleep(5)
+                
+                await asyncio.sleep(3)
         except ConnectionResetError:
             pass
 
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
-    )
+    if use_gzip:
+        logger.debug("Using Gzip compression")
+        return GzipStreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive"}
+        )
+    else:
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+        )
 
 @app.get("/api/orders/stream")
-async def stream_orders(token: str = Depends(verify_token)) -> StreamingResponse:
+async def stream_orders(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
+    logger.debug("Starting: Order stream broadcast")
+    accept_encoding = request.headers.get("Accept-Encoding", "")
+    use_gzip = "gzip" in accept_encoding
+
     async def event_generator():
         try:
+            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to orders stream'})}\n\n"
+            
             start_time = asyncio.get_event_loop().time()
             max_duration = 300
             disconnect_warning_time = 240
+            
             while True:
                 current_time = asyncio.get_event_loop().time()
                 elapsed_time = current_time - start_time
+                
                 if elapsed_time >= max_duration:
                     yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'})}\n\n"
                     break
+                    
                 if elapsed_time >= disconnect_warning_time and elapsed_time < max_duration:
                     remaining = int(max_duration - elapsed_time)
                     yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'})}\n\n"
+                
                 orders = await get_orders()
                 data = json.dumps(orders, default=str)
                 yield f"event: orders\ndata: {data}\n\n"
+                
                 await asyncio.sleep(5)
         except ConnectionResetError:
             pass
 
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
-    )
+    if use_gzip:
+        logger.debug("Using Gzip compression")
+        return GzipStreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive"}
+        )
+    else:
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+        )
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
