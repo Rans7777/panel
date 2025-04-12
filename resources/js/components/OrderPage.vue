@@ -10,12 +10,18 @@
             <i class="pi pi-times"></i>
           </div>
           <div class="flex-1 text-sm leading-5">{{ error }}</div>
+          <button @click="error = ''" class="ml-2 text-white/80 hover:text-white">
+            <i class="pi pi-times"></i>
+          </button>
         </div>
         <div v-if="message" class="flex items-start p-4 mb-4 rounded-lg shadow-lg bg-green-500/90 text-white border-l-4 border-green-600 backdrop-blur">
           <div class="w-6 h-6 mr-3 flex items-center justify-center rounded-full bg-white/20">
             <i class="pi pi-check"></i>
           </div>
           <div class="flex-1 text-sm leading-5">{{ message }}</div>
+          <button @click="message = ''" class="ml-2 text-white/80 hover:text-white">
+            <i class="pi pi-times"></i>
+          </button>
         </div>
       </div>
 
@@ -460,6 +466,7 @@ const loadProducts = async () => {
   try {
     const response = await axios.get('/api/products');
     products.value = response.data.data;
+    loadCartFromSession();
   } catch (err) {
     showError('商品情報の取得に失敗しました');
   }
@@ -485,24 +492,37 @@ const handleProductClick = async (productId) => {
   }
 };
 
-// 商品クリックの実際の処理
-const processProductClick = async (productId) => {
-  // 商品IDから商品を検索
-  const product = products.value.find(p => p.id === productId);
+// カートの内容をセッションストレージに保存
+const saveCartToSession = () => {
+  sessionStorage.setItem('cart', JSON.stringify(cart.value));
+};
 
-  if (!product) {
-    showError('商品情報が見つかりません');
-    return;
-  }
+// セッションストレージからカートの内容を復元
+const loadCartFromSession = () => {
+  const savedCart = sessionStorage.getItem('cart');
+  if (savedCart) {
+    const parsedCart = JSON.parse(savedCart);
+    const removedItems = parsedCart.filter(item => {
+      const product = products.value.find(p => p.id === item.id);
+      return !product || product.stock <= 0;
+    });
 
-  // 商品データから直接オプション情報を取得
-  if (product.options && product.options.length > 0) {
-    selectedProductId.value = productId;
-    productOptions.value = product.options;
-    showOptionsPopup.value = true;
-  } else {
-    // オプションがない場合は直接カートに追加
-    addToCart(productId);
+    cart.value = parsedCart.filter(item => {
+      const product = products.value.find(p => p.id === item.id);
+      return product && product.stock > 0;
+    });
+
+    if (removedItems.length > 0) {
+      const itemNames = removedItems.map(item => item.name).join(',');
+      showError(`${itemNames}は在庫切れのため、カートから削除されました`);
+    }
+
+    if (cart.value.length > 0) {
+      calculateTotalPrice();
+      saveCartToSession();
+    } else {
+      sessionStorage.removeItem('cart');
+    }
   }
 };
 
@@ -545,6 +565,7 @@ const addToCart = (productId) => {
   });
 
   calculateTotalPrice();
+  saveCartToSession();
   showMessage('商品がカートに追加されました');
 };
 
@@ -576,6 +597,7 @@ const updateQuantity = (index, quantity) => {
   }
 
   calculateTotalPrice();
+  saveCartToSession();
 };
 
 // カートから商品を削除
@@ -587,6 +609,7 @@ const removeFromCart = (index) => {
 
   cart.value.splice(index, 1);
   calculateTotalPrice();
+  saveCartToSession();
 };
 
 // カート内の商品の合計金額を計算
@@ -695,7 +718,8 @@ const showPaymentModal = () => {
 
 // おつりを計算
 const calculateChange = () => {
-  changeAmount.value = parseInt(paymentAmount.value - totalPrice.value);
+  const change = parseInt(paymentAmount.value - totalPrice.value);
+  changeAmount.value = change < 0 ? 0 : change;
 };
 
 // お支払い金額の入力を検証
@@ -744,6 +768,7 @@ const confirmOrder = async () => {
     if (response.status === 201) {
       cart.value = [];
       totalPrice.value = 0;
+      sessionStorage.removeItem('cart');
       showPaymentPopup.value = false;
       showMessage('注文が確定しました！');
       await loadProducts();
