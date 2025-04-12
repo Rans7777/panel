@@ -76,6 +76,10 @@ type Order struct {
 	CreatedAt time.Time       `json:"created_at"`
 }
 
+// init initializes logging, loads configuration from config.yml, sets up the application timezone, and establishes the database connection.
+// It configures log output to both stdout and a file, parses the YAML configuration, and defaults to UTC if the APP_TIMEZONE is unset or invalid.
+// Depending on the configuration, it connects to either a SQLite or a MySQL database, setting appropriate connection limits and verifying connectivity.
+// Fatal errors during these initialization steps result in log termination and application exit.
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -161,6 +165,9 @@ func init() {
 	}
 }
 
+// main initializes and starts the web server. It configures the Gin framework based on the debug flag by setting
+// the appropriate mode and logging level, applies CORS middleware and trusted proxies, and registers secured API
+// routes for streaming product and order data. The server then listens on port 8000.
 func main() {
 	if config.Debug {
 		gin.SetMode(gin.DebugMode)
@@ -187,6 +194,11 @@ func main() {
 	r.Run(":8000")
 }
 
+// VerifyToken returns a Gin middleware that authenticates HTTP requests by validating an access token.
+// It retrieves the Authorization header, strips the "Bearer " prefix if present, and checks that the token
+// was created within the last 5 minutes by querying the database. If the token is missing, invalid, or expired,
+// the middleware aborts the request with an appropriate HTTP status, otherwise it attaches the token to the
+// request context and allows the request to proceed.
 func verifyToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log.Debug("Starting: Token verification")
@@ -224,6 +236,9 @@ func verifyToken() gin.HandlerFunc {
 	}
 }
 
+// getProducts retrieves all product records from the database.
+// It executes a SQL query on the products table and scans each row into a Product struct.
+// Rows that fail during scanning are logged and skipped, while a query execution error is returned.
 func getProducts() ([]Product, error) {
 	log.Debug("Starting: Fetching product data")
 	products := []Product{}
@@ -257,6 +272,11 @@ func getProducts() ([]Product, error) {
 	return products, nil
 }
 
+// getOrders retrieves orders from the database and returns them as a slice of Order.
+// 
+// It executes a SQL query to fetch the uuid, product_id, quantity, image, options, and created_at fields from the "orders" table.
+// In case of a query error, the function immediately returns the error. For each fetched row, any scan error is logged and that row is skipped.
+// When the options field is valid, it is converted from a SQL null string to a JSON raw message before being assigned.
 func getOrders() ([]Order, error) {
 	log.Debug("Starting: Fetching order data")
 	orders := []Order{}
@@ -290,6 +310,12 @@ func getOrders() ([]Order, error) {
 	return orders, nil
 }
 
+// StreamProducts initiates a server-sent events stream to broadcast product data.
+// It configures the response for SSE and, if requested, enables Gzip compression.
+// Upon establishing the connection, it sends an initial "connected" event and then
+// periodically (every three seconds) retrieves and broadcasts product data.
+// Prior to closing the connection—either after a 5-minute maximum duration or when
+// nearing this limit—it emits a "disconnect_warning" event before ultimately closing the stream.
 func streamProducts(c *gin.Context) {
 	log.Debug("Starting: Product stream broadcast")
 	acceptEncoding := c.GetHeader("Accept-Encoding")
@@ -362,6 +388,10 @@ func streamProducts(c *gin.Context) {
 	}
 }
 
+// streamOrders initiates a server-sent events (SSE) stream to broadcast live order updates.
+// It configures SSE headers and, if requested by the client via the "Accept-Encoding" header, compresses responses using Gzip.
+// Upon connection, it sends a confirmation message, then periodically retrieves and streams order data every 5 seconds.
+// The stream issues a disconnect warning as it nears the 5-minute timeout, after which it sends a close event and terminates.
 func streamOrders(c *gin.Context) {
 	log.Debug("Starting: Order stream broadcast")
 	acceptEncoding := c.GetHeader("Accept-Encoding")
