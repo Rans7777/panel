@@ -1024,14 +1024,20 @@ body {
   flex: 0 0 auto;
   width: 250px;
   position: relative;
-  transform: translateX(100vw);
-  opacity: 0;
 }
 
 .conveyor-mode .conveyor-item {
+  transform: translateX(100vw);
+  opacity: 0;
   animation: moveItem 20s linear infinite;
   animation-delay: calc(var(--item-index) * (15s / var(--total-items)));
   opacity: 1;
+}
+
+.conveyor-item {
+  transform: none;
+  opacity: 1;
+  display: block;
 }
 
 @keyframes moveItem {
