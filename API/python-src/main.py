@@ -225,7 +225,7 @@ async def stream_products(request: Request, token: str = Depends(verify_token)) 
 
     async def event_generator():
         try:
-            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to products stream'})}\n\n"
+            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to products stream'}, ensure_ascii=False)}\n\n"
 
             start_time = asyncio.get_event_loop().time()
             max_duration = 300
@@ -236,27 +236,27 @@ async def stream_products(request: Request, token: str = Depends(verify_token)) 
                 elapsed_time = current_time - start_time
 
                 if elapsed_time >= max_duration:
-                    yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'})}\n\n"
+                    yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'}, ensure_ascii=False)}\n\n"
                     break
 
                 if elapsed_time >= disconnect_warning_time and elapsed_time < max_duration:
                     remaining = int(max_duration - elapsed_time)
-                    yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'})}\n\n"
+                    yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'}, ensure_ascii=False)}\n\n"
 
                 try:
                     products = await get_products()
-                    data = json.dumps(products, default=str)
+                    data = json.dumps(products, default=str, ensure_ascii=False)
                     yield f"event: products\ndata: {data}\n\n"
                 except Exception as e:
                     logger.error(f"Error fetching products: {str(e)}")
-                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching products'})}\n\n"
+                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching products'}, ensure_ascii=False)}\n\n"
 
                 await asyncio.sleep(3)
         except ConnectionResetError:
             logger.warning("Connection reset by client")
         except Exception as e:
             logger.error(f"Error in product stream: {str(e)}")
-            yield f"event: error\ndata: {json.dumps({'message': 'Error in product stream'})}\n\n"
+            yield f"event: error\ndata: {json.dumps({'message': 'Error in product stream'}, ensure_ascii=False)}\n\n"
 
     headers = {
         "Content-Type": "text/event-stream",
@@ -289,7 +289,7 @@ async def stream_orders(request: Request, token: str = Depends(verify_token)) ->
 
     async def event_generator():
         try:
-            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to orders stream'})}\n\n"
+            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to orders stream'}, ensure_ascii=False)}\n\n"
 
             start_time = asyncio.get_event_loop().time()
             max_duration = 300
@@ -300,27 +300,27 @@ async def stream_orders(request: Request, token: str = Depends(verify_token)) ->
                 elapsed_time = current_time - start_time
 
                 if elapsed_time >= max_duration:
-                    yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'})}\n\n"
+                    yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'}, ensure_ascii=False)}\n\n"
                     break
 
                 if elapsed_time >= disconnect_warning_time and elapsed_time < max_duration:
                     remaining = int(max_duration - elapsed_time)
-                    yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'})}\n\n"
+                    yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'}, ensure_ascii=False)}\n\n"
 
                 try:
                     orders = await get_orders()
-                    data = json.dumps(orders, default=str)
+                    data = json.dumps(orders, default=str, ensure_ascii=False)
                     yield f"event: orders\ndata: {data}\n\n"
                 except Exception as e:
                     logger.error(f"Error fetching orders: {str(e)}")
-                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching orders'})}\n\n"
+                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching orders'}, ensure_ascii=False)}\n\n"
 
                 await asyncio.sleep(5)
         except ConnectionResetError:
             logger.warning("Connection reset by client")
         except Exception as e:
             logger.error(f"Error in order stream: {str(e)}")
-            yield f"event: error\ndata: {json.dumps({'message': 'Error in order stream'})}\n\n"
+            yield f"event: error\ndata: {json.dumps({'message': 'Error in order stream'}, ensure_ascii=False)}\n\n"
 
     if use_gzip:
         logger.debug("Using Gzip compression")
