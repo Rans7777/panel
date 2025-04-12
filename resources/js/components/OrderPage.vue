@@ -44,7 +44,7 @@
               {{ product.name }}
             </h3>
             <p class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
-              ¥{{ product.price }}
+              {{ General.formatPrice(product.price) }}
             </p>
           </div>
         </div>
@@ -75,11 +75,11 @@
                   <div v-if="item.options && item.options.length > 0" class="mt-1 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-500': !isDarkMode }">
                     オプション:<br>
                     <span v-for="option in item.options" :key="option.id" class="ml-2 block italic">
-                      {{ option.option_name }} (追加料金: ¥{{ parseInt(option.price) }})
+                      {{ option.option_name }} (追加料金: {{ General.formatPrice(option.price) }})
                     </span>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-center">¥{{ parseInt(item.price) }}</td>
+                <td class="px-4 py-3 text-center">{{ General.formatPrice(item.price) }}</td>
                 <td class="px-4 py-3 text-center">
                   <input 
                     type="number"
@@ -90,7 +90,7 @@
                     @change="updateQuantity(index, item.quantity)"
                   />
                 </td>
-                <td class="px-4 py-3 text-center">¥{{ parseInt(item.price * item.quantity) }}</td>
+                <td class="px-4 py-3 text-center">{{ General.formatPrice(item.price * item.quantity) }}</td>
                 <td class="px-4 py-3 text-center">
                   <button 
                     @click="handleDeleteClick(index)"
@@ -141,12 +141,12 @@
                 class="pl-2"
                 :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }"
               >
-                {{ option.option_name }} (¥{{ parseInt(option.price) }})
+                {{ option.option_name }} ({{ General.formatPrice(option.price) }})
               </div>
             </div>
             <div class="flex justify-between items-center mt-4">
               <div class="font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
-                ¥{{ parseInt(item.price) }}
+                {{ General.formatPrice(item.price) }}
               </div>
               <div class="flex items-center gap-2">
                 <button 
@@ -168,7 +168,7 @@
         <!-- 合計金額と注文ボタン -->
         <div class="mt-8">
           <div class="text-right text-xl font-bold mb-4">
-            合計金額: ¥{{ parseInt(totalPrice) }}
+            合計金額: {{ General.formatPrice(totalPrice) }}
           </div>
           <div class="flex justify-end">
             <button 
@@ -205,7 +205,7 @@
                 class="w-4 h-4"
               />
               <label :for="`option-${option.id}`">
-                {{ option.option_name }} (追加料金: ¥{{ parseInt(option.price) }})
+                {{ option.option_name }} (追加料金: {{ General.formatPrice(option.price) }})
               </label>
             </div>
           </div>
@@ -243,7 +243,7 @@
         >
           <h3 class="text-xl font-bold mb-4">お支払い</h3>
           <div class="space-y-4 mb-6">
-            <p>合計金額: ¥{{ parseInt(totalPrice) }}</p>
+            <p>合計金額: {{ General.formatPrice(totalPrice) }}</p>
             <div class="space-y-2">
               <label for="payment-amount">お支払い金額:</label>
               <input 
@@ -261,7 +261,7 @@
                 }"
               />
             </div>
-            <p>おつり: ¥{{ parseInt(changeAmount) }}</p>
+            <p>おつり: {{ General.formatPrice(changeAmount) }}</p>
           </div>
           <div class="flex justify-between gap-4">
             <button 
@@ -331,6 +331,7 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import General from '../utils/General';
 
 const products = ref([]);
 const productOptions = ref([]);

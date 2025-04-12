@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -25,6 +26,7 @@ var timezone *time.Location
 var config Config
 
 type Config struct {
+	Debug        bool   `yaml:"DEBUG"`
 	DBConnection string `yaml:"DB_CONNECTION"`
 	DBHost       string `yaml:"DB_HOST"`
 	DBPort       string `yaml:"DB_PORT"`
@@ -160,7 +162,13 @@ func init() {
 }
 
 func main() {
-	gin.SetMode(gin.ReleaseMode)
+	if config.Debug {
+		gin.SetMode(gin.DebugMode)
+		log.SetLevel(log.DebugLevel)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+		log.SetLevel(log.InfoLevel)
+	}
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{config.AppUrl},
@@ -181,14 +189,19 @@ func main() {
 
 func verifyToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log.Debug("Starting: Token verification")
 		auth := c.GetHeader("Authorization")
 		if auth == "" {
+			log.Debug("Authorization header not found")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"detail": "Authorization header missing"})
 			return
 		}
 		token := auth
 		if strings.HasPrefix(auth, "Bearer ") {
 			token = strings.TrimPrefix(auth, "Bearer ")
+			if config.Debug {
+				log.Debugf("Bearer token detected: %s", token)
+			}
 		}
 		validTime := time.Now().In(timezone).Add(-5 * time.Minute)
 		query := "SELECT id, access_token, created_at FROM access_tokens WHERE access_token = ? AND created_at >= ?"
@@ -212,8 +225,10 @@ func verifyToken() gin.HandlerFunc {
 }
 
 func getProducts() ([]Product, error) {
+	log.Debug("Starting: Fetching product data")
 	products := []Product{}
 	query := "SELECT name, description, price, stock, image, allergens, created_at FROM products"
+	log.Debugf("Executing query: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Errorf("Database error in getProducts: %v", err)
@@ -221,6 +236,7 @@ func getProducts() ([]Product, error) {
 	}
 	defer rows.Close()
 
+	count := 0
 	for rows.Next() {
 		var p Product
 		var allergensStr sql.NullString
@@ -229,6 +245,8 @@ func getProducts() ([]Product, error) {
 			log.Errorf("Error scanning product row: %v", err)
 			continue
 		}
+		count++
+		log.Debugf("Product data read #%d: Name: %s, Price: %.2f, Stock: %d", count, p.Name.String, p.Price, p.Stock)
 
 		if allergensStr.Valid {
 			p.Allergens = json.RawMessage(allergensStr.String)
@@ -240,8 +258,10 @@ func getProducts() ([]Product, error) {
 }
 
 func getOrders() ([]Order, error) {
+	log.Debug("Starting: Fetching order data")
 	orders := []Order{}
 	query := "SELECT uuid, product_id, quantity, image, options, created_at FROM orders"
+	log.Debugf("Executing query: %s", query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Errorf("Database error in getOrders: %v", err)
@@ -249,6 +269,7 @@ func getOrders() ([]Order, error) {
 	}
 	defer rows.Close()
 
+	count := 0
 	for rows.Next() {
 		var o Order
 		var optionsStr sql.NullString
@@ -257,6 +278,8 @@ func getOrders() ([]Order, error) {
 			log.Errorf("Error scanning order row: %v", err)
 			continue
 		}
+		count++
+		log.Debugf("Order data read #%d: UUID: %s, Product ID: %d, Quantity: %d", count, o.UUID, o.ProductID, o.Quantity)
 
 		if optionsStr.Valid {
 			o.Options = json.RawMessage(optionsStr.String)
@@ -268,9 +291,27 @@ func getOrders() ([]Order, error) {
 }
 
 func streamProducts(c *gin.Context) {
+	log.Debug("Starting: Product stream broadcast")
+	acceptEncoding := c.GetHeader("Accept-Encoding")
+	useGzip := strings.Contains(acceptEncoding, "gzip")
+
+	if useGzip {
+		log.Debug("Using Gzip compression")
+		c.Writer.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(c.Writer)
+		defer gz.Close()
+		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
+	}
+
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
 	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.Header().Set("Transfer-Encoding", "chunked")
+	c.Writer.Flush()
+
+	data, _ := json.Marshal(gin.H{"message": "Connected to products stream"})
+	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
 	c.Writer.Flush()
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
@@ -322,9 +363,27 @@ func streamProducts(c *gin.Context) {
 }
 
 func streamOrders(c *gin.Context) {
+	log.Debug("Starting: Order stream broadcast")
+	acceptEncoding := c.GetHeader("Accept-Encoding")
+	useGzip := strings.Contains(acceptEncoding, "gzip")
+
+	if useGzip {
+		log.Debug("Using Gzip compression")
+		c.Writer.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(c.Writer)
+		defer gz.Close()
+		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
+	}
+
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
 	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.Header().Set("Transfer-Encoding", "chunked")
+	c.Writer.Flush()
+
+	data, _ := json.Marshal(gin.H{"message": "Connected to orders stream"})
+	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
 	c.Writer.Flush()
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
@@ -372,4 +431,24 @@ func streamOrders(c *gin.Context) {
 			return
 		}
 	}
+}
+
+type gzipResponseWriter struct {
+	io.Writer
+	gin.ResponseWriter
+}
+
+func (w *gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func (w *gzipResponseWriter) WriteString(s string) (int, error) {
+	return w.Writer.Write([]byte(s))
+}
+
+func (w *gzipResponseWriter) Flush() {
+	if f, ok := w.Writer.(*gzip.Writer); ok {
+		f.Flush()
+	}
+	w.ResponseWriter.Flush()
 }
