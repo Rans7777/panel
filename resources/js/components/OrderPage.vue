@@ -339,7 +339,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import General from '../utils/General';
@@ -480,6 +480,17 @@ const handleProductClick = async (productId) => {
     if (!product) {
       showError('商品情報が見つかりません');
       return;
+    }
+
+    // 隠しモードの処理
+    if (isDropMode.value || isRagingMode.value) {
+      clickedProductId.value = productId;
+      if (dropTimer.value) {
+        clearTimeout(dropTimer.value);
+      }
+      dropTimer.value = setTimeout(() => {
+        clickedProductId.value = null;
+      }, 1000);
     }
 
     if (product.options && product.options.length > 0) {
@@ -817,6 +828,12 @@ onMounted(() => {
   watchSystemTheme();
   applyDarkMode();
   checkHiddenMode();
+});
+
+onUnmounted(() => {
+  if (dropTimer.value) {
+    clearTimeout(dropTimer.value);
+  }
 });
 </script>
 
