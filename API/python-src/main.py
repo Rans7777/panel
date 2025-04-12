@@ -324,18 +324,27 @@ async def stream_orders(request: Request, token: str = Depends(verify_token)) ->
             logger.error(f"Error in order stream: {str(e)}")
             yield f"event: error\ndata: {json.dumps({'message': 'Error in order stream'}, ensure_ascii=False)}\n\n"
 
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+        "Transfer-Encoding": "chunked"
+    }
+
     if use_gzip:
         logger.debug("Using Gzip compression")
+        headers["Content-Encoding"] = "gzip"
         return GzipStreamingResponse(
             event_generator(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive", "Content-Type": "text/event-stream"}
+            headers=headers
         )
     else:
         return StreamingResponse(
             event_generator(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive", "Content-Type": "text/event-stream"}
+            headers=headers
         )
 
 if __name__ == "__main__":
