@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources;
 
-use Illuminate\Support\Str;
 use App\Filament\Resources\OrderHistoryResource\Pages;
 use App\Models\Order;
 use Filament\Forms;
@@ -12,6 +11,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Illuminate\Support\Str;
 
 final class OrderHistoryResource extends Resource
 {
