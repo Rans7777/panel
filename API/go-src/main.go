@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -268,6 +269,16 @@ func getOrders() ([]Order, error) {
 }
 
 func streamProducts(c *gin.Context) {
+	acceptEncoding := c.GetHeader("Accept-Encoding")
+	useGzip := strings.Contains(acceptEncoding, "gzip")
+
+	if useGzip {
+		c.Writer.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(c.Writer)
+		defer gz.Close()
+		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
+	}
+
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
 	c.Writer.Header().Set("Connection", "keep-alive")
@@ -328,6 +339,16 @@ func streamProducts(c *gin.Context) {
 }
 
 func streamOrders(c *gin.Context) {
+	acceptEncoding := c.GetHeader("Accept-Encoding")
+	useGzip := strings.Contains(acceptEncoding, "gzip")
+
+	if useGzip {
+		c.Writer.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(c.Writer)
+		defer gz.Close()
+		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
+	}
+
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
 	c.Writer.Header().Set("Connection", "keep-alive")
@@ -384,4 +405,24 @@ func streamOrders(c *gin.Context) {
 			return
 		}
 	}
+}
+
+type gzipResponseWriter struct {
+	io.Writer
+	gin.ResponseWriter
+}
+
+func (w *gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func (w *gzipResponseWriter) WriteString(s string) (int, error) {
+	return w.Writer.Write([]byte(s))
+}
+
+func (w *gzipResponseWriter) Flush() {
+	if f, ok := w.Writer.(*gzip.Writer); ok {
+		f.Flush()
+	}
+	w.ResponseWriter.Flush()
 }
