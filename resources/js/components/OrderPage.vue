@@ -26,7 +26,12 @@
           :key="product.id"
           @click="handleProductClick(product.id)"
           class="cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
-          :class="{ 'bg-gray-800 border border-gray-700': isDarkMode, 'bg-white border border-gray-200': !isDarkMode }"
+          :class="{ 
+            'bg-gray-800 border border-gray-700': isDarkMode, 
+            'bg-white border border-gray-200': !isDarkMode,
+            'drop-mode': isDropMode && clickedProductId === product.id,
+            'rotate-mode': isRagingMode && clickedProductId === product.id
+          }"
         >
           <div class="p-4">
             <div class="flex justify-center items-center h-24 mb-4">
@@ -350,6 +355,11 @@ const showDeleteConfirmation = ref(false);
 const deleteTargetIndex = ref(null);
 const messageTimer = ref(null);
 const errorTimer = ref(null);
+const clickedProductId = ref(null);
+const dropTimer = ref(null);
+const hiddenModeType = ref('');
+const isRagingMode = ref(false);
+const isDropMode = ref(false);
 
 // メッセージ通知を表示する関数
 const showMessage = (msg) => {
@@ -436,6 +446,15 @@ const watchSystemTheme = () => {
   }
 };
 
+// 隠しモードをチェック
+const checkHiddenMode = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const hiddenParam = urlParams.get('hidden');
+  isDropMode.value = hiddenParam === 'drop';
+  isRagingMode.value = hiddenParam === 'rotate';
+  hiddenModeType.value = hiddenParam || '';
+};
+
 // API から製品情報を取得
 const loadProducts = async () => {
   try {
@@ -449,25 +468,41 @@ const loadProducts = async () => {
 // 商品クリック時の処理
 const handleProductClick = async (productId) => {
   try {
-    // 商品IDから商品を検索
-    const product = products.value.find(p => p.id === productId);
-
-    if (!product) {
-      showError('商品情報が見つかりません');
+    if (isDropMode.value || isRagingMode.value) {
+      clickedProductId.value = productId;
+      if (dropTimer.value) {
+        clearTimeout(dropTimer.value);
+      }
+      dropTimer.value = setTimeout(() => {
+        clickedProductId.value = null;
+        processProductClick(productId);
+      }, isRagingMode.value ? 2000 : 1000);
       return;
     }
-
-    // 商品データから直接オプション情報を取得
-    if (product.options && product.options.length > 0) {
-      selectedProductId.value = productId;
-      productOptions.value = product.options;
-      showOptionsPopup.value = true;
-    } else {
-      // オプションがない場合は直接カートに追加
-      addToCart(productId);
-    }
+    processProductClick(productId);
   } catch (err) {
     showError('商品の処理に失敗しました');
+  }
+};
+
+// 商品クリックの実際の処理
+const processProductClick = async (productId) => {
+  // 商品IDから商品を検索
+  const product = products.value.find(p => p.id === productId);
+
+  if (!product) {
+    showError('商品情報が見つかりません');
+    return;
+  }
+
+  // 商品データから直接オプション情報を取得
+  if (product.options && product.options.length > 0) {
+    selectedProductId.value = productId;
+    productOptions.value = product.options;
+    showOptionsPopup.value = true;
+  } else {
+    // オプションがない場合は直接カートに追加
+    addToCart(productId);
   }
 };
 
@@ -746,6 +781,7 @@ onMounted(() => {
   detectDarkMode();
   watchSystemTheme();
   applyDarkMode();
+  checkHiddenMode();
 });
 </script>
 
@@ -775,5 +811,62 @@ html, body {
 .dark-mode {
   background-color: #121827;
   color: #f3f4f6;
+}
+
+@keyframes drop {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.drop-mode {
+  animation: drop 1s ease-in forwards;
+  pointer-events: none;
+  z-index: 10;
+  position: relative;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: rotate(900deg);
+  }
+  50% {
+    transform: rotate(1800deg);
+  }
+  75% {
+    transform: rotate(2700deg);
+  }
+  100% {
+    transform: rotate(3600deg);
+    opacity: 0;
+  }
+}
+
+.rotate-mode {
+  animation: rotate 2s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 10;
+  position: relative;
+}
+
+:root {
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
 }
 </style>
