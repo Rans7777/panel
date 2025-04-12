@@ -191,13 +191,31 @@ class GzipStreamingResponse(StreamingResponse):
         self.headers["X-Accel-Buffering"] = "no"
 
     async def stream_response(self, send):
+        await send({
+            "type": "http.response.start",
+            "status": self.status_code,
+            "headers": [
+                [k.lower().encode(), v.encode()] for k, v in self.headers.items()
+            ]
+        })
+
         gz = gzip.GzipFile(fileobj=io.BytesIO(), mode='wb')
         async for chunk in self.body_iterator:
             gz.write(chunk.encode() if isinstance(chunk, str) else chunk)
             gz.flush()
-            await send({"type": "http.response.body", "body": gz.fileobj.getvalue()})
+            await send({
+                "type": "http.response.body",
+                "body": gz.fileobj.getvalue(),
+                "more_body": True
+            })
             gz.fileobj = io.BytesIO()
         gz.close()
+
+        await send({
+            "type": "http.response.body",
+            "body": b"",
+            "more_body": False
+        })
 
 @app.get("/api/products/stream")
 async def stream_products(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
@@ -208,43 +226,59 @@ async def stream_products(request: Request, token: str = Depends(verify_token)) 
     async def event_generator():
         try:
             yield f"event: connected\ndata: {json.dumps({'message': 'Connected to products stream'})}\n\n"
-            
+
             start_time = asyncio.get_event_loop().time()
             max_duration = 300
             disconnect_warning_time = 240
-            
+
             while True:
                 current_time = asyncio.get_event_loop().time()
                 elapsed_time = current_time - start_time
-                
+
                 if elapsed_time >= max_duration:
                     yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'})}\n\n"
                     break
-                    
+
                 if elapsed_time >= disconnect_warning_time and elapsed_time < max_duration:
                     remaining = int(max_duration - elapsed_time)
                     yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'})}\n\n"
-                
-                products = await get_products()
-                data = json.dumps(products, default=str)
-                yield f"event: products\ndata: {data}\n\n"
-                
+
+                try:
+                    products = await get_products()
+                    data = json.dumps(products, default=str)
+                    yield f"event: products\ndata: {data}\n\n"
+                except Exception as e:
+                    logger.error(f"Error fetching products: {str(e)}")
+                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching products'})}\n\n"
+
                 await asyncio.sleep(3)
         except ConnectionResetError:
-            pass
+            logger.warning("Connection reset by client")
+        except Exception as e:
+            logger.error(f"Error in product stream: {str(e)}")
+            yield f"event: error\ndata: {json.dumps({'message': 'Error in product stream'})}\n\n"
+
+    headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+        "Transfer-Encoding": "chunked"
+    }
 
     if use_gzip:
         logger.debug("Using Gzip compression")
+        headers["Content-Encoding"] = "gzip"
         return GzipStreamingResponse(
             event_generator(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache, no-transform", "Connection": "keep-alive"}
+            headers=headers
         )
     else:
         return StreamingResponse(
             event_generator(),
             media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+            headers=headers
         )
 
 @app.get("/api/orders/stream")
@@ -256,30 +290,37 @@ async def stream_orders(request: Request, token: str = Depends(verify_token)) ->
     async def event_generator():
         try:
             yield f"event: connected\ndata: {json.dumps({'message': 'Connected to orders stream'})}\n\n"
-            
+
             start_time = asyncio.get_event_loop().time()
             max_duration = 300
             disconnect_warning_time = 240
-            
+
             while True:
                 current_time = asyncio.get_event_loop().time()
                 elapsed_time = current_time - start_time
-                
+
                 if elapsed_time >= max_duration:
                     yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'})}\n\n"
                     break
-                    
+
                 if elapsed_time >= disconnect_warning_time and elapsed_time < max_duration:
                     remaining = int(max_duration - elapsed_time)
                     yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'})}\n\n"
-                
-                orders = await get_orders()
-                data = json.dumps(orders, default=str)
-                yield f"event: orders\ndata: {data}\n\n"
-                
+
+                try:
+                    orders = await get_orders()
+                    data = json.dumps(orders, default=str)
+                    yield f"event: orders\ndata: {data}\n\n"
+                except Exception as e:
+                    logger.error(f"Error fetching orders: {str(e)}")
+                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching orders'})}\n\n"
+
                 await asyncio.sleep(5)
         except ConnectionResetError:
-            pass
+            logger.warning("Connection reset by client")
+        except Exception as e:
+            logger.error(f"Error in order stream: {str(e)}")
+            yield f"event: error\ndata: {json.dumps({'message': 'Error in order stream'})}\n\n"
 
     if use_gzip:
         logger.debug("Using Gzip compression")
@@ -296,4 +337,4 @@ async def stream_orders(request: Request, token: str = Depends(verify_token)) ->
         )
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(config.get("APP_PORT", 8080)))
