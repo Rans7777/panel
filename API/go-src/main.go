@@ -192,7 +192,9 @@ func main() {
 		api.GET("/products/stream", verifyToken(), streamProducts)
 		api.GET("/orders/stream", verifyToken(), streamOrders)
 	}
-	r.Run(":" + config.AppPort)
+	if err := r.Run(":" + config.AppPort); err != nil {
+	    log.Fatalf("Failed to start server: %v", err)
+	}
 }
 
 // VerifyToken returns a Gin middleware that authenticates HTTP requests by validating an access token.
