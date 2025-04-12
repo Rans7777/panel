@@ -1147,7 +1147,7 @@ body {
 .conveyor-mode .conveyor-item {
   transform: translateX(100vw);
   opacity: 0;
-  animation: moveItem calc(10s + (var(--total-items) * 0.5s)) linear infinite;
+  animation: moveItem 20s linear infinite;
   animation-delay: calc(var(--item-index) * (15s / var(--total-items)));
   opacity: 1;
 }
