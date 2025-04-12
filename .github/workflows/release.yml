@@ -18,23 +18,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.24.1
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+          go-version: 1.24.2
 
       - name: Build Go
         run: |
           cd API/go-src
           go build -o main -v ./...
           cd ../..
-
-      - name: Build Node.js
-        run: |
-          npm install
-          npm run build
 
       - name: Create API release archive
         run: |
@@ -45,7 +35,7 @@ jobs:
 
       - name: Create web release archive
         run: |
-          rm -rf tests node_modules API
+          rm -rf tests API
           tar --exclude='api-release.tar.gz' -czvf web-release.tar.gz *
 
       - name: sumcheck
@@ -80,8 +70,8 @@ jobs:
 
             ### チェックサム
             ```
-            Web: ${{ env.WEB_CHECKSUM }}
-            API: ${{ env.API_CHECKSUM }}
+            ${{ env.WEB_CHECKSUM }}
+            ${{ env.API_CHECKSUM }}
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
