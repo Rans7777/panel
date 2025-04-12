@@ -1,11 +1,26 @@
 <template>
-  <div class="min-h-screen transition-all duration-300" :class="{ 'bg-gray-900 text-gray-100': isDarkMode, 'bg-white text-gray-800': !isDarkMode }">
+  <div class="min-h-screen transition-all duration-300" 
+       :class="{ 
+         'bg-gray-900 text-gray-100': isDarkMode && !isRainbowMode, 
+         'bg-white text-gray-800': !isDarkMode && !isRainbowMode,
+         'rainbow-bg': isRainbowMode 
+       }">
     <div class="max-w-7xl mx-auto p-4">
       <div class="mb-8">
-        <h1 class="text-3xl font-bold text-center my-6 relative inline-block pb-2 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-1/2 after:h-[3px] after:bg-red-600" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">メニュー</h1>
+        <h1 class="text-3xl font-bold text-center my-6 relative inline-block pb-2 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-1/2 after:h-[3px]" 
+            :class="{ 
+              'text-gray-100 after:bg-red-600': isDarkMode && !isRainbowMode, 
+              'text-gray-800 after:bg-red-600': !isDarkMode && !isRainbowMode,
+              'rainbow-text': isRainbowMode 
+            }">メニュー</h1>
       </div>
 
-      <div v-if="disconnectWarning" class="border-l-4 p-4 mb-4" :class="{ 'bg-yellow-900/30 border-yellow-600 text-yellow-200': isDarkMode, 'bg-yellow-50 border-yellow-400 text-yellow-700': !isDarkMode }">
+      <div v-if="disconnectWarning" class="border-l-4 p-4 mb-4" 
+           :class="{ 
+             'bg-yellow-900/30 border-yellow-600 text-yellow-200': isDarkMode && !isRainbowMode, 
+             'bg-yellow-50 border-yellow-400 text-yellow-700': !isDarkMode && !isRainbowMode,
+             'rainbow-border': isRainbowMode 
+           }">
         <div class="flex items-center">
           <div class="flex-shrink-0">
             <i class="pi pi-exclamation-triangle" :class="{ 'text-yellow-400': !isDarkMode, 'text-yellow-300': isDarkMode }"></i>
@@ -19,12 +34,25 @@
       </div>
 
       <div v-if="loading" class="flex justify-center items-center h-64">
-        <div class="w-9 h-9 border-4 rounded-full animate-spin" :class="{ 'border-gray-700 border-l-red-500': isDarkMode, 'border-gray-200 border-l-red-600': !isDarkMode }"></div>
+        <div class="w-9 h-9 border-4 rounded-full animate-spin" 
+             :class="{ 
+               'border-gray-700 border-l-red-500': isDarkMode && !isRainbowMode, 
+               'border-gray-200 border-l-red-600': !isDarkMode && !isRainbowMode,
+               'rainbow-border': isRainbowMode 
+             }"></div>
       </div>
 
       <div v-else class="mt-8">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-          <div v-for="product in products" :key="product.id" class="h-full rounded-lg overflow-hidden shadow-md max-w-[450px] mx-auto w-full transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg" :class="{ 'bg-gray-800 shadow-gray-900/30': isDarkMode, 'bg-white': !isDarkMode }">
+          <div v-for="product in products" :key="product.id" 
+               class="h-full rounded-lg overflow-hidden shadow-md max-w-[450px] mx-auto w-full transition-all duration-300 hover:translate-y-[-4px] hover:shadow-lg" 
+               :class="{ 
+                 'bg-gray-800 shadow-gray-900/30': isDarkMode && !isRainbowMode, 
+                 'bg-white': !isDarkMode && !isRainbowMode,
+                 'animate-spin-slow': isHiddenMode === 'rotate',
+                 'rainbow-border': isRainbowMode,
+                 'rainbow-bg': isRainbowMode
+               }">
             <div class="w-full">
               <div class="h-[200px] flex justify-center items-center overflow-hidden relative" :class="{ 'bg-gray-700': isDarkMode, 'bg-gray-100': !isDarkMode }">
                 <img v-if="product.image" :src="'/storage/' + product.image" :alt="product.name" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105" />
@@ -85,7 +113,11 @@
       <button 
         @click="toggleDarkMode"
         class="fixed bottom-5 right-5 px-4 py-2 rounded-full shadow-lg transition-colors text-white"
-        :class="{ 'bg-gray-700 hover:bg-gray-600': isDarkMode, 'bg-green-600 hover:bg-green-700': !isDarkMode }"
+        :class="{ 
+          'bg-gray-700 hover:bg-gray-600': isDarkMode && !isRainbowMode, 
+          'bg-green-600 hover:bg-green-700': !isDarkMode && !isRainbowMode,
+          'rainbow-bg': isRainbowMode 
+        }"
       >
         <i :class="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'" class="mr-2"></i>
         {{ isDarkMode ? 'ライトモード' : 'ダークモード' }}
@@ -114,6 +146,8 @@ export default {
     let tokenRetryCount = ref(0);
     let tokenRetryTimer = null;
     const api = new API();
+    const isHiddenMode = ref('');
+    const isRainbowMode = ref(false);
 
     const showWarning = (message, duration = 0) => {
       if (warningTimer) {
@@ -310,11 +344,19 @@ export default {
       fetchProductsWithToken();
     };
 
+    const checkHiddenMode = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hiddenParam = urlParams.get('hidden');
+      isHiddenMode.value = hiddenParam;
+      isRainbowMode.value = hiddenParam === 'rainbow';
+    };
+
     onMounted(() => {
       setupEventSource();
       detectDarkMode();
       watchSystemTheme();
       applyDarkMode();
+      checkHiddenMode();
     });
 
     onUnmounted(async () => {
@@ -339,7 +381,9 @@ export default {
       remainingTime,
       isDarkMode,
       toggleDarkMode,
-      General
+      General,
+      isHiddenMode,
+      isRainbowMode
     };
   }
 };
@@ -356,5 +400,63 @@ html, body {
 .dark-mode {
   background-color: #121827;
   color: #f3f4f6;
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 10s linear infinite;
+}
+
+@keyframes rainbow-text {
+  0% { color: #ff0000; }
+  16.666% { color: #ff8800; }
+  33.333% { color: #ffff00; }
+  50% { color: #00ff00; }
+  66.666% { color: #0000ff; }
+  83.333% { color: #ff00ff; }
+  100% { color: #ff0000; }
+}
+
+.rainbow-text {
+  animation: rainbow-text 3s linear infinite;
+}
+
+@keyframes rainbow-bg {
+  0% { background: linear-gradient(45deg, #ff0000, #ff8800); }
+  16.666% { background: linear-gradient(45deg, #ff8800, #ffff00); }
+  33.333% { background: linear-gradient(45deg, #ffff00, #00ff00); }
+  50% { background: linear-gradient(45deg, #00ff00, #0000ff); }
+  66.666% { background: linear-gradient(45deg, #0000ff, #ff00ff); }
+  83.333% { background: linear-gradient(45deg, #ff00ff, #ff0000); }
+  100% { background: linear-gradient(45deg, #ff0000, #ff8800); }
+}
+
+.rainbow-bg {
+  animation: rainbow-bg 3s linear infinite;
+  background-size: 200% 200%;
+  color: white !important;
+}
+
+@keyframes rainbow-border {
+  0% { border-color: #ff0000; }
+  16.666% { border-color: #ff8800; }
+  33.333% { border-color: #ffff00; }
+  50% { border-color: #00ff00; }
+  66.666% { border-color: #0000ff; }
+  83.333% { border-color: #ff00ff; }
+  100% { border-color: #ff0000; }
+}
+
+.rainbow-border {
+  border: 4px solid transparent;
+  animation: rainbow-border 3s linear infinite;
 }
 </style>
