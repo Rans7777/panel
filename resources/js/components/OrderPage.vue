@@ -475,18 +475,20 @@ const loadProducts = async () => {
 // 商品クリック時の処理
 const handleProductClick = async (productId) => {
   try {
-    if (isDropMode.value || isRagingMode.value) {
-      clickedProductId.value = productId;
-      if (dropTimer.value) {
-        clearTimeout(dropTimer.value);
-      }
-      dropTimer.value = setTimeout(() => {
-        clickedProductId.value = null;
-        processProductClick(productId);
-      }, isRagingMode.value ? 2000 : 1000);
+    const product = products.value.find(p => p.id === productId);
+
+    if (!product) {
+      showError('商品情報が見つかりません');
       return;
     }
-    processProductClick(productId);
+
+    if (product.options && product.options.length > 0) {
+      selectedProductId.value = productId;
+      productOptions.value = product.options;
+      showOptionsPopup.value = true;
+    } else {
+      addToCart(productId);
+    }
   } catch (err) {
     showError('商品の処理に失敗しました');
   }
@@ -502,15 +504,25 @@ const loadCartFromSession = () => {
   const savedCart = sessionStorage.getItem('cart');
   if (savedCart) {
     const parsedCart = JSON.parse(savedCart);
-    const removedItems = parsedCart.filter(item => {
-      const product = products.value.find(p => p.id === item.id);
-      return !product || product.stock <= 0;
-    });
+    const removedItems = [];
+    const validItems = [];
 
-    cart.value = parsedCart.filter(item => {
+    for (const item of parsedCart) {
       const product = products.value.find(p => p.id === item.id);
-      return product && product.stock > 0;
-    });
+      if (!product || product.stock <= 0) {
+        removedItems.push(item);
+      } else {
+        if (item.quantity > product.stock) {
+          item.quantity = product.stock;
+        }
+        validItems.push({
+          ...item,
+          quantity: item.quantity
+        });
+      }
+    }
+
+    cart.value = validItems;
 
     if (removedItems.length > 0) {
       const itemNames = removedItems.map(item => item.name).join(',');
@@ -543,26 +555,26 @@ const addToCart = (productId) => {
   }
 
   // 同一商品（オプションがない場合）の場合は数量をインクリメント
-  for (let i = 0; i < cart.value.length; i++) {
-    if (cart.value[i].id === product.id && !cart.value[i].options) {
-      if (cart.value[i].quantity < product.stock) {
-        cart.value[i].quantity++;
-      } else {
-        showError('在庫数を超えています: ' + product.name);
-      }
-      calculateTotalPrice();
-      showMessage('商品がカートに追加されました');
-      return;
-    }
-  }
+  const existingItemIndex = cart.value.findIndex(item => 
+    item.id === product.id && !item.options
+  );
 
-  cart.value.push({
-    id: product.id,
-    name: product.name,
-    image: product.image,
-    price: product.price,
-    quantity: 1
-  });
+  if (existingItemIndex !== -1) {
+    const currentQuantity = cart.value[existingItemIndex].quantity;
+    if (currentQuantity < product.stock) {
+      cart.value[existingItemIndex].quantity = currentQuantity + 1;
+    } else {
+      showError('在庫数を超えています: ' + product.name);
+    }
+  } else {
+    cart.value.push({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      price: product.price,
+      quantity: 1
+    });
+  }
 
   calculateTotalPrice();
   saveCartToSession();
