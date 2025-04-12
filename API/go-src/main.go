@@ -269,8 +269,14 @@ func getOrders() ([]Order, error) {
 
 func streamProducts(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
 	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.Header().Set("Transfer-Encoding", "chunked")
+	c.Writer.Flush()
+
+	data, _ := json.Marshal(gin.H{"message": "Connected to products stream"})
+	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
 	c.Writer.Flush()
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
@@ -323,8 +329,14 @@ func streamProducts(c *gin.Context) {
 
 func streamOrders(c *gin.Context) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
 	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.Header().Set("Transfer-Encoding", "chunked")
+	c.Writer.Flush()
+
+	data, _ := json.Marshal(gin.H{"message": "Connected to orders stream"})
+	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
 	c.Writer.Flush()
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)

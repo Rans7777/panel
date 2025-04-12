@@ -262,6 +262,8 @@ export default {
                 } catch (error) {
                   showWarning('製品データの解析に失敗しました:', 0);
                 }
+              } else if (eventName === 'connected') {
+                showWarning('接続成功', 3000);
               } else if (eventName === 'disconnect_warning') {
                 try {
                   const parsedData = JSON.parse(data);
