@@ -516,8 +516,12 @@ const loadCartFromSession = () => {
           item.quantity = product.stock;
         }
         validItems.push({
-          ...item,
-          quantity: item.quantity
+          id: item.id,
+          name: item.name,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          options: item.options ? JSON.parse(JSON.stringify(item.options)) : null
         });
       }
     }
@@ -572,7 +576,8 @@ const addToCart = (productId) => {
       name: product.name,
       image: product.image,
       price: product.price,
-      quantity: 1
+      quantity: 1,
+      options: null
     });
   }
 
@@ -666,42 +671,35 @@ const confirmOptionSelection = () => {
   const totalItemPrice = parseInt(Number(product.price) + additionalPrice);
 
   // 同じ商品とオプションの組み合わせがカートにあるかチェック
-  for (let i = 0; i < cart.value.length; i++) {
-    const item = cart.value[i];
-
+  const existingItemIndex = cart.value.findIndex(item => {
     if (item.id === product.id && item.options) {
-      const existingOptionIds = item.options.map(opt => opt.id);
+      const existingOptionIds = item.options.map(opt => opt.id).sort();
       const currentOptionIds = [...selectedOptionIds.value].sort();
-
-      if (JSON.stringify(existingOptionIds.sort()) === JSON.stringify(currentOptionIds)) {
-        // 同じ商品とオプションの組み合わせがある場合は数量を増やす
-        if (item.quantity < product.stock) {
-          item.quantity++;
-        } else {
-          showError('在庫数を超えています: ' + product.name);
-        }
-
-        calculateTotalPrice();
-        resetOptionSelection();
-
-        showMessage('商品とオプションがカートに追加されました');
-        return;
-      }
+      return JSON.stringify(existingOptionIds) === JSON.stringify(currentOptionIds);
     }
-  }
-
-  cart.value.push({
-    id: product.id,
-    name: product.name,
-    image: product.image,
-    price: totalItemPrice,
-    quantity: 1,
-    options: selectedOptions
+    return false;
   });
+
+  if (existingItemIndex !== -1) {
+    if (cart.value[existingItemIndex].quantity < product.stock) {
+      cart.value[existingItemIndex].quantity++;
+    } else {
+      showError('在庫数を超えています: ' + product.name);
+    }
+  } else {
+    cart.value.push({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      price: totalItemPrice,
+      quantity: 1,
+      options: JSON.parse(JSON.stringify(selectedOptions))
+    });
+  }
 
   calculateTotalPrice();
   resetOptionSelection();
-
+  saveCartToSession();
   showMessage('商品とオプションがカートに追加されました');
 };
 
