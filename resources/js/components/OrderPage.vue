@@ -34,37 +34,43 @@
       </div>
 
       <!-- 商品カード一覧 -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mb-8">
-        <div
-          v-for="product in products.filter(p => p.stock > 0)"
-          :key="product.id"
-          @click="handleProductClick(product.id)"
-          class="cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
-          :class="{ 
-            'bg-gray-800 border border-gray-700': isDarkMode, 
-            'bg-white border border-gray-200': !isDarkMode,
-            'drop-mode': isDropMode && clickedProductId === product.id,
-            'rotate-mode': isRagingMode && clickedProductId === product.id
-          }"
-        >
-          <div class="p-4">
-            <div class="flex justify-center items-center h-24 mb-4">
-              <img 
-                v-if="product.image" 
-                :src="'/storage/' + product.image" 
-                :alt="product.name"
-                class="w-24 h-24 object-contain"
-              />
-              <div v-else class="w-12 h-12 flex items-center justify-center">
-                <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
+      <div class="conveyor-container" :class="{ 'conveyor-mode': isConveyorMode }">
+        <div class="conveyor-track">
+          <div
+            v-for="(product, index) in products.filter(p => p.stock > 0)"
+            :key="product.id"
+            @click="handleProductClick(product.id)"
+            class="conveyor-item cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
+            :class="{ 
+              'bg-gray-800 border border-gray-700': isDarkMode, 
+              'bg-white border border-gray-200': !isDarkMode,
+              'drop-mode': isDropMode && clickedProductId === product.id,
+              'rotate-mode': isRagingMode && clickedProductId === product.id
+            }"
+            :style="isConveyorMode ? {
+              '--item-index': index,
+              '--total-items': products.filter(p => p.stock > 0).length
+            } : {}"
+          >
+            <div class="p-4">
+              <div class="flex justify-center items-center h-24 mb-4">
+                <img 
+                  v-if="product.image" 
+                  :src="'/storage/' + product.image" 
+                  :alt="product.name"
+                  class="w-24 h-24 object-contain"
+                />
+                <div v-else class="w-12 h-12 flex items-center justify-center">
+                  <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
+                </div>
               </div>
+              <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
+                {{ product.name }}
+              </h3>
+              <p class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
+                {{ General.formatPrice(product.price) }}
+              </p>
             </div>
-            <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
-              {{ product.name }}
-            </h3>
-            <p class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
-              {{ General.formatPrice(product.price) }}
-            </p>
           </div>
         </div>
       </div>
@@ -375,6 +381,7 @@ const hiddenModeType = ref('');
 const isRagingMode = ref(false);
 const isDropMode = ref(false);
 const isRainMode = ref(false);
+const isConveyorMode = ref(false);
 
 // メッセージ通知を表示する関数
 const showMessage = (msg) => {
@@ -468,6 +475,7 @@ const checkHiddenMode = () => {
   isDropMode.value = hiddenParam === 'drop';
   isRagingMode.value = hiddenParam === 'rotate';
   isRainMode.value = hiddenParam === 'rain';
+  isConveyorMode.value = hiddenParam === 'conveyor';
   hiddenModeType.value = hiddenParam || '';
 };
 
@@ -959,5 +967,101 @@ body {
   height: 100px;
   background: linear-gradient(transparent, #4a90e2);
   animation: rain linear infinite;
+}
+
+.perspective-container {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+@keyframes conveyor {
+  0% {
+    transform: translateZ(0) rotateY(0deg) translateX(0);
+  }
+  25% {
+    transform: translateZ(100px) rotateY(90deg) translateX(100px);
+  }
+  50% {
+    transform: translateZ(200px) rotateY(180deg) translateX(0);
+  }
+  75% {
+    transform: translateZ(100px) rotateY(270deg) translateX(-100px);
+  }
+  100% {
+    transform: translateZ(0) rotateY(360deg) translateX(0);
+  }
+}
+
+.conveyor-mode {
+  animation: conveyor var(--conveyor-duration) linear infinite;
+  animation-delay: var(--conveyor-delay);
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+}
+
+.conveyor-mode:hover {
+  animation-play-state: paused;
+}
+
+.conveyor-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.conveyor-track {
+  position: absolute;
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  width: fit-content;
+  height: 100%;
+}
+
+.conveyor-item {
+  flex: 0 0 auto;
+  width: 250px;
+  position: relative;
+  transform: translateX(100vw);
+  opacity: 0;
+}
+
+.conveyor-mode .conveyor-item {
+  animation: moveItem 20s linear infinite;
+  animation-delay: calc(var(--item-index) * (15s / var(--total-items)));
+  opacity: 1;
+}
+
+@keyframes moveItem {
+  0% {
+    transform: translateX(100vw);
+    opacity: 1;
+  }
+  85% {
+    transform: translateX(-100vw);
+    opacity: 1;
+  }
+  86% {
+    transform: translateX(-100vw);
+    opacity: 0;
+  }
+  87% {
+    transform: translateX(100vw);
+    opacity: 0;
+  }
+  88% {
+    transform: translateX(100vw);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100vw);
+    opacity: 1;
+  }
+}
+
+.conveyor-mode .conveyor-track {
+  animation: none;
 }
 </style>
