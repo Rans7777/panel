@@ -57,7 +57,7 @@
               </div>
 
               <div class="flex justify-between items-center mb-4">
-                <div class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }">{{ formatPrice(product.price) }}</div>
+                <div class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }">{{ General.formatPrice(product.price) }}</div>
                 <div v-if="product.stock > 0" class="text-sm flex items-center gap-1" :class="{ 'text-green-400': isDarkMode, 'text-green-600': !isDarkMode }">
                   <i class="pi pi-check-circle"></i> 在庫あり
                 </div>
@@ -69,7 +69,7 @@
                 <h3 class="text-base font-bold mb-2 relative inline-block pb-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px]" :class="{ 'text-gray-400 after:bg-gray-700': isDarkMode, 'text-gray-600 after:bg-gray-200': !isDarkMode }">オプション</h3>
                 <div v-for="option in product.options" :key="option.id" class="flex justify-between mb-1 py-2 last:border-b-0" :class="{ 'border-b border-dashed border-gray-700': isDarkMode, 'border-b border-dashed border-gray-200': !isDarkMode }">
                   <span :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }" class="text-[0.95rem]">{{ option.option_name }}</span>
-                  <span :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }" class="font-medium text-[0.95rem]">+{{ formatPrice(option.price) }}</span>
+                  <span :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }" class="font-medium text-[0.95rem]">+{{ General.formatPrice(option.price) }}</span>
                 </div>
               </div>
             </div>
@@ -93,6 +93,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import Cache from '../utils/Cache';
 import API from '../utils/API';
+import General from '../utils/General';
 
 export default {
   setup() {
@@ -302,13 +303,6 @@ export default {
       fetchProductsWithToken();
     };
 
-    const formatPrice = (price) => {
-      return new Intl.NumberFormat('ja-JP', {
-        style: 'currency',
-        currency: 'JPY'
-      }).format(price);
-    };
-
     onMounted(() => {
       setupEventSource();
       detectDarkMode();
@@ -333,12 +327,12 @@ export default {
     return {
       products,
       loading,
-      formatPrice,
       connectionStatus,
       disconnectWarning,
       remainingTime,
       isDarkMode,
-      toggleDarkMode
+      toggleDarkMode,
+      General
     };
   }
 };

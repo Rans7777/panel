@@ -7,4 +7,16 @@ export default class General {
     hashKey(str) {
         return window.md5(str);
     }
+
+    /**
+     * 価格を日本円形式にフォーマット
+     * @param {number} price 価格
+     * @return {string} フォーマットされた価格
+     */
+    static formatPrice(price) {
+        return new Intl.NumberFormat('ja-JP', {
+          style: 'currency',
+          currency: 'JPY'
+        }).format(price);
+    }
 }
