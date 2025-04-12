@@ -1,5 +1,13 @@
 <template>
   <div class="min-h-screen p-5 transition-all duration-300" :class="{ 'bg-gray-900 text-gray-100': isDarkMode, 'bg-white text-gray-800': !isDarkMode }">
+    <!-- 雨のエフェクト -->
+    <div v-if="isRainMode" class="rain-container fixed inset-0 pointer-events-none z-50">
+      <div v-for="n in 100" :key="n" class="raindrop" :style="{ 
+        left: `${Math.random() * 100}%`,
+        animationDuration: `${Math.random() * 1 + 0.5}s`,
+        animationDelay: `${Math.random() * 2}s`
+      }"></div>
+    </div>
     <div class="max-w-7xl mx-auto">
       <h1 class="text-4xl font-bold text-center mb-8" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">注文ページ</h1>
 
@@ -366,6 +374,7 @@ const dropTimer = ref(null);
 const hiddenModeType = ref('');
 const isRagingMode = ref(false);
 const isDropMode = ref(false);
+const isRainMode = ref(false);
 
 // メッセージ通知を表示する関数
 const showMessage = (msg) => {
@@ -458,6 +467,7 @@ const checkHiddenMode = () => {
   const hiddenParam = urlParams.get('hidden');
   isDropMode.value = hiddenParam === 'drop';
   isRagingMode.value = hiddenParam === 'rotate';
+  isRainMode.value = hiddenParam === 'rain';
   hiddenModeType.value = hiddenParam || '';
 };
 
@@ -920,5 +930,34 @@ html, body {
 
 body {
   overflow-x: hidden;
+}
+
+@keyframes rain {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.rain-container {
+  overflow: hidden;
+}
+
+.raindrop {
+  position: absolute;
+  width: 2px;
+  height: 100px;
+  background: linear-gradient(transparent, #4a90e2);
+  animation: rain linear infinite;
 }
 </style>
