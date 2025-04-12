@@ -537,6 +537,11 @@ const watchSystemTheme = () => {
 const checkHiddenMode = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const hiddenParam = urlParams.get('hidden');
+  // 隠しモードの設定: URLパラメータ `hidden` の値によって異なるモードを有効化
+  // - 'drop': ドロップモード（要素がアニメーションで落下）
+  // - 'rotate': 回転モード（要素がアニメーションで回転）
+  // - 'rain': 雨モード（画面上に雨のアニメーションを表示）
+  // - 'conveyor': コンベアモード（商品をコンベアベルトのように表示）
   isDropMode.value = hiddenParam === 'drop';
   isRagingMode.value = hiddenParam === 'rotate';
   isRainMode.value = hiddenParam === 'rain';
@@ -622,6 +627,8 @@ const loadCartFromSession = () => {
 
     cart.value = validItems;
 
+    selectedItems.value = new Array(cart.value.length).fill(false);
+
     if (removedItems.length > 0) {
       const itemNames = removedItems.map(item => item.name).join(',');
       showError(`${itemNames}は在庫切れのため、カートから削除されました`);
@@ -678,7 +685,9 @@ const addToCart = (productId) => {
   calculateTotalPrice();
   saveCartToSession();
   showMessage('商品がカートに追加されました');
-  selectedItems.value = new Array(cart.value.length).fill(false);
+  if (selectedItems.value.length < cart.value.length) {
+    selectedItems.value.push(false);
+  }
 };
 
 // カート内の商品数量を更新
@@ -924,19 +933,28 @@ const cancelBulkDelete = () => {
 };
 
 const confirmBulkDelete = () => {
+  // 選択されたアイテムのインデックスを取得（降順でソート）
+  // 降順でソートするのは、削除時にインデックスがずれるのを防ぐため
   const indicesToDelete = selectedItems.value
     .map((selected, index) => selected ? index : -1)
     .filter(index => index !== -1)
     .reverse();
 
+  // 削除されるアイテムの数をカウント
+  const deletedCount = indicesToDelete.length;
+
   indicesToDelete.forEach(index => {
-    removeFromCart(index);
+    cart.value.splice(index, 1);
   });
+
+  // カートの更新後に計算と保存を行う
+  calculateTotalPrice();
+  saveCartToSession();
 
   selectedItems.value = new Array(cart.value.length).fill(false);
   selectAll.value = false;
   showBulkDeleteConfirmation.value = false;
-  showMessage('選択した商品を削除しました');
+  showMessage(`選択した${deletedCount}個の商品を削除しました`);
 };
 
 onMounted(() => {
@@ -1066,6 +1084,7 @@ body {
   height: 100px;
   background: linear-gradient(transparent, #4a90e2);
   animation: rain linear infinite;
+  will-change: transform, opacity;
 }
 
 .perspective-container {
@@ -1128,7 +1147,7 @@ body {
 .conveyor-mode .conveyor-item {
   transform: translateX(100vw);
   opacity: 0;
-  animation: moveItem 20s linear infinite;
+  animation: moveItem calc(10s + (var(--total-items) * 0.5s)) linear infinite;
   animation-delay: calc(var(--item-index) * (15s / var(--total-items)));
   opacity: 1;
 }
