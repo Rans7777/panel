@@ -402,6 +402,7 @@
 
       <!-- テーマ切り替えボタン -->
       <button 
+        v-if="cart.length === 0"
         @click="toggleDarkMode"
         class="fixed bottom-5 right-5 px-4 py-2 rounded-full shadow-lg transition-colors text-white"
         :class="{ 'bg-gray-700 hover:bg-gray-600': isDarkMode, 'bg-green-600 hover:bg-green-700': !isDarkMode }"
