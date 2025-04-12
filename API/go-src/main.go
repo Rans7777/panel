@@ -35,6 +35,7 @@ type Config struct {
 	DBPassword   string `yaml:"DB_PASSWORD"`
 	AppTimezone  string `yaml:"APP_TIMEZONE"`
 	AppUrl       string `yaml:"APP_URL"`
+	AppPort      string `yaml:"APP_PORT"`
 }
 
 type Product struct {
@@ -191,7 +192,7 @@ func main() {
 		api.GET("/products/stream", verifyToken(), streamProducts)
 		api.GET("/orders/stream", verifyToken(), streamOrders)
 	}
-	r.Run(":8000")
+	r.Run(":" + config.AppPort)
 }
 
 // VerifyToken returns a Gin middleware that authenticates HTTP requests by validating an access token.
@@ -273,7 +274,6 @@ func getProducts() ([]Product, error) {
 }
 
 // getOrders retrieves orders from the database and returns them as a slice of Order.
-// 
 // It executes a SQL query to fetch the uuid, product_id, quantity, image, options, and created_at fields from the "orders" table.
 // In case of a query error, the function immediately returns the error. For each fetched row, any scan error is logged and that row is skipped.
 // When the options field is valid, it is converted from a SQL null string to a JSON raw message before being assigned.
