@@ -86,6 +86,18 @@
           <table class="w-full">
             <thead>
               <tr :class="{ 'bg-gray-700': isDarkMode, 'bg-gray-50': !isDarkMode }">
+                <th class="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    v-model="selectAll"
+                    @change="toggleSelectAll"
+                    class="appearance-none w-4 h-4 rounded border-2 transition-colors cursor-pointer"
+                    :class="{
+                      'border-gray-600 bg-gray-700 checked:bg-blue-500': isDarkMode,
+                      'border-gray-300 bg-white checked:bg-blue-500': !isDarkMode
+                    }"
+                  />
+                </th>
                 <th class="px-4 py-3 text-left">商品名</th>
                 <th class="px-4 py-3 text-center">単価</th>
                 <th class="px-4 py-3 text-center">数量</th>
@@ -95,6 +107,17 @@
             </thead>
             <tbody>
               <tr v-for="(item, index) in cart" :key="index" class="border-t" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
+                <td class="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    v-model="selectedItems[index]"
+                    class="appearance-none w-4 h-4 rounded border-2 transition-colors cursor-pointer"
+                    :class="{
+                      'border-gray-600 bg-gray-700 checked:bg-blue-500': isDarkMode,
+                      'border-gray-300 bg-white checked:bg-blue-500': !isDarkMode
+                    }"
+                  />
+                </td>
                 <td class="px-4 py-3">
                   {{ item.name }}
                   <div v-if="item.options && item.options.length > 0" class="mt-1 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-500': !isDarkMode }">
@@ -192,8 +215,17 @@
 
         <!-- 合計金額と注文ボタン -->
         <div class="mt-8">
-          <div class="text-right text-xl font-bold mb-4">
-            合計金額: {{ General.formatPrice(totalPrice) }}
+          <div class="flex justify-between items-center mb-4">
+            <button 
+              v-if="hasSelectedItems"
+              @click="handleBulkDeleteClick"
+              class="px-4 py-2 rounded text-white bg-red-500 hover:bg-red-600 transition-colors"
+            >
+              選択した商品を削除
+            </button>
+            <div class="text-xl font-bold">
+              合計金額: {{ General.formatPrice(totalPrice) }}
+            </div>
           </div>
           <div class="flex justify-end">
             <button 
@@ -339,6 +371,35 @@
         </div>
       </div>
 
+      <!-- 一括削除確認ポップアップ -->
+      <div v-if="showBulkDeleteConfirmation" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div 
+          class="w-full max-w-md rounded-lg p-6"
+          :class="{ 'bg-gray-800': isDarkMode, 'bg-white': !isDarkMode }"
+        >
+          <h3 class="text-xl font-bold mb-4">商品の一括削除</h3>
+          <p class="mb-6">選択した商品をカートから削除してもよろしいですか？</p>
+          <div class="flex justify-end gap-4">
+            <button 
+              @click="cancelBulkDelete"
+              class="px-4 py-2 rounded border transition-colors"
+              :class="{
+                'border-gray-600 bg-gray-700 hover:bg-gray-600': isDarkMode,
+                'border-gray-300 bg-gray-100 hover:bg-gray-200': !isDarkMode
+              }"
+            >
+              キャンセル
+            </button>
+            <button 
+              @click="confirmBulkDelete"
+              class="px-4 py-2 rounded text-white bg-red-500 hover:bg-red-600 transition-colors"
+            >
+              削除する
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- テーマ切り替えボタン -->
       <button 
         @click="toggleDarkMode"
@@ -353,7 +414,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import General from '../utils/General';
@@ -382,6 +443,9 @@ const isRagingMode = ref(false);
 const isDropMode = ref(false);
 const isRainMode = ref(false);
 const isConveyorMode = ref(false);
+const selectedItems = ref([]);
+const selectAll = ref(false);
+const showBulkDeleteConfirmation = ref(false);
 
 // メッセージ通知を表示する関数
 const showMessage = (msg) => {
@@ -613,6 +677,7 @@ const addToCart = (productId) => {
   calculateTotalPrice();
   saveCartToSession();
   showMessage('商品がカートに追加されました');
+  selectedItems.value = new Array(cart.value.length).fill(false);
 };
 
 // カート内の商品数量を更新
@@ -656,6 +721,7 @@ const removeFromCart = (index) => {
   cart.value.splice(index, 1);
   calculateTotalPrice();
   saveCartToSession();
+  selectedItems.value.splice(index, 1);
 };
 
 // カート内の商品の合計金額を計算
@@ -838,6 +904,38 @@ const confirmDelete = () => {
 const cancelDelete = () => {
   showDeleteConfirmation.value = false;
   deleteTargetIndex.value = null;
+};
+
+const toggleSelectAll = () => {
+  selectedItems.value = new Array(cart.value.length).fill(selectAll.value);
+};
+
+const hasSelectedItems = computed(() => {
+  return selectedItems.value.some(selected => selected);
+});
+
+const handleBulkDeleteClick = () => {
+  showBulkDeleteConfirmation.value = true;
+};
+
+const cancelBulkDelete = () => {
+  showBulkDeleteConfirmation.value = false;
+};
+
+const confirmBulkDelete = () => {
+  const indicesToDelete = selectedItems.value
+    .map((selected, index) => selected ? index : -1)
+    .filter(index => index !== -1)
+    .reverse();
+
+  indicesToDelete.forEach(index => {
+    removeFromCart(index);
+  });
+
+  selectedItems.value = new Array(cart.value.length).fill(false);
+  selectAll.value = false;
+  showBulkDeleteConfirmation.value = false;
+  showMessage('選択した商品を削除しました');
 };
 
 onMounted(() => {
