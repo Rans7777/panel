@@ -16,6 +16,11 @@ from typing import Optional, Dict
 from loguru import logger
 
 def load_config():
+    """
+    YAML形式の構成ファイル「config.yml」を読み込み、その内容を辞書として返します。
+    
+    ファイルの内容はyaml.safe_loadを用いてパースされます。
+    """
     config_path = os.path.join('config.yml')
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
@@ -153,6 +158,16 @@ async def get_products() -> list[dict]:
         return []
 
 async def get_orders() -> list[dict]:
+    """
+    データベースから注文情報を非同期に取得する。
+    
+    この関数は、設定ファイルのDB接続種別に応じてSQLiteまたは他のデータベースから注文データを取得する。
+    各注文の作成日時（created_at）が存在する場合は、ISO 8601形式（"%Y-%m-%dT%H:%M:%SZ"）にフォーマットする。
+    エラー発生時はエラーログを出力し、空のリストを返す。
+    
+    戻り値:
+        list[dict]: 各注文情報を保持する辞書のリスト。エラー時は空のリストを返す。
+    """
     try:
         db_connection = config["DB_CONNECTION"]
         query = "SELECT uuid, product_id, quantity, image, options, created_at FROM orders"
@@ -185,12 +200,23 @@ async def get_orders() -> list[dict]:
 
 class GzipStreamingResponse(StreamingResponse):
     def __init__(self, content, status_code: int = 200, headers: Dict[str, str] = None, media_type: str = None):
+        """
+        Gzip圧縮対応のストリーミングレスポンスを初期化する。
+        
+        基本レスポンスを生成した後、HTTPヘッダーにGzip圧縮およびチャンク転送を有効にする設定を追加します。
+        具体的には、「Content-Encoding」を"gzip"、「Transfer-Encoding」を"chunked"、「X-Accel-Buffering」を"no"に設定します。
+        """
         super().__init__(content, status_code, headers, media_type)
         self.headers["Content-Encoding"] = "gzip"
         self.headers["Transfer-Encoding"] = "chunked"
         self.headers["X-Accel-Buffering"] = "no"
 
     async def stream_response(self, send):
+        """
+        Gzipで圧縮したレスポンスをストリーミング送信します.
+        
+        この非同期メソッドは、HTTPレスポンス開始メッセージを送信後、self.body_iteratorから取得した各チャンクをgzip圧縮して順次送信します。各チャンク送信後はバッファをリセットし、すべてのチャンクが処理された後、ストリームの完了を示す空のボディを送信します。
+        """
         await send({
             "type": "http.response.start",
             "status": self.status_code,
@@ -221,11 +247,25 @@ class GzipStreamingResponse(StreamingResponse):
 
 @app.get("/api/products/stream")
 async def stream_products(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
+    """
+    商品のストリーミングレスポンスを生成します。
+    
+    この非同期関数は、クライアントのリクエストヘッダーに基づきGzip圧縮の有無を判定し、Gzipが要求された場合はGzipStreamingResponseを返します。イベントジェネレーターは、接続時の確認メッセージ、定期的な商品のデータ配信、切断警告、及びエラー発生時の通知イベントを生成し、最大接続時間や警告時間に従って接続を管理します。
+    """
     logger.debug("Starting: Product stream broadcast")
     accept_encoding = request.headers.get("Accept-Encoding", "")
     use_gzip = "gzip" in accept_encoding
 
     async def event_generator():
+        """
+            製品ストリームのSSEイベントを生成する非同期ジェネレータ。
+        
+            この関数は、接続確認、定期的な製品データの送信、切断警告、および接続終了イベントを
+            SSE形式のメッセージとしてクライアントに送信します。接続開始時には接続確認メッセージを送出し、
+            最大300秒の接続期間内で3秒ごとに製品データを取得・送信します。240秒を超えると切断警告を
+            発行し、接続期間が終了すると終了イベントを返します。製品データの取得中にエラーが発生した場合は、
+            エラーメッセージを送出します。
+            """
         try:
             yield f"event: connected\ndata: {json.dumps({'message': 'Connected to products stream'}, ensure_ascii=False)}\n\n"
 
@@ -285,11 +325,26 @@ async def stream_products(request: Request, token: str = Depends(verify_token)) 
 
 @app.get("/api/orders/stream")
 async def stream_orders(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
+    """
+    サーバー送信イベント(SSE)形式で注文情報のストリーミング配信を行います。
+    
+    この非同期関数は、接続開始時に初期メッセージを送信し、定期的に最新の注文情報を取得してストリームに送信します。
+    接続時間が一定の閾値に達すると、切断警告および接続終了のイベントを送信します。
+    また、リクエストヘッダに「gzip」が含まれている場合は、Gzip圧縮を適用したレスポンスを返します。
+    認証トークンは依存性注入により検証され、有効な場合にのみストリームが開始されます。
+    """
     logger.debug("Starting: Order stream broadcast")
     accept_encoding = request.headers.get("Accept-Encoding", "")
     use_gzip = "gzip" in accept_encoding
 
     async def event_generator():
+        """
+        サーバー送信イベント（SSE）用のメッセージを非同期に生成する関数です。
+        
+        初回に接続確立メッセージを送出し、その後定期的に注文データを取得してSSEフォーマットのメッセージを生成します。
+        接続時間が300秒に達するとクローズイベントを送出し、240秒以降は接続終了までの残秒数を含む警告イベントを送出します。
+        注文データの取得に失敗した場合はエラーメッセージを返し、接続リセットやその他例外発生時にも適切なエラー処理を行います。
+        """
         try:
             yield f"event: connected\ndata: {json.dumps({'message': 'Connected to orders stream'}, ensure_ascii=False)}\n\n"
 
