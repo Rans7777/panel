@@ -1,5 +1,13 @@
 <template>
   <div class="min-h-screen p-5 transition-all duration-300" :class="{ 'bg-gray-900 text-gray-100': isDarkMode, 'bg-white text-gray-800': !isDarkMode }">
+    <!-- 雨のエフェクト -->
+    <div v-if="isRainMode" class="rain-container fixed inset-0 pointer-events-none z-50">
+      <div v-for="n in 100" :key="n" class="raindrop" :style="{ 
+        left: `${Math.random() * 100}%`,
+        animationDuration: `${Math.random() * 1 + 0.5}s`,
+        animationDelay: `${Math.random() * 2}s`
+      }"></div>
+    </div>
     <div class="max-w-7xl mx-auto">
       <h1 class="text-4xl font-bold text-center mb-8" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">注文ページ</h1>
 
@@ -26,37 +34,43 @@
       </div>
 
       <!-- 商品カード一覧 -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mb-8">
-        <div
-          v-for="product in products.filter(p => p.stock > 0)"
-          :key="product.id"
-          @click="handleProductClick(product.id)"
-          class="cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
-          :class="{ 
-            'bg-gray-800 border border-gray-700': isDarkMode, 
-            'bg-white border border-gray-200': !isDarkMode,
-            'drop-mode': isDropMode && clickedProductId === product.id,
-            'rotate-mode': isRagingMode && clickedProductId === product.id
-          }"
-        >
-          <div class="p-4">
-            <div class="flex justify-center items-center h-24 mb-4">
-              <img 
-                v-if="product.image" 
-                :src="'/storage/' + product.image" 
-                :alt="product.name"
-                class="w-24 h-24 object-contain"
-              />
-              <div v-else class="w-12 h-12 flex items-center justify-center">
-                <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
+      <div class="conveyor-container" :class="{ 'conveyor-mode': isConveyorMode }">
+        <div class="conveyor-track">
+          <div
+            v-for="(product, index) in products.filter(p => p.stock > 0)"
+            :key="product.id"
+            @click="handleProductClick(product.id)"
+            class="conveyor-item cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
+            :class="{ 
+              'bg-gray-800 border border-gray-700': isDarkMode, 
+              'bg-white border border-gray-200': !isDarkMode,
+              'drop-mode': isDropMode && clickedProductId === product.id,
+              'rotate-mode': isRagingMode && clickedProductId === product.id
+            }"
+            :style="isConveyorMode ? {
+              '--item-index': index,
+              '--total-items': products.filter(p => p.stock > 0).length
+            } : {}"
+          >
+            <div class="p-4">
+              <div class="flex justify-center items-center h-24 mb-4">
+                <img 
+                  v-if="product.image" 
+                  :src="'/storage/' + product.image" 
+                  :alt="product.name"
+                  class="w-24 h-24 object-contain"
+                />
+                <div v-else class="w-12 h-12 flex items-center justify-center">
+                  <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
+                </div>
               </div>
+              <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
+                {{ product.name }}
+              </h3>
+              <p class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
+                {{ General.formatPrice(product.price) }}
+              </p>
             </div>
-            <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
-              {{ product.name }}
-            </h3>
-            <p class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
-              {{ General.formatPrice(product.price) }}
-            </p>
           </div>
         </div>
       </div>
@@ -72,6 +86,18 @@
           <table class="w-full">
             <thead>
               <tr :class="{ 'bg-gray-700': isDarkMode, 'bg-gray-50': !isDarkMode }">
+                <th class="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    v-model="selectAll"
+                    @change="toggleSelectAll"
+                    class="appearance-none w-4 h-4 rounded border-2 transition-colors cursor-pointer"
+                    :class="{
+                      'border-gray-600 bg-gray-700 checked:bg-blue-500': isDarkMode,
+                      'border-gray-300 bg-white checked:bg-blue-500': !isDarkMode
+                    }"
+                  />
+                </th>
                 <th class="px-4 py-3 text-left">商品名</th>
                 <th class="px-4 py-3 text-center">単価</th>
                 <th class="px-4 py-3 text-center">数量</th>
@@ -81,6 +107,17 @@
             </thead>
             <tbody>
               <tr v-for="(item, index) in cart" :key="index" class="border-t" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
+                <td class="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    v-model="selectedItems[index]"
+                    class="appearance-none w-4 h-4 rounded border-2 transition-colors cursor-pointer"
+                    :class="{
+                      'border-gray-600 bg-gray-700 checked:bg-blue-500': isDarkMode,
+                      'border-gray-300 bg-white checked:bg-blue-500': !isDarkMode
+                    }"
+                  />
+                </td>
                 <td class="px-4 py-3">
                   {{ item.name }}
                   <div v-if="item.options && item.options.length > 0" class="mt-1 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-500': !isDarkMode }">
@@ -178,8 +215,17 @@
 
         <!-- 合計金額と注文ボタン -->
         <div class="mt-8">
-          <div class="text-right text-xl font-bold mb-4">
-            合計金額: {{ General.formatPrice(totalPrice) }}
+          <div class="flex justify-between items-center mb-4">
+            <button 
+              v-if="hasSelectedItems"
+              @click="handleBulkDeleteClick"
+              class="px-4 py-2 rounded text-white bg-red-500 hover:bg-red-600 transition-colors"
+            >
+              選択した商品を削除
+            </button>
+            <div class="text-xl font-bold">
+              合計金額: {{ General.formatPrice(totalPrice) }}
+            </div>
           </div>
           <div class="flex justify-end">
             <button 
@@ -325,8 +371,38 @@
         </div>
       </div>
 
+      <!-- 一括削除確認ポップアップ -->
+      <div v-if="showBulkDeleteConfirmation" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div 
+          class="w-full max-w-md rounded-lg p-6"
+          :class="{ 'bg-gray-800': isDarkMode, 'bg-white': !isDarkMode }"
+        >
+          <h3 class="text-xl font-bold mb-4">商品の一括削除</h3>
+          <p class="mb-6">選択した商品をカートから削除してもよろしいですか？</p>
+          <div class="flex justify-end gap-4">
+            <button 
+              @click="cancelBulkDelete"
+              class="px-4 py-2 rounded border transition-colors"
+              :class="{
+                'border-gray-600 bg-gray-700 hover:bg-gray-600': isDarkMode,
+                'border-gray-300 bg-gray-100 hover:bg-gray-200': !isDarkMode
+              }"
+            >
+              キャンセル
+            </button>
+            <button 
+              @click="confirmBulkDelete"
+              class="px-4 py-2 rounded text-white bg-red-500 hover:bg-red-600 transition-colors"
+            >
+              削除する
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- テーマ切り替えボタン -->
       <button 
+        v-if="cart.length === 0"
         @click="toggleDarkMode"
         class="fixed bottom-5 right-5 px-4 py-2 rounded-full shadow-lg transition-colors text-white"
         :class="{ 'bg-gray-700 hover:bg-gray-600': isDarkMode, 'bg-green-600 hover:bg-green-700': !isDarkMode }"
@@ -339,7 +415,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import General from '../utils/General';
@@ -366,6 +442,11 @@ const dropTimer = ref(null);
 const hiddenModeType = ref('');
 const isRagingMode = ref(false);
 const isDropMode = ref(false);
+const isRainMode = ref(false);
+const isConveyorMode = ref(false);
+const selectedItems = ref([]);
+const selectAll = ref(false);
+const showBulkDeleteConfirmation = ref(false);
 
 // メッセージ通知を表示する関数
 const showMessage = (msg) => {
@@ -456,8 +537,15 @@ const watchSystemTheme = () => {
 const checkHiddenMode = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const hiddenParam = urlParams.get('hidden');
+  // 隠しモードの設定: URLパラメータ `hidden` の値によって異なるモードを有効化
+  // - 'drop': ドロップモード（要素がアニメーションで落下）
+  // - 'rotate': 回転モード（要素がアニメーションで回転）
+  // - 'rain': 雨モード（画面上に雨のアニメーションを表示）
+  // - 'conveyor': コンベアモード（商品をコンベアベルトのように表示）
   isDropMode.value = hiddenParam === 'drop';
   isRagingMode.value = hiddenParam === 'rotate';
+  isRainMode.value = hiddenParam === 'rain';
+  isConveyorMode.value = hiddenParam === 'conveyor';
   hiddenModeType.value = hiddenParam || '';
 };
 
@@ -475,6 +563,14 @@ const loadProducts = async () => {
 // 商品クリック時の処理
 const handleProductClick = async (productId) => {
   try {
+    const product = products.value.find(p => p.id === productId);
+
+    if (!product) {
+      showError('商品情報が見つかりません');
+      return;
+    }
+
+    // 隠しモードの処理
     if (isDropMode.value || isRagingMode.value) {
       clickedProductId.value = productId;
       if (dropTimer.value) {
@@ -482,11 +578,16 @@ const handleProductClick = async (productId) => {
       }
       dropTimer.value = setTimeout(() => {
         clickedProductId.value = null;
-        processProductClick(productId);
-      }, isRagingMode.value ? 2000 : 1000);
-      return;
+      }, 1000);
     }
-    processProductClick(productId);
+
+    if (product.options && product.options.length > 0) {
+      selectedProductId.value = productId;
+      productOptions.value = product.options;
+      showOptionsPopup.value = true;
+    } else {
+      addToCart(productId);
+    }
   } catch (err) {
     showError('商品の処理に失敗しました');
   }
@@ -502,15 +603,31 @@ const loadCartFromSession = () => {
   const savedCart = sessionStorage.getItem('cart');
   if (savedCart) {
     const parsedCart = JSON.parse(savedCart);
-    const removedItems = parsedCart.filter(item => {
-      const product = products.value.find(p => p.id === item.id);
-      return !product || product.stock <= 0;
-    });
+    const removedItems = [];
+    const validItems = [];
 
-    cart.value = parsedCart.filter(item => {
+    for (const item of parsedCart) {
       const product = products.value.find(p => p.id === item.id);
-      return product && product.stock > 0;
-    });
+      if (!product || product.stock <= 0) {
+        removedItems.push(item);
+      } else {
+        if (item.quantity > product.stock) {
+          item.quantity = product.stock;
+        }
+        validItems.push({
+          id: item.id,
+          name: item.name,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          options: item.options ? JSON.parse(JSON.stringify(item.options)) : null
+        });
+      }
+    }
+
+    cart.value = validItems;
+
+    selectedItems.value = new Array(cart.value.length).fill(false);
 
     if (removedItems.length > 0) {
       const itemNames = removedItems.map(item => item.name).join(',');
@@ -543,30 +660,34 @@ const addToCart = (productId) => {
   }
 
   // 同一商品（オプションがない場合）の場合は数量をインクリメント
-  for (let i = 0; i < cart.value.length; i++) {
-    if (cart.value[i].id === product.id && !cart.value[i].options) {
-      if (cart.value[i].quantity < product.stock) {
-        cart.value[i].quantity++;
-      } else {
-        showError('在庫数を超えています: ' + product.name);
-      }
-      calculateTotalPrice();
-      showMessage('商品がカートに追加されました');
-      return;
-    }
-  }
+  const existingItemIndex = cart.value.findIndex(item => 
+    item.id === product.id && !item.options
+  );
 
-  cart.value.push({
-    id: product.id,
-    name: product.name,
-    image: product.image,
-    price: product.price,
-    quantity: 1
-  });
+  if (existingItemIndex !== -1) {
+    const currentQuantity = cart.value[existingItemIndex].quantity;
+    if (currentQuantity < product.stock) {
+      cart.value[existingItemIndex].quantity = currentQuantity + 1;
+    } else {
+      showError('在庫数を超えています: ' + product.name);
+    }
+  } else {
+    cart.value.push({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      price: product.price,
+      quantity: 1,
+      options: null
+    });
+  }
 
   calculateTotalPrice();
   saveCartToSession();
   showMessage('商品がカートに追加されました');
+  if (selectedItems.value.length < cart.value.length) {
+    selectedItems.value.push(false);
+  }
 };
 
 // カート内の商品数量を更新
@@ -610,6 +731,7 @@ const removeFromCart = (index) => {
   cart.value.splice(index, 1);
   calculateTotalPrice();
   saveCartToSession();
+  selectedItems.value.splice(index, 1);
 };
 
 // カート内の商品の合計金額を計算
@@ -654,42 +776,35 @@ const confirmOptionSelection = () => {
   const totalItemPrice = parseInt(Number(product.price) + additionalPrice);
 
   // 同じ商品とオプションの組み合わせがカートにあるかチェック
-  for (let i = 0; i < cart.value.length; i++) {
-    const item = cart.value[i];
-
+  const existingItemIndex = cart.value.findIndex(item => {
     if (item.id === product.id && item.options) {
-      const existingOptionIds = item.options.map(opt => opt.id);
+      const existingOptionIds = item.options.map(opt => opt.id).sort();
       const currentOptionIds = [...selectedOptionIds.value].sort();
-
-      if (JSON.stringify(existingOptionIds.sort()) === JSON.stringify(currentOptionIds)) {
-        // 同じ商品とオプションの組み合わせがある場合は数量を増やす
-        if (item.quantity < product.stock) {
-          item.quantity++;
-        } else {
-          showError('在庫数を超えています: ' + product.name);
-        }
-
-        calculateTotalPrice();
-        resetOptionSelection();
-
-        showMessage('商品とオプションがカートに追加されました');
-        return;
-      }
+      return JSON.stringify(existingOptionIds) === JSON.stringify(currentOptionIds);
     }
-  }
-
-  cart.value.push({
-    id: product.id,
-    name: product.name,
-    image: product.image,
-    price: totalItemPrice,
-    quantity: 1,
-    options: selectedOptions
+    return false;
   });
+
+  if (existingItemIndex !== -1) {
+    if (cart.value[existingItemIndex].quantity < product.stock) {
+      cart.value[existingItemIndex].quantity++;
+    } else {
+      showError('在庫数を超えています: ' + product.name);
+    }
+  } else {
+    cart.value.push({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      price: totalItemPrice,
+      quantity: 1,
+      options: JSON.parse(JSON.stringify(selectedOptions))
+    });
+  }
 
   calculateTotalPrice();
   resetOptionSelection();
-
+  saveCartToSession();
   showMessage('商品とオプションがカートに追加されました');
 };
 
@@ -801,12 +916,59 @@ const cancelDelete = () => {
   deleteTargetIndex.value = null;
 };
 
+const toggleSelectAll = () => {
+  selectedItems.value = new Array(cart.value.length).fill(selectAll.value);
+};
+
+const hasSelectedItems = computed(() => {
+  return selectedItems.value.some(selected => selected);
+});
+
+const handleBulkDeleteClick = () => {
+  showBulkDeleteConfirmation.value = true;
+};
+
+const cancelBulkDelete = () => {
+  showBulkDeleteConfirmation.value = false;
+};
+
+const confirmBulkDelete = () => {
+  // 選択されたアイテムのインデックスを取得（降順でソート）
+  // 降順でソートするのは、削除時にインデックスがずれるのを防ぐため
+  const indicesToDelete = selectedItems.value
+    .map((selected, index) => selected ? index : -1)
+    .filter(index => index !== -1)
+    .reverse();
+
+  // 削除されるアイテムの数をカウント
+  const deletedCount = indicesToDelete.length;
+
+  indicesToDelete.forEach(index => {
+    cart.value.splice(index, 1);
+  });
+
+  // カートの更新後に計算と保存を行う
+  calculateTotalPrice();
+  saveCartToSession();
+
+  selectedItems.value = new Array(cart.value.length).fill(false);
+  selectAll.value = false;
+  showBulkDeleteConfirmation.value = false;
+  showMessage(`選択した${deletedCount}個の商品を削除しました`);
+};
+
 onMounted(() => {
   loadProducts();
   detectDarkMode();
   watchSystemTheme();
   applyDarkMode();
   checkHiddenMode();
+});
+
+onUnmounted(() => {
+  if (dropTimer.value) {
+    clearTimeout(dropTimer.value);
+  }
 });
 </script>
 
@@ -893,5 +1055,137 @@ html, body {
 
 body {
   overflow-x: hidden;
+}
+
+@keyframes rain {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.rain-container {
+  overflow: hidden;
+}
+
+.raindrop {
+  position: absolute;
+  width: 2px;
+  height: 100px;
+  background: linear-gradient(transparent, #4a90e2);
+  animation: rain linear infinite;
+  will-change: transform, opacity;
+}
+
+.perspective-container {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+@keyframes conveyor {
+  0% {
+    transform: translateZ(0) rotateY(0deg) translateX(0);
+  }
+  25% {
+    transform: translateZ(100px) rotateY(90deg) translateX(100px);
+  }
+  50% {
+    transform: translateZ(200px) rotateY(180deg) translateX(0);
+  }
+  75% {
+    transform: translateZ(100px) rotateY(270deg) translateX(-100px);
+  }
+  100% {
+    transform: translateZ(0) rotateY(360deg) translateX(0);
+  }
+}
+
+.conveyor-mode {
+  animation: conveyor var(--conveyor-duration) linear infinite;
+  animation-delay: var(--conveyor-delay);
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+}
+
+.conveyor-mode:hover {
+  animation-play-state: paused;
+}
+
+.conveyor-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.conveyor-track {
+  position: absolute;
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  width: fit-content;
+  height: 100%;
+}
+
+.conveyor-item {
+  flex: 0 0 auto;
+  width: 250px;
+  position: relative;
+}
+
+.conveyor-mode .conveyor-item {
+  transform: translateX(100vw);
+  opacity: 0;
+  animation: moveItem 20s linear infinite;
+  animation-delay: calc(var(--item-index) * (15s / var(--total-items)));
+  opacity: 1;
+}
+
+.conveyor-item {
+  transform: none;
+  opacity: 1;
+  display: block;
+}
+
+@keyframes moveItem {
+  0% {
+    transform: translateX(100vw);
+    opacity: 1;
+  }
+  85% {
+    transform: translateX(-100vw);
+    opacity: 1;
+  }
+  86% {
+    transform: translateX(-100vw);
+    opacity: 0;
+  }
+  87% {
+    transform: translateX(100vw);
+    opacity: 0;
+  }
+  88% {
+    transform: translateX(100vw);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100vw);
+    opacity: 1;
+  }
+}
+
+.conveyor-mode .conveyor-track {
+  animation: none;
 }
 </style>
