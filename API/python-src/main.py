@@ -199,16 +199,18 @@ class GzipStreamingResponse(StreamingResponse):
             ]
         })
 
-        gz = gzip.GzipFile(fileobj=io.BytesIO(), mode='wb')
+        fileobj = io.BytesIO()
+        gz = gzip.GzipFile(fileobj=fileobj, mode='wb')
         async for chunk in self.body_iterator:
             gz.write(chunk.encode() if isinstance(chunk, str) else chunk)
             gz.flush()
             await send({
                 "type": "http.response.body",
-                "body": gz.fileobj.getvalue(),
+                "body": fileobj.getvalue(),
                 "more_body": True
             })
-            gz.fileobj = io.BytesIO()
+            fileobj.seek(0)
+            fileobj.truncate()
         gz.close()
 
         await send({
