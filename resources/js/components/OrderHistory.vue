@@ -25,36 +25,43 @@
           <p>注文履歴がありません</p>
         </div>
         <div v-else class="space-y-6">
-          <div v-for="orderGroup in groupedOrders" :key="orderGroup.uuid" class="border rounded-lg p-6 shadow-sm" :class="{ 'bg-gray-800 border-gray-700': isDarkMode, 'bg-white border-gray-200': !isDarkMode }">
-            <div class="border-b pb-4 mb-4" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
-              <p :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">注文日: {{ formatDate(orderGroup.created_at) }}</p>
-              <p :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">注文番号: {{ orderGroup.uuid }}</p>
-            </div>
-            <div class="space-y-4">
-              <div v-for="order in orderGroup.orders" :key="order.product_id" class="flex justify-between items-start border-b last:border-b-0 pb-4 last:pb-0" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
-                <div>
-                  <h3 class="font-semibold" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
-                    <template v-if="productNames[order.product_id]">
-                      商品名: {{ productNames[order.product_id] }}
-                    </template>
-                    <template v-else>
-                      商品名: {{ order.product_id }}
-                      <span class="text-xs text-gray-500">（読み込み中...）</span>
-                    </template>
-                  </h3>
-                  <p :class="{ 'text-gray-400': isDarkMode, 'text-gray-700': !isDarkMode }" class="mt-2">数量: {{ order.quantity }}個</p>
-                  <div v-if="order.options" class="mt-2 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">
-                    <p class="font-medium">オプション:</p>
-                    <ul class="list-disc list-inside pl-2">
-                      <li v-for="(option, index) in parseOptions(order.options)" :key="index">
-                        {{ option.option_name }}
-                      </li>
-                    </ul>
+          <transition-group 
+            name="slide-fade"
+            tag="div"
+            class="space-y-6"
+            appear
+          >
+            <div v-for="orderGroup in groupedOrders" :key="orderGroup.uuid" class="border rounded-lg p-6 shadow-sm" :class="{ 'bg-gray-800 border-gray-700': isDarkMode, 'bg-white border-gray-200': !isDarkMode }">
+              <div class="border-b pb-4 mb-4" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
+                <p :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">注文日: {{ formatDate(orderGroup.created_at) }}</p>
+                <p :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">注文番号: {{ orderGroup.uuid }}</p>
+              </div>
+              <div class="space-y-4">
+                <div v-for="order in orderGroup.orders" :key="order.product_id" class="flex justify-between items-start border-b last:border-b-0 pb-4 last:pb-0" :class="{ 'border-gray-700': isDarkMode, 'border-gray-200': !isDarkMode }">
+                  <div>
+                    <h3 class="font-semibold" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
+                      <template v-if="productNames[order.product_id]">
+                        商品名: {{ productNames[order.product_id] }}
+                      </template>
+                      <template v-else>
+                        商品名: {{ order.product_id }}
+                        <span class="text-xs text-gray-500">（読み込み中...）</span>
+                      </template>
+                    </h3>
+                    <p :class="{ 'text-gray-400': isDarkMode, 'text-gray-700': !isDarkMode }" class="mt-2">数量: {{ order.quantity }}個</p>
+                    <div v-if="order.options" class="mt-2 text-sm" :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }">
+                      <p class="font-medium">オプション:</p>
+                      <ul class="list-disc list-inside pl-2">
+                        <li v-for="(option, index) in parseOptions(order.options)" :key="index">
+                          {{ option.option_name }}
+                        </li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </transition-group>
         </div>
       </div>
     </div>
@@ -444,5 +451,24 @@ html, body {
 .dark-mode {
   background-color: #121827;
   color: #f3f4f6;
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.5s ease;
+}
+
+.slide-fade-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-fade-move {
+  transition: transform 0.5s ease;
 }
 </style>
