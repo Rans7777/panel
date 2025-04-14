@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"database/sql"
@@ -10,8 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -33,18 +32,26 @@ type EventManager struct {
 	productSubscribers map[string]chan []Product
 	orderSubscribers   map[string]chan []Order
 	mu                 sync.RWMutex
+	bufferSize         int
 }
 
 var eventManager = &EventManager{
 	productSubscribers: make(map[string]chan []Product),
 	orderSubscribers:   make(map[string]chan []Order),
+	bufferSize:         100,
+}
+
+func (em *EventManager) SetBufferSize(size int) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+	em.bufferSize = size
 }
 
 func (em *EventManager) SubscribeProducts(id string) chan []Product {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
-	ch := make(chan []Product, 10)
+	ch := make(chan []Product, em.bufferSize)
 	em.productSubscribers[id] = ch
 	return ch
 }
@@ -53,7 +60,7 @@ func (em *EventManager) SubscribeOrders(id string) chan []Order {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
-	ch := make(chan []Order, 10)
+	ch := make(chan []Order, em.bufferSize)
 	em.orderSubscribers[id] = ch
 	return ch
 }
@@ -116,7 +123,7 @@ func startEventPublishers() {
 				continue
 			}
 
-			if !reflect.DeepEqual(products, lastProducts) {
+			if !ProductsEqual(products, lastProducts) {
 				eventManager.PublishProducts(products)
 				lastProducts = products
 			}
@@ -136,7 +143,7 @@ func startEventPublishers() {
 				continue
 			}
 
-			if !reflect.DeepEqual(orders, lastOrders) {
+			if !OrdersEqual(orders, lastOrders) {
 				eventManager.PublishOrders(orders)
 				lastOrders = orders
 			}
@@ -167,6 +174,28 @@ type Product struct {
 	CreatedAt   time.Time       `json:"created_at"`
 }
 
+func (p Product) Equal(other Product) bool {
+	return p.Name.String == other.Name.String &&
+		p.Description.String == other.Description.String &&
+		p.Price == other.Price &&
+		p.Stock == other.Stock &&
+		p.Image.String == other.Image.String &&
+		bytes.Equal(p.Allergens, other.Allergens) &&
+		p.CreatedAt.Equal(other.CreatedAt)
+}
+
+func ProductsEqual(a, b []Product) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !a[i].Equal(b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 func (p Product) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Name        string          `json:"name"`
@@ -194,6 +223,27 @@ type Order struct {
 	Image     sql.NullString  `json:"image"`
 	Options   json.RawMessage `json:"options"`
 	CreatedAt time.Time       `json:"created_at"`
+}
+
+func (o Order) Equal(other Order) bool {
+	return o.UUID == other.UUID &&
+		o.ProductID == other.ProductID &&
+		o.Quantity == other.Quantity &&
+		o.Image.String == other.Image.String &&
+		bytes.Equal(o.Options, other.Options) &&
+		o.CreatedAt.Equal(other.CreatedAt)
+}
+
+func OrdersEqual(a, b []Order) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !a[i].Equal(b[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // init initializes logging, loads configuration from config.yml, sets up the application timezone, and establishes the database connection.
@@ -445,19 +495,13 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 	useGzip := strings.Contains(acceptEncoding, "gzip")
 
 	cleanup := make(chan struct{})
-	defer func() {
-		close(cleanup)
-		runtime.GC()
-	}()
+	defer close(cleanup)
 
 	if useGzip {
 		log.Debug("Using Gzip compression")
 		c.Writer.Header().Set("Content-Encoding", "gzip")
 		gz := gzip.NewWriter(c.Writer)
-		defer func() {
-			gz.Close()
-			gz = nil
-		}()
+		defer gz.Close()
 		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
 	}
 
@@ -473,10 +517,7 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 	c.Writer.Flush()
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
-	defer func() {
-		cancel()
-		runtime.GC()
-	}()
+	defer cancel()
 
 	clientGone := c.Writer.CloseNotify()
 
@@ -491,6 +532,9 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 	maxDuration := 5 * time.Minute
 	disconnectWarningTime := 4 * time.Minute
 	warningSent := false
+
+	eventTicker := time.NewTicker(100 * time.Millisecond)
+	defer eventTicker.Stop()
 
 	for {
 		select {
@@ -515,7 +559,7 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 			log.Debug("Cleanup requested")
 			return
 
-		default:
+		case <-eventTicker.C:
 			elapsedTime := time.Since(startTime)
 			if elapsedTime >= maxDuration {
 				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection closed after %v seconds", maxDuration.Seconds())})
@@ -529,10 +573,7 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 				go func() {
 					countdown := 60
 					ticker := time.NewTicker(1 * time.Second)
-					defer func() {
-						ticker.Stop()
-						ticker = nil
-					}()
+					defer ticker.Stop()
 
 					for countdown > 0 {
 						select {
@@ -556,8 +597,6 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 					cancel()
 				}()
 			}
-
-			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
@@ -567,7 +606,6 @@ func streamProducts(c *gin.Context) {
 	productChan := eventManager.SubscribeProducts(clientID)
 	defer func() {
 		eventManager.UnsubscribeProducts(clientID)
-		runtime.GC()
 	}()
 
 	productFetcher := func() (any, error) {
@@ -590,7 +628,6 @@ func streamOrders(c *gin.Context) {
 	orderChan := eventManager.SubscribeOrders(clientID)
 	defer func() {
 		eventManager.UnsubscribeOrders(clientID)
-		runtime.GC()
 	}()
 
 	orderFetcher := func() (any, error) {
