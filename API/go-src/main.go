@@ -193,7 +193,7 @@ func main() {
 		api.GET("/orders/stream", verifyToken(), streamOrders)
 	}
 	if err := r.Run(":" + config.AppPort); err != nil {
-	    log.Fatalf("Failed to start server: %v", err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
@@ -245,9 +245,14 @@ func verifyToken() gin.HandlerFunc {
 func getProducts() ([]Product, error) {
 	log.Debug("Starting: Fetching product data")
 	products := []Product{}
-	query := "SELECT name, description, price, stock, image, allergens, created_at FROM products"
-	log.Debugf("Executing query: %s", query)
-	rows, err := db.Query(query)
+	stmt, err := db.Prepare("SELECT name, description, price, stock, image, allergens, created_at FROM products")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return products, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
 	if err != nil {
 		log.Errorf("Database error in getProducts: %v", err)
 		return products, err
@@ -312,14 +317,8 @@ func getOrders() ([]Order, error) {
 	return orders, nil
 }
 
-// StreamProducts initiates a server-sent events stream to broadcast product data.
-// It configures the response for SSE and, if requested, enables Gzip compression.
-// Upon establishing the connection, it sends an initial "connected" event and then
-// periodically (every three seconds) retrieves and broadcasts product data.
-// Prior to closing the connection—either after a 5-minute maximum duration or when
-// nearing this limit—it emits a "disconnect_warning" event before ultimately closing the stream.
-func streamProducts(c *gin.Context) {
-	log.Debug("Starting: Product stream broadcast")
+func createStream(c *gin.Context, streamType string, dataFetcher func() (any, error), sleepTime time.Duration) {
+	log.Debug("Starting: Stream broadcast")
 	acceptEncoding := c.GetHeader("Accept-Encoding")
 	useGzip := strings.Contains(acceptEncoding, "gzip")
 
@@ -338,7 +337,7 @@ func streamProducts(c *gin.Context) {
 	c.Writer.Header().Set("Transfer-Encoding", "chunked")
 	c.Writer.Flush()
 
-	data, _ := json.Marshal(gin.H{"message": "Connected to products stream"})
+	data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connected to %s stream", streamType)})
 	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
 	c.Writer.Flush()
 
@@ -349,7 +348,7 @@ func streamProducts(c *gin.Context) {
 	maxDuration := 5 * time.Minute
 	disconnectWarningTime := 4 * time.Minute
 
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(sleepTime)
 	defer ticker.Stop()
 
 	for {
@@ -370,18 +369,19 @@ func streamProducts(c *gin.Context) {
 				c.Writer.Flush()
 			}
 
-			products, err := getProducts()
+			data, err := dataFetcher()
 			if err != nil {
+				log.Errorf("Error fetching %s data: %v", streamType, err)
 				continue
 			}
 
-			data, err := json.Marshal(products)
+			dataJSON, err := json.Marshal(data)
 			if err != nil {
-				log.Errorf("Error marshaling products: %v", err)
+				log.Errorf("Error marshaling %s data: %v", streamType, err)
 				continue
 			}
 
-			fmt.Fprintf(c.Writer, "event: products\ndata: %s\n\n", data)
+			fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", streamType, dataJSON)
 			c.Writer.Flush()
 
 		case <-ctx.Done():
@@ -390,79 +390,16 @@ func streamProducts(c *gin.Context) {
 	}
 }
 
-// streamOrders initiates a server-sent events (SSE) stream to broadcast live order updates.
-// It configures SSE headers and, if requested by the client via the "Accept-Encoding" header, compresses responses using Gzip.
-// Upon connection, it sends a confirmation message, then periodically retrieves and streams order data every 5 seconds.
-// The stream issues a disconnect warning as it nears the 5-minute timeout, after which it sends a close event and terminates.
+func streamProducts(c *gin.Context) {
+	createStream(c, "products", func() (any, error) {
+		return getProducts()
+	}, 3*time.Second)
+}
+
 func streamOrders(c *gin.Context) {
-	log.Debug("Starting: Order stream broadcast")
-	acceptEncoding := c.GetHeader("Accept-Encoding")
-	useGzip := strings.Contains(acceptEncoding, "gzip")
-
-	if useGzip {
-		log.Debug("Using Gzip compression")
-		c.Writer.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(c.Writer)
-		defer gz.Close()
-		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
-	}
-
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
-	c.Writer.Header().Set("Connection", "keep-alive")
-	c.Writer.Header().Set("X-Accel-Buffering", "no")
-	c.Writer.Header().Set("Transfer-Encoding", "chunked")
-	c.Writer.Flush()
-
-	data, _ := json.Marshal(gin.H{"message": "Connected to orders stream"})
-	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
-	c.Writer.Flush()
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
-	defer cancel()
-
-	startTime := time.Now()
-	maxDuration := 5 * time.Minute
-	disconnectWarningTime := 4 * time.Minute
-
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			elapsedTime := time.Since(startTime)
-			if elapsedTime >= maxDuration {
-				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection closed after %v seconds", maxDuration.Seconds())})
-				fmt.Fprintf(c.Writer, "event: close\ndata: %s\n\n", data)
-				c.Writer.Flush()
-				return
-			}
-
-			if elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration {
-				remaining := int(maxDuration.Seconds() - elapsedTime.Seconds())
-				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection will close in %d seconds", remaining)})
-				fmt.Fprintf(c.Writer, "event: disconnect_warning\ndata: %s\n\n", data)
-				c.Writer.Flush()
-			}
-
-			orders, err := getOrders()
-			if err != nil {
-				continue
-			}
-
-			data, err := json.Marshal(orders)
-			if err != nil {
-				log.Errorf("Error marshaling orders: %v", err)
-				continue
-			}
-
-			fmt.Fprintf(c.Writer, "event: orders\ndata: %s\n\n", data)
-			c.Writer.Flush()
-		case <-ctx.Done():
-			return
-		}
-	}
+	createStream(c, "orders", func() (any, error) {
+		return getOrders()
+	}, 5*time.Second)
 }
 
 type gzipResponseWriter struct {
