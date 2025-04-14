@@ -196,18 +196,18 @@ func startEventPublishers() {
 }
 
 type Config struct {
-	Debug        bool   `yaml:"DEBUG"`
-	DBConnection string `yaml:"DB_CONNECTION"`
-	DBHost       string `yaml:"DB_HOST"`
-	DBPort       string `yaml:"DB_PORT"`
-	DBDatabase   string `yaml:"DB_DATABASE"`
-	DBUsername   string `yaml:"DB_USERNAME"`
-	DBPassword   string `yaml:"DB_PASSWORD"`
-	AppTimezone  string `yaml:"APP_TIMEZONE"`
-	AppUrl       string `yaml:"APP_URL"`
-	AppPort      string `yaml:"APP_PORT"`
-	ProductPollInterval int `yaml:"PRODUCT_POLL_INTERVAL"`
-	OrderPollInterval   int `yaml:"ORDER_POLL_INTERVAL"`
+	Debug               bool   `yaml:"DEBUG"`
+	DBConnection        string `yaml:"DB_CONNECTION"`
+	DBHost              string `yaml:"DB_HOST"`
+	DBPort              string `yaml:"DB_PORT"`
+	DBDatabase          string `yaml:"DB_DATABASE"`
+	DBUsername          string `yaml:"DB_USERNAME"`
+	DBPassword          string `yaml:"DB_PASSWORD"`
+	AppTimezone         string `yaml:"APP_TIMEZONE"`
+	AppUrl              string `yaml:"APP_URL"`
+	AppPort             string `yaml:"APP_PORT"`
+	ProductPollInterval int    `yaml:"PRODUCT_POLL_INTERVAL"`
+	OrderPollInterval   int    `yaml:"ORDER_POLL_INTERVAL"`
 }
 
 type Product struct {
@@ -498,9 +498,14 @@ func getProductsSince(since time.Time) ([]Product, error) {
 func getOrdersSince(since time.Time) ([]Order, error) {
 	log.Debug("Starting: Fetching order data since", since)
 	orders := []Order{}
-	query := "SELECT uuid, product_id, quantity, image, options, created_at FROM orders WHERE updated_at > ?"
-	log.Debugf("Executing query: %s", query)
-	rows, err := db.Query(query, since)
+	stmt, err := db.Prepare("SELECT uuid, product_id, quantity, image, options, created_at FROM orders WHERE updated_at > ?")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return orders, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(since)
 	if err != nil {
 		log.Errorf("Database error in getOrdersSince: %v", err)
 		return orders, err
@@ -530,6 +535,13 @@ func getOrdersSince(since time.Time) ([]Order, error) {
 
 func getLastUpdateTime(tableName string) (time.Time, error) {
 	var lastUpdate time.Time
+	validTables := map[string]bool{
+		"products": true,
+		"orders":   true,
+	}
+	if !validTables[tableName] {
+		return time.Time{}, fmt.Errorf("invalid table name: %s", tableName)
+	}
 	query := fmt.Sprintf("SELECT MAX(updated_at) FROM %s", tableName)
 	err := db.QueryRow(query).Scan(&lastUpdate)
 	if err != nil {
