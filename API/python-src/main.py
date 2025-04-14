@@ -221,15 +221,14 @@ class GzipStreamingResponse(StreamingResponse):
             "more_body": False
         })
 
-@app.get("/api/products/stream")
-async def stream_products(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
-    logger.debug("Starting: Product stream broadcast")
+async def create_stream(request: Request, stream_type: str, data_fetcher, sleep_time: int) -> StreamingResponse:
+    logger.debug(f"Starting: {stream_type.capitalize()} stream broadcast")
     accept_encoding = request.headers.get("Accept-Encoding", "")
     use_gzip = "gzip" in accept_encoding
 
     async def event_generator():
         try:
-            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to products stream'}, ensure_ascii=False)}\n\n"
+            yield f"event: connected\ndata: {json.dumps({'message': f'Connected to {stream_type} stream'}, ensure_ascii=False)}\n\n"
 
             start_time = asyncio.get_event_loop().time()
             max_duration = 300
@@ -248,19 +247,19 @@ async def stream_products(request: Request, token: str = Depends(verify_token)) 
                     yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'}, ensure_ascii=False)}\n\n"
 
                 try:
-                    products = await get_products()
-                    data = json.dumps(products, default=str, ensure_ascii=False)
-                    yield f"event: products\ndata: {data}\n\n"
+                    data = await data_fetcher()
+                    json_data = json.dumps(data, default=str, ensure_ascii=False)
+                    yield f"event: {stream_type}\ndata: {json_data}\n\n"
                 except Exception as e:
-                    logger.error(f"Error fetching products: {str(e)}")
-                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching products'}, ensure_ascii=False)}\n\n"
+                    logger.error(f"Error fetching {stream_type}: {str(e)}")
+                    yield f"event: error\ndata: {json.dumps({'message': f'Error fetching {stream_type}'}, ensure_ascii=False)}\n\n"
 
-                await asyncio.sleep(3)
+                await asyncio.sleep(sleep_time)
         except ConnectionResetError:
             logger.warning("Connection reset by client")
         except Exception as e:
-            logger.error(f"Error in product stream: {str(e)}")
-            yield f"event: error\ndata: {json.dumps({'message': 'Error in product stream'}, ensure_ascii=False)}\n\n"
+            logger.error(f"Error in {stream_type} stream: {str(e)}")
+            yield f"event: error\ndata: {json.dumps({'message': f'Error in {stream_type} stream'}, ensure_ascii=False)}\n\n"
 
     headers = {
         "Content-Type": "text/event-stream",
@@ -272,7 +271,6 @@ async def stream_products(request: Request, token: str = Depends(verify_token)) 
 
     if use_gzip:
         logger.debug("Using Gzip compression")
-        headers["Content-Encoding"] = "gzip"
         return GzipStreamingResponse(
             event_generator(),
             media_type="text/event-stream",
@@ -284,70 +282,14 @@ async def stream_products(request: Request, token: str = Depends(verify_token)) 
             media_type="text/event-stream",
             headers=headers
         )
+
+@app.get("/api/products/stream")
+async def stream_products(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
+    return await create_stream(request, "products", get_products, 3)
 
 @app.get("/api/orders/stream")
 async def stream_orders(request: Request, token: str = Depends(verify_token)) -> StreamingResponse:
-    logger.debug("Starting: Order stream broadcast")
-    accept_encoding = request.headers.get("Accept-Encoding", "")
-    use_gzip = "gzip" in accept_encoding
-
-    async def event_generator():
-        try:
-            yield f"event: connected\ndata: {json.dumps({'message': 'Connected to orders stream'}, ensure_ascii=False)}\n\n"
-
-            start_time = asyncio.get_event_loop().time()
-            max_duration = 300
-            disconnect_warning_time = 240
-
-            while True:
-                current_time = asyncio.get_event_loop().time()
-                elapsed_time = current_time - start_time
-
-                if elapsed_time >= max_duration:
-                    yield f"event: close\ndata: {json.dumps({'message': f'Connection closed after {max_duration} seconds'}, ensure_ascii=False)}\n\n"
-                    break
-
-                if elapsed_time >= disconnect_warning_time and elapsed_time < max_duration:
-                    remaining = int(max_duration - elapsed_time)
-                    yield f"event: disconnect_warning\ndata: {json.dumps({'message': f'Connection will close in {remaining} seconds'}, ensure_ascii=False)}\n\n"
-
-                try:
-                    orders = await get_orders()
-                    data = json.dumps(orders, default=str, ensure_ascii=False)
-                    yield f"event: orders\ndata: {data}\n\n"
-                except Exception as e:
-                    logger.error(f"Error fetching orders: {str(e)}")
-                    yield f"event: error\ndata: {json.dumps({'message': 'Error fetching orders'}, ensure_ascii=False)}\n\n"
-
-                await asyncio.sleep(5)
-        except ConnectionResetError:
-            logger.warning("Connection reset by client")
-        except Exception as e:
-            logger.error(f"Error in order stream: {str(e)}")
-            yield f"event: error\ndata: {json.dumps({'message': 'Error in order stream'}, ensure_ascii=False)}\n\n"
-
-    headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no",
-        "Transfer-Encoding": "chunked"
-    }
-
-    if use_gzip:
-        logger.debug("Using Gzip compression")
-        headers["Content-Encoding"] = "gzip"
-        return GzipStreamingResponse(
-            event_generator(),
-            media_type="text/event-stream",
-            headers=headers
-        )
-    else:
-        return StreamingResponse(
-            event_generator(),
-            media_type="text/event-stream",
-            headers=headers
-        )
+    return await create_stream(request, "orders", get_orders, 5)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(config.get("APP_PORT", 8080)), log_level=log_level.lower())
