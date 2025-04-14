@@ -110,42 +110,86 @@ func (em *EventManager) PublishOrders(orders []Order) {
 }
 
 func startEventPublishers() {
+	productInterval := 5
+	orderInterval := 3
+
+	if config.ProductPollInterval > 0 {
+		productInterval = config.ProductPollInterval
+	}
+	if config.OrderPollInterval > 0 {
+		orderInterval = config.OrderPollInterval
+	}
+
 	go func() {
-		ticker := time.NewTicker(3 * time.Second)
+		ticker := time.NewTicker(time.Duration(productInterval) * time.Second)
 		defer ticker.Stop()
 
-		var lastProducts []Product
+		products, err := getProducts()
+		if err != nil {
+			log.Errorf("Error fetching initial products: %v", err)
+		} else {
+			eventManager.PublishProducts(products)
+		}
+
+		lastProductUpdate, err := getLastUpdateTime("products")
+		if err != nil {
+			log.Errorf("Error getting last product update time: %v", err)
+			lastProductUpdate = time.Now().Add(-1 * time.Hour)
+		}
 
 		for range ticker.C {
-			products, err := getProducts()
+			updatedProducts, err := getProductsSince(lastProductUpdate)
 			if err != nil {
-				log.Errorf("Error fetching products: %v", err)
+				log.Errorf("Error fetching updated products: %v", err)
 				continue
 			}
 
-			if !ProductsEqual(products, lastProducts) {
-				eventManager.PublishProducts(products)
-				lastProducts = products
+			if len(updatedProducts) > 0 {
+				allProducts, err := getProducts()
+				if err != nil {
+					log.Errorf("Error fetching all products: %v", err)
+					continue
+				}
+
+				eventManager.PublishProducts(allProducts)
+				lastProductUpdate = time.Now()
 			}
 		}
 	}()
 
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(time.Duration(orderInterval) * time.Second)
 		defer ticker.Stop()
 
-		var lastOrders []Order
+		orders, err := getOrders()
+		if err != nil {
+			log.Errorf("Error fetching initial orders: %v", err)
+		} else {
+			eventManager.PublishOrders(orders)
+		}
+
+		lastOrderUpdate, err := getLastUpdateTime("orders")
+		if err != nil {
+			log.Errorf("Error getting last order update time: %v", err)
+			lastOrderUpdate = time.Now().Add(-1 * time.Hour)
+		}
 
 		for range ticker.C {
-			orders, err := getOrders()
+			updatedOrders, err := getOrdersSince(lastOrderUpdate)
 			if err != nil {
-				log.Errorf("Error fetching orders: %v", err)
+				log.Errorf("Error fetching updated orders: %v", err)
 				continue
 			}
 
-			if !OrdersEqual(orders, lastOrders) {
-				eventManager.PublishOrders(orders)
-				lastOrders = orders
+			if len(updatedOrders) > 0 {
+				allOrders, err := getOrders()
+				if err != nil {
+					log.Errorf("Error fetching all orders: %v", err)
+					continue
+				}
+
+				eventManager.PublishOrders(allOrders)
+				lastOrderUpdate = time.Now()
 			}
 		}
 	}()
@@ -162,6 +206,8 @@ type Config struct {
 	AppTimezone  string `yaml:"APP_TIMEZONE"`
 	AppUrl       string `yaml:"APP_URL"`
 	AppPort      string `yaml:"APP_PORT"`
+	ProductPollInterval int `yaml:"PRODUCT_POLL_INTERVAL"`
+	OrderPollInterval   int `yaml:"ORDER_POLL_INTERVAL"`
 }
 
 type Product struct {
@@ -409,6 +455,90 @@ func verifyToken() gin.HandlerFunc {
 		c.Set("token", token)
 		c.Next()
 	}
+}
+
+func getProductsSince(since time.Time) ([]Product, error) {
+	log.Debug("Starting: Fetching product data since", since)
+	products := []Product{}
+	stmt, err := db.Prepare("SELECT name, description, price, stock, image, allergens, created_at FROM products WHERE updated_at > ?")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return products, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(since)
+	if err != nil {
+		log.Errorf("Database error in getProductsSince: %v", err)
+		return products, err
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var p Product
+		var allergensStr sql.NullString
+		err := rows.Scan(&p.Name, &p.Description, &p.Price, &p.Stock, &p.Image, &allergensStr, &p.CreatedAt)
+		if err != nil {
+			log.Errorf("Error scanning product row: %v", err)
+			continue
+		}
+		count++
+		log.Debugf("Product data read #%d: Name: %s, Price: %.2f, Stock: %d", count, p.Name.String, p.Price, p.Stock)
+
+		if allergensStr.Valid {
+			p.Allergens = json.RawMessage(allergensStr.String)
+		}
+		products = append(products, p)
+	}
+
+	return products, nil
+}
+
+func getOrdersSince(since time.Time) ([]Order, error) {
+	log.Debug("Starting: Fetching order data since", since)
+	orders := []Order{}
+	query := "SELECT uuid, product_id, quantity, image, options, created_at FROM orders WHERE updated_at > ?"
+	log.Debugf("Executing query: %s", query)
+	rows, err := db.Query(query, since)
+	if err != nil {
+		log.Errorf("Database error in getOrdersSince: %v", err)
+		return orders, err
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var o Order
+		var optionsStr sql.NullString
+		err := rows.Scan(&o.UUID, &o.ProductID, &o.Quantity, &o.Image, &optionsStr, &o.CreatedAt)
+		if err != nil {
+			log.Errorf("Error scanning order row: %v", err)
+			continue
+		}
+		count++
+		log.Debugf("Order data read #%d: UUID: %s, Product ID: %d, Quantity: %d", count, o.UUID, o.ProductID, o.Quantity)
+
+		if optionsStr.Valid {
+			o.Options = json.RawMessage(optionsStr.String)
+		}
+		orders = append(orders, o)
+	}
+
+	return orders, nil
+}
+
+func getLastUpdateTime(tableName string) (time.Time, error) {
+	var lastUpdate time.Time
+	query := fmt.Sprintf("SELECT MAX(updated_at) FROM %s", tableName)
+	err := db.QueryRow(query).Scan(&lastUpdate)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return time.Time{}, nil
+		}
+		return time.Time{}, err
+	}
+	return lastUpdate, nil
 }
 
 // getProducts retrieves all product records from the database.
