@@ -21,7 +21,9 @@ def load_config():
         return yaml.safe_load(f)
 
 config = load_config()
-logger.add('app.log', enqueue=True, level="INFO")
+debug_mode = config.get("DEBUG", False)
+log_level = "DEBUG" if debug_mode else "INFO"
+logger.add('app.log', enqueue=True, level=log_level)
 
 db_pool = None
 
@@ -348,4 +350,4 @@ async def stream_orders(request: Request, token: str = Depends(verify_token)) ->
         )
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=int(config.get("APP_PORT", 8080)))
+    uvicorn.run(app, host="0.0.0.0", port=int(config.get("APP_PORT", 8080)), log_level=log_level.lower())
