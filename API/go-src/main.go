@@ -10,13 +10,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/goccy/go-yaml"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	_ "modernc.org/sqlite"
 )
@@ -24,6 +28,121 @@ import (
 var db *sql.DB
 var timezone *time.Location
 var config Config
+
+type EventManager struct {
+	productSubscribers map[string]chan []Product
+	orderSubscribers   map[string]chan []Order
+	mu                 sync.RWMutex
+}
+
+var eventManager = &EventManager{
+	productSubscribers: make(map[string]chan []Product),
+	orderSubscribers:   make(map[string]chan []Order),
+}
+
+func (em *EventManager) SubscribeProducts(id string) chan []Product {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	ch := make(chan []Product, 10)
+	em.productSubscribers[id] = ch
+	return ch
+}
+
+func (em *EventManager) SubscribeOrders(id string) chan []Order {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	ch := make(chan []Order, 10)
+	em.orderSubscribers[id] = ch
+	return ch
+}
+
+func (em *EventManager) UnsubscribeProducts(id string) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	if ch, exists := em.productSubscribers[id]; exists {
+		close(ch)
+		delete(em.productSubscribers, id)
+	}
+}
+
+func (em *EventManager) UnsubscribeOrders(id string) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	if ch, exists := em.orderSubscribers[id]; exists {
+		close(ch)
+		delete(em.orderSubscribers, id)
+	}
+}
+
+func (em *EventManager) PublishProducts(products []Product) {
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+
+	for _, ch := range em.productSubscribers {
+		select {
+		case ch <- products:
+		default:
+		}
+	}
+}
+
+func (em *EventManager) PublishOrders(orders []Order) {
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+
+	for _, ch := range em.orderSubscribers {
+		select {
+		case ch <- orders:
+		default:
+		}
+	}
+}
+
+func startEventPublishers() {
+	go func() {
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		var lastProducts []Product
+
+		for range ticker.C {
+			products, err := getProducts()
+			if err != nil {
+				log.Errorf("Error fetching products: %v", err)
+				continue
+			}
+
+			if !reflect.DeepEqual(products, lastProducts) {
+				eventManager.PublishProducts(products)
+				lastProducts = products
+			}
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		var lastOrders []Order
+
+		for range ticker.C {
+			orders, err := getOrders()
+			if err != nil {
+				log.Errorf("Error fetching orders: %v", err)
+				continue
+			}
+
+			if !reflect.DeepEqual(orders, lastOrders) {
+				eventManager.PublishOrders(orders)
+				lastOrders = orders
+			}
+		}
+	}()
+}
 
 type Config struct {
 	Debug        bool   `yaml:"DEBUG"`
@@ -177,6 +296,9 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 		log.SetLevel(log.InfoLevel)
 	}
+
+	startEventPublishers()
+
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{config.AppUrl},
@@ -317,16 +439,25 @@ func getOrders() ([]Order, error) {
 	return orders, nil
 }
 
-func createStream(c *gin.Context, streamType string, dataFetcher func() (any, error), sleepTime time.Duration) {
-	log.Debug("Starting: Stream broadcast")
+func createStream(c *gin.Context, streamType string, dataFetcher func() (any, error), eventChan chan any) {
+	log.Debugf("Starting: %s stream broadcast", streamType)
 	acceptEncoding := c.GetHeader("Accept-Encoding")
 	useGzip := strings.Contains(acceptEncoding, "gzip")
+
+	cleanup := make(chan struct{})
+	defer func() {
+		close(cleanup)
+		runtime.GC()
+	}()
 
 	if useGzip {
 		log.Debug("Using Gzip compression")
 		c.Writer.Header().Set("Content-Encoding", "gzip")
 		gz := gzip.NewWriter(c.Writer)
-		defer gz.Close()
+		defer func() {
+			gz.Close()
+			gz = nil
+		}()
 		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
 	}
 
@@ -342,18 +473,49 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 	c.Writer.Flush()
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
-	defer cancel()
+	defer func() {
+		cancel()
+		runtime.GC()
+	}()
+
+	clientGone := c.Writer.CloseNotify()
+
+	initialData, err := dataFetcher()
+	if err == nil {
+		data, _ := json.Marshal(initialData)
+		fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", streamType, data)
+		c.Writer.Flush()
+	}
 
 	startTime := time.Now()
 	maxDuration := 5 * time.Minute
 	disconnectWarningTime := 4 * time.Minute
-
-	ticker := time.NewTicker(sleepTime)
-	defer ticker.Stop()
+	warningSent := false
 
 	for {
 		select {
-		case <-ticker.C:
+		case eventData := <-eventChan:
+			data, err := json.Marshal(eventData)
+			if err != nil {
+				log.Errorf("Error marshaling %s data: %v", streamType, err)
+				continue
+			}
+			fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", streamType, data)
+			c.Writer.Flush()
+
+		case <-ctx.Done():
+			log.Debug("Context timeout, closing connection")
+			return
+
+		case <-clientGone:
+			log.Debug("Client disconnected")
+			return
+
+		case <-cleanup:
+			log.Debug("Cleanup requested")
+			return
+
+		default:
 			elapsedTime := time.Since(startTime)
 			if elapsedTime >= maxDuration {
 				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection closed after %v seconds", maxDuration.Seconds())})
@@ -362,44 +524,88 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 				return
 			}
 
-			if elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration {
-				remaining := int(maxDuration.Seconds() - elapsedTime.Seconds())
-				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection will close in %d seconds", remaining)})
-				fmt.Fprintf(c.Writer, "event: disconnect_warning\ndata: %s\n\n", data)
-				c.Writer.Flush()
+			if elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration && !warningSent {
+				warningSent = true
+				go func() {
+					countdown := 60
+					ticker := time.NewTicker(1 * time.Second)
+					defer func() {
+						ticker.Stop()
+						ticker = nil
+					}()
+
+					for countdown > 0 {
+						select {
+						case <-ticker.C:
+							data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection will close in %d seconds", countdown)})
+							fmt.Fprintf(c.Writer, "event: disconnect_warning\ndata: %s\n\n", data)
+							c.Writer.Flush()
+							countdown--
+						case <-ctx.Done():
+							return
+						case <-clientGone:
+							return
+						case <-cleanup:
+							return
+						}
+					}
+
+					data, _ := json.Marshal(gin.H{"message": "Connection closed"})
+					fmt.Fprintf(c.Writer, "event: close\ndata: %s\n\n", data)
+					c.Writer.Flush()
+					cancel()
+				}()
 			}
 
-			data, err := dataFetcher()
-			if err != nil {
-				log.Errorf("Error fetching %s data: %v", streamType, err)
-				continue
-			}
-
-			dataJSON, err := json.Marshal(data)
-			if err != nil {
-				log.Errorf("Error marshaling %s data: %v", streamType, err)
-				continue
-			}
-
-			fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", streamType, dataJSON)
-			c.Writer.Flush()
-
-		case <-ctx.Done():
-			return
+			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
 
 func streamProducts(c *gin.Context) {
-	createStream(c, "products", func() (any, error) {
+	clientID := uuid.New().String()
+	productChan := eventManager.SubscribeProducts(clientID)
+	defer func() {
+		eventManager.UnsubscribeProducts(clientID)
+		runtime.GC()
+	}()
+
+	productFetcher := func() (any, error) {
 		return getProducts()
-	}, 3*time.Second)
+	}
+
+	anyChan := make(chan any, 10)
+	go func() {
+		defer close(anyChan)
+		for p := range productChan {
+			anyChan <- p
+		}
+	}()
+
+	createStream(c, "products", productFetcher, anyChan)
 }
 
 func streamOrders(c *gin.Context) {
-	createStream(c, "orders", func() (any, error) {
+	clientID := uuid.New().String()
+	orderChan := eventManager.SubscribeOrders(clientID)
+	defer func() {
+		eventManager.UnsubscribeOrders(clientID)
+		runtime.GC()
+	}()
+
+	orderFetcher := func() (any, error) {
 		return getOrders()
-	}, 5*time.Second)
+	}
+
+	anyChan := make(chan any, 10)
+	go func() {
+		defer close(anyChan)
+		for o := range orderChan {
+			anyChan <- o
+		}
+	}()
+
+	createStream(c, "orders", orderFetcher, anyChan)
 }
 
 type gzipResponseWriter struct {
