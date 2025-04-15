@@ -93,6 +93,7 @@ func (em *EventManager) PublishProducts(products []Product) {
 		select {
 		case ch <- products:
 		default:
+			log.Warnf("Product updates could not be delivered to clients: Channel buffer is full.")
 		}
 	}
 }
@@ -105,6 +106,7 @@ func (em *EventManager) PublishOrders(orders []Order) {
 		select {
 		case ch <- orders:
 		default:
+			log.Warnf("Order updates could not be delivered to clients: Channel buffer is full.")
 		}
 	}
 }
@@ -601,9 +603,15 @@ func getProducts() ([]Product, error) {
 func getOrders() ([]Order, error) {
 	log.Debug("Starting: Fetching order data")
 	orders := []Order{}
-	query := "SELECT uuid, product_id, quantity, image, options, created_at FROM orders"
-	log.Debugf("Executing query: %s", query)
-	rows, err := db.Query(query)
+	stmt, err := db.Prepare("SELECT uuid, product_id, quantity, image, options, created_at FROM orders")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return orders, err
+	}
+	defer stmt.Close()
+
+	log.Debug("Executing prepared statement for orders")
+	rows, err := stmt.Query()
 	if err != nil {
 		log.Errorf("Database error in getOrders: %v", err)
 		return orders, err
@@ -661,8 +669,6 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
 	defer cancel()
 
-	clientGone := c.Writer.CloseNotify()
-
 	initialData, err := dataFetcher()
 	if err == nil {
 		data, _ := json.Marshal(initialData)
@@ -673,6 +679,7 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 	startTime := time.Now()
 	maxDuration := 5 * time.Minute
 	disconnectWarningTime := 4 * time.Minute
+	var warningSentMu sync.Mutex
 	warningSent := false
 
 	eventTicker := time.NewTicker(100 * time.Millisecond)
@@ -690,11 +697,7 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 			c.Writer.Flush()
 
 		case <-ctx.Done():
-			log.Debug("Context timeout, closing connection")
-			return
-
-		case <-clientGone:
-			log.Debug("Client disconnected")
+			log.Debug("Context cancelled or timeout reached")
 			return
 
 		case <-cleanup:
@@ -710,8 +713,13 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 				return
 			}
 
-			if elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration && !warningSent {
+			warningSentMu.Lock()
+			shouldSendWarning := elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration && !warningSent
+			if shouldSendWarning {
 				warningSent = true
+			}
+			warningSentMu.Unlock()
+			if shouldSendWarning {
 				go func() {
 					countdown := 60
 					ticker := time.NewTicker(1 * time.Second)
@@ -725,8 +733,6 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 							c.Writer.Flush()
 							countdown--
 						case <-ctx.Done():
-							return
-						case <-clientGone:
 							return
 						case <-cleanup:
 							return
