@@ -63,7 +63,7 @@ func (em *EventManager) increaseBufferSize() bool {
 	return false
 }
 
-func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T) bool {
+func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T, subscriberId string, updateMapFunc func(string, chan []T)) bool {
 	for attempts := 0; attempts < 2; attempts++ {
 		select {
 		case ch <- items:
@@ -83,6 +83,7 @@ func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T) bool {
 				}
 				log.Warnf("Copied %d existing messages to new channel (new capacity: %d)", copied, cap(newCh))
 				ch = newCh
+				updateMapFunc(subscriberId, newCh)
 				continue
 			}
 			log.Warnf("Updates could not be delivered: buffer full (capacity: %d) and max size reached", cap(ch))
@@ -135,7 +136,11 @@ func (em *EventManager) PublishProducts(products []Product) {
 	defer em.mu.RUnlock()
 
 	for id, ch := range em.productSubscribers {
-		if !tryPublishWithRetry(em, ch, products) {
+		if !tryPublishWithRetry(em, ch, products, id, func(id string, newCh chan []Product) {
+			em.mu.Lock()
+			defer em.mu.Unlock()
+			em.productSubscribers[id] = newCh
+		}) {
 			log.Errorf("Failed to deliver product updates to subscriber %s", id)
 		}
 	}
@@ -146,7 +151,11 @@ func (em *EventManager) PublishOrders(orders []Order) {
 	defer em.mu.RUnlock()
 
 	for id, ch := range em.orderSubscribers {
-		if !tryPublishWithRetry(em, ch, orders) {
+		if !tryPublishWithRetry(em, ch, orders, id, func(id string, newCh chan []Order) {
+			em.mu.Lock()
+			defer em.mu.Unlock()
+			em.orderSubscribers[id] = newCh
+		}) {
 			log.Errorf("Failed to deliver order updates to subscriber %s", id)
 		}
 	}
