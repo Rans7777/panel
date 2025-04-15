@@ -61,7 +61,7 @@ func (em *EventManager) increaseBufferSize() bool {
 }
 
 func (em *EventManager) tryPublishWithRetry(ch chan []Product, products []Product) bool {
-	for attempts := range 2 {
+	for attempts := 0; attempts < 2; attempts++ {
 		select {
 		case ch <- products:
 			if attempts > 0 {
@@ -90,7 +90,7 @@ func (em *EventManager) tryPublishWithRetry(ch chan []Product, products []Produc
 }
 
 func (em *EventManager) tryPublishOrderWithRetry(ch chan []Order, orders []Order) bool {
-	for attempts := range 2 {
+	for attempts := 0; attempts < 2; attempts++ {
 		select {
 		case ch <- orders:
 			if attempts > 0 {
