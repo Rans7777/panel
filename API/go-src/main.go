@@ -33,18 +33,73 @@ type EventManager struct {
 	orderSubscribers   map[string]chan []Order
 	mu                 sync.RWMutex
 	bufferSize         int
+	maxBufferSize      int
+	missCount          int
 }
 
 var eventManager = &EventManager{
 	productSubscribers: make(map[string]chan []Product),
 	orderSubscribers:   make(map[string]chan []Order),
 	bufferSize:         100,
+	maxBufferSize:      config.MaxBufferSize,
+	missCount:          0,
 }
 
-func (em *EventManager) SetBufferSize(size int) {
+func (em *EventManager) increaseBufferSize() bool {
 	em.mu.Lock()
 	defer em.mu.Unlock()
-	em.bufferSize = size
+
+	if em.bufferSize < em.maxBufferSize {
+		newSize := min(em.bufferSize*2, em.maxBufferSize)
+		em.bufferSize = newSize
+		log.Infof("Buffer size increased to %d", em.bufferSize)
+		return true
+	}
+	return false
+}
+
+func (em *EventManager) tryPublishWithRetry(ch chan []Product, products []Product) bool {
+	for attempts := range 2 {
+		select {
+		case ch <- products:
+			return true
+		default:
+			if attempts == 0 && em.increaseBufferSize() {
+				newCh := make(chan []Product, em.bufferSize)
+				close(ch)
+				for p := range ch {
+					newCh <- p
+				}
+				ch = newCh
+				continue
+			}
+			log.Warnf("Product updates could not be delivered even after buffer resize")
+			return false
+		}
+	}
+	return false
+}
+
+func (em *EventManager) tryPublishOrderWithRetry(ch chan []Order, orders []Order) bool {
+	for attempts := range 2 {
+		select {
+		case ch <- orders:
+			return true
+		default:
+			if attempts == 0 && em.increaseBufferSize() {
+				newCh := make(chan []Order, em.bufferSize)
+				close(ch)
+				for o := range ch {
+					newCh <- o
+				}
+				ch = newCh
+				continue
+			}
+			log.Warnf("Order updates could not be delivered even after buffer resize")
+			return false
+		}
+	}
+	return false
 }
 
 func (em *EventManager) SubscribeProducts(id string) chan []Product {
@@ -89,11 +144,9 @@ func (em *EventManager) PublishProducts(products []Product) {
 	em.mu.RLock()
 	defer em.mu.RUnlock()
 
-	for _, ch := range em.productSubscribers {
-		select {
-		case ch <- products:
-		default:
-			log.Warnf("Product updates could not be delivered to clients: Channel buffer is full.")
+	for id, ch := range em.productSubscribers {
+		if !em.tryPublishWithRetry(ch, products) {
+			log.Errorf("Failed to deliver product updates to subscriber %s", id)
 		}
 	}
 }
@@ -102,11 +155,9 @@ func (em *EventManager) PublishOrders(orders []Order) {
 	em.mu.RLock()
 	defer em.mu.RUnlock()
 
-	for _, ch := range em.orderSubscribers {
-		select {
-		case ch <- orders:
-		default:
-			log.Warnf("Order updates could not be delivered to clients: Channel buffer is full.")
+	for id, ch := range em.orderSubscribers {
+		if !em.tryPublishOrderWithRetry(ch, orders) {
+			log.Errorf("Failed to deliver order updates to subscriber %s", id)
 		}
 	}
 }
@@ -210,6 +261,7 @@ type Config struct {
 	AppPort             string `yaml:"APP_PORT"`
 	ProductPollInterval int    `yaml:"PRODUCT_POLL_INTERVAL"`
 	OrderPollInterval   int    `yaml:"ORDER_POLL_INTERVAL"`
+	MaxBufferSize       int    `yaml:"MAX_BUFFER_SIZE"`
 }
 
 type Product struct {
