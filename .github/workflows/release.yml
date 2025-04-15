@@ -22,14 +22,14 @@ jobs:
 
       - name: Build Go
         run: |
-          cd API/go-src
+          cd API
           go build -o main -v ./...
           cd ../..
 
       - name: Create API release archive
         run: |
           cd API
-          tar -czvf api-release.tar.gz python-src go-src/main
+          tar -czvf api-release.tar.gz main
           mv api-release.tar.gz ../
           cd ..
 
