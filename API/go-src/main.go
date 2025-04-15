@@ -34,15 +34,18 @@ type EventManager struct {
 	mu                 sync.RWMutex
 	bufferSize         int
 	maxBufferSize      int
-	missCount          int
 }
 
 var eventManager = &EventManager{
 	productSubscribers: make(map[string]chan []Product),
 	orderSubscribers:   make(map[string]chan []Order),
 	bufferSize:         100,
-	maxBufferSize:      config.MaxBufferSize,
-	missCount:          0,
+	maxBufferSize: func() int {
+		if config.MaxBufferSize > 0 {
+			return config.MaxBufferSize
+		}
+		return 500
+	}(),
 }
 
 func (em *EventManager) increaseBufferSize() bool {
@@ -149,6 +152,51 @@ func (em *EventManager) PublishOrders(orders []Order) {
 	}
 }
 
+type DataFetcher[T any] struct {
+	getAll       func() ([]T, error)
+	getSince     func(time.Time) ([]T, error)
+	publish      func([]T)
+	tableName    string
+	pollInterval int
+}
+
+func startEventPublisher[T any](fetcher DataFetcher[T]) {
+	ticker := time.NewTicker(time.Duration(fetcher.pollInterval) * time.Second)
+	defer ticker.Stop()
+
+	initialData, err := fetcher.getAll()
+	if err != nil {
+		log.Errorf("Error fetching initial %s: %v", fetcher.tableName, err)
+	} else {
+		fetcher.publish(initialData)
+	}
+
+	lastUpdate, err := getLastUpdateTime(fetcher.tableName)
+	if err != nil {
+		log.Errorf("Error getting last %s update time: %v", fetcher.tableName, err)
+		lastUpdate = time.Now().Add(-1 * time.Hour)
+	}
+
+	for range ticker.C {
+		updatedData, err := fetcher.getSince(lastUpdate)
+		if err != nil {
+			log.Errorf("Error fetching updated %s: %v", fetcher.tableName, err)
+			continue
+		}
+
+		if len(updatedData) > 0 {
+			allData, err := fetcher.getAll()
+			if err != nil {
+				log.Errorf("Error fetching all %s: %v", fetcher.tableName, err)
+				continue
+			}
+
+			fetcher.publish(allData)
+			lastUpdate = time.Now()
+		}
+	}
+}
+
 func startEventPublishers() {
 	productInterval := 5
 	orderInterval := 3
@@ -160,79 +208,24 @@ func startEventPublishers() {
 		orderInterval = config.OrderPollInterval
 	}
 
-	go func() {
-		ticker := time.NewTicker(time.Duration(productInterval) * time.Second)
-		defer ticker.Stop()
+	productFetcher := DataFetcher[Product]{
+		getAll:       getProducts,
+		getSince:     getProductsSince,
+		publish:      eventManager.PublishProducts,
+		tableName:    "products",
+		pollInterval: productInterval,
+	}
 
-		products, err := getProducts()
-		if err != nil {
-			log.Errorf("Error fetching initial products: %v", err)
-		} else {
-			eventManager.PublishProducts(products)
-		}
+	orderFetcher := DataFetcher[Order]{
+		getAll:       getOrders,
+		getSince:     getOrdersSince,
+		publish:      eventManager.PublishOrders,
+		tableName:    "orders",
+		pollInterval: orderInterval,
+	}
 
-		lastProductUpdate, err := getLastUpdateTime("products")
-		if err != nil {
-			log.Errorf("Error getting last product update time: %v", err)
-			lastProductUpdate = time.Now().Add(-1 * time.Hour)
-		}
-
-		for range ticker.C {
-			updatedProducts, err := getProductsSince(lastProductUpdate)
-			if err != nil {
-				log.Errorf("Error fetching updated products: %v", err)
-				continue
-			}
-
-			if len(updatedProducts) > 0 {
-				allProducts, err := getProducts()
-				if err != nil {
-					log.Errorf("Error fetching all products: %v", err)
-					continue
-				}
-
-				eventManager.PublishProducts(allProducts)
-				lastProductUpdate = time.Now()
-			}
-		}
-	}()
-
-	go func() {
-		ticker := time.NewTicker(time.Duration(orderInterval) * time.Second)
-		defer ticker.Stop()
-
-		orders, err := getOrders()
-		if err != nil {
-			log.Errorf("Error fetching initial orders: %v", err)
-		} else {
-			eventManager.PublishOrders(orders)
-		}
-
-		lastOrderUpdate, err := getLastUpdateTime("orders")
-		if err != nil {
-			log.Errorf("Error getting last order update time: %v", err)
-			lastOrderUpdate = time.Now().Add(-1 * time.Hour)
-		}
-
-		for range ticker.C {
-			updatedOrders, err := getOrdersSince(lastOrderUpdate)
-			if err != nil {
-				log.Errorf("Error fetching updated orders: %v", err)
-				continue
-			}
-
-			if len(updatedOrders) > 0 {
-				allOrders, err := getOrders()
-				if err != nil {
-					log.Errorf("Error fetching all orders: %v", err)
-					continue
-				}
-
-				eventManager.PublishOrders(allOrders)
-				lastOrderUpdate = time.Now()
-			}
-		}
-	}()
+	go startEventPublisher(productFetcher)
+	go startEventPublisher(orderFetcher)
 }
 
 type Config struct {
@@ -799,7 +792,7 @@ func streamProducts(c *gin.Context) {
 		return getProducts()
 	}
 
-	anyChan := make(chan any, 10)
+	anyChan := make(chan any, eventManager.bufferSize)
 	go func() {
 		defer close(anyChan)
 		for p := range productChan {
@@ -821,7 +814,7 @@ func streamOrders(c *gin.Context) {
 		return getOrders()
 	}
 
-	anyChan := make(chan any, 10)
+	anyChan := make(chan any, eventManager.bufferSize)
 	go func() {
 		defer close(anyChan)
 		for o := range orderChan {
