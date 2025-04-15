@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"database/sql"
@@ -11,12 +12,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/goccy/go-yaml"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	_ "modernc.org/sqlite"
 )
@@ -25,17 +28,229 @@ var db *sql.DB
 var timezone *time.Location
 var config Config
 
+type EventManager struct {
+	productSubscribers map[string]chan []Product
+	orderSubscribers   map[string]chan []Order
+	mu                 sync.RWMutex
+	bufferSize         int
+	maxBufferSize      int
+}
+
+var eventManager = &EventManager{
+	productSubscribers: make(map[string]chan []Product),
+	orderSubscribers:   make(map[string]chan []Order),
+	bufferSize:         100,
+	maxBufferSize: func() int {
+		if config.MaxBufferSize > 0 {
+			return config.MaxBufferSize
+		}
+		return 500
+	}(),
+}
+
+func (em *EventManager) increaseBufferSize() bool {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	if em.bufferSize < em.maxBufferSize {
+		oldSize := em.bufferSize
+		newSize := min(em.bufferSize*2, em.maxBufferSize)
+		em.bufferSize = newSize
+		log.Warnf("Buffer size increased from %d to %d (max: %d)", oldSize, newSize, em.maxBufferSize)
+		return true
+	}
+	log.Warnf("Cannot increase buffer size: already at maximum (%d)", em.maxBufferSize)
+	return false
+}
+
+func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T, subscriberId string, updateMapFunc func(string, chan []T)) bool {
+	for attempts := 0; attempts < 2; attempts++ {
+		select {
+		case ch <- items:
+			if attempts > 0 {
+				log.Infof("Successfully delivered updates after buffer resize")
+			}
+			return true
+		default:
+			if attempts == 0 && em.increaseBufferSize() {
+				log.Warnf("Attempting to resize buffer and retry delivery (current channel capacity: %d)", cap(ch))
+				newCh := make(chan []T, em.bufferSize)
+				close(ch)
+				copied := 0
+				for item := range ch {
+					newCh <- item
+					copied++
+				}
+				log.Warnf("Copied %d existing messages to new channel (new capacity: %d)", copied, cap(newCh))
+				ch = newCh
+				updateMapFunc(subscriberId, newCh)
+				continue
+			}
+			log.Warnf("Updates could not be delivered: buffer full (capacity: %d) and max size reached", cap(ch))
+			return false
+		}
+	}
+	return false
+}
+
+func (em *EventManager) SubscribeProducts(id string) chan []Product {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	ch := make(chan []Product, em.bufferSize)
+	em.productSubscribers[id] = ch
+	return ch
+}
+
+func (em *EventManager) SubscribeOrders(id string) chan []Order {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	ch := make(chan []Order, em.bufferSize)
+	em.orderSubscribers[id] = ch
+	return ch
+}
+
+func (em *EventManager) UnsubscribeProducts(id string) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	if ch, exists := em.productSubscribers[id]; exists {
+		close(ch)
+		delete(em.productSubscribers, id)
+	}
+}
+
+func (em *EventManager) UnsubscribeOrders(id string) {
+	em.mu.Lock()
+	defer em.mu.Unlock()
+
+	if ch, exists := em.orderSubscribers[id]; exists {
+		close(ch)
+		delete(em.orderSubscribers, id)
+	}
+}
+
+func (em *EventManager) PublishProducts(products []Product) {
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+
+	for id, ch := range em.productSubscribers {
+		if !tryPublishWithRetry(em, ch, products, id, func(id string, newCh chan []Product) {
+			em.mu.Lock()
+			defer em.mu.Unlock()
+			em.productSubscribers[id] = newCh
+		}) {
+			log.Errorf("Failed to deliver product updates to subscriber %s", id)
+		}
+	}
+}
+
+func (em *EventManager) PublishOrders(orders []Order) {
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+
+	for id, ch := range em.orderSubscribers {
+		if !tryPublishWithRetry(em, ch, orders, id, func(id string, newCh chan []Order) {
+			em.mu.Lock()
+			defer em.mu.Unlock()
+			em.orderSubscribers[id] = newCh
+		}) {
+			log.Errorf("Failed to deliver order updates to subscriber %s", id)
+		}
+	}
+}
+
+type DataFetcher[T any] struct {
+	getAll       func() ([]T, error)
+	getSince     func(time.Time) ([]T, error)
+	publish      func([]T)
+	tableName    string
+	pollInterval int
+}
+
+func startEventPublisher[T any](fetcher DataFetcher[T]) {
+	ticker := time.NewTicker(time.Duration(fetcher.pollInterval) * time.Second)
+	defer ticker.Stop()
+
+	initialData, err := fetcher.getAll()
+	if err != nil {
+		log.Errorf("Error fetching initial %s: %v", fetcher.tableName, err)
+	} else {
+		fetcher.publish(initialData)
+	}
+
+	lastUpdate, err := getLastUpdateTime(fetcher.tableName)
+	if err != nil {
+		log.Errorf("Error getting last %s update time: %v", fetcher.tableName, err)
+		lastUpdate = time.Now().Add(-1 * time.Hour)
+	}
+
+	for range ticker.C {
+		updatedData, err := fetcher.getSince(lastUpdate)
+		if err != nil {
+			log.Errorf("Error fetching updated %s: %v", fetcher.tableName, err)
+			continue
+		}
+
+		if len(updatedData) > 0 {
+			allData, err := fetcher.getAll()
+			if err != nil {
+				log.Errorf("Error fetching all %s: %v", fetcher.tableName, err)
+				continue
+			}
+
+			fetcher.publish(allData)
+			lastUpdate = time.Now()
+		}
+	}
+}
+
+func startEventPublishers() {
+	productInterval := 5
+	orderInterval := 3
+
+	if config.ProductPollInterval > 0 {
+		productInterval = config.ProductPollInterval
+	}
+	if config.OrderPollInterval > 0 {
+		orderInterval = config.OrderPollInterval
+	}
+
+	productFetcher := DataFetcher[Product]{
+		getAll:       getProducts,
+		getSince:     getProductsSince,
+		publish:      eventManager.PublishProducts,
+		tableName:    "products",
+		pollInterval: productInterval,
+	}
+
+	orderFetcher := DataFetcher[Order]{
+		getAll:       getOrders,
+		getSince:     getOrdersSince,
+		publish:      eventManager.PublishOrders,
+		tableName:    "orders",
+		pollInterval: orderInterval,
+	}
+
+	go startEventPublisher(productFetcher)
+	go startEventPublisher(orderFetcher)
+}
+
 type Config struct {
-	Debug        bool   `yaml:"DEBUG"`
-	DBConnection string `yaml:"DB_CONNECTION"`
-	DBHost       string `yaml:"DB_HOST"`
-	DBPort       string `yaml:"DB_PORT"`
-	DBDatabase   string `yaml:"DB_DATABASE"`
-	DBUsername   string `yaml:"DB_USERNAME"`
-	DBPassword   string `yaml:"DB_PASSWORD"`
-	AppTimezone  string `yaml:"APP_TIMEZONE"`
-	AppUrl       string `yaml:"APP_URL"`
-	AppPort      string `yaml:"APP_PORT"`
+	Debug               bool   `yaml:"DEBUG"`
+	DBConnection        string `yaml:"DB_CONNECTION"`
+	DBHost              string `yaml:"DB_HOST"`
+	DBPort              string `yaml:"DB_PORT"`
+	DBDatabase          string `yaml:"DB_DATABASE"`
+	DBUsername          string `yaml:"DB_USERNAME"`
+	DBPassword          string `yaml:"DB_PASSWORD"`
+	AppTimezone         string `yaml:"APP_TIMEZONE"`
+	AppUrl              string `yaml:"APP_URL"`
+	AppPort             string `yaml:"APP_PORT"`
+	ProductPollInterval int    `yaml:"PRODUCT_POLL_INTERVAL"`
+	OrderPollInterval   int    `yaml:"ORDER_POLL_INTERVAL"`
+	MaxBufferSize       int    `yaml:"MAX_BUFFER_SIZE"`
 }
 
 type Product struct {
@@ -46,6 +261,28 @@ type Product struct {
 	Image       sql.NullString  `json:"image"`
 	Allergens   json.RawMessage `json:"allergens"`
 	CreatedAt   time.Time       `json:"created_at"`
+}
+
+func (p Product) Equal(other Product) bool {
+	return p.Name.String == other.Name.String &&
+		p.Description.String == other.Description.String &&
+		p.Price == other.Price &&
+		p.Stock == other.Stock &&
+		p.Image.String == other.Image.String &&
+		bytes.Equal(p.Allergens, other.Allergens) &&
+		p.CreatedAt.Equal(other.CreatedAt)
+}
+
+func ProductsEqual(a, b []Product) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !a[i].Equal(b[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 func (p Product) MarshalJSON() ([]byte, error) {
@@ -75,6 +312,27 @@ type Order struct {
 	Image     sql.NullString  `json:"image"`
 	Options   json.RawMessage `json:"options"`
 	CreatedAt time.Time       `json:"created_at"`
+}
+
+func (o Order) Equal(other Order) bool {
+	return o.UUID == other.UUID &&
+		o.ProductID == other.ProductID &&
+		o.Quantity == other.Quantity &&
+		o.Image.String == other.Image.String &&
+		bytes.Equal(o.Options, other.Options) &&
+		o.CreatedAt.Equal(other.CreatedAt)
+}
+
+func OrdersEqual(a, b []Order) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !a[i].Equal(b[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // init initializes logging, loads configuration from config.yml, sets up the application timezone, and establishes the database connection.
@@ -177,6 +435,9 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 		log.SetLevel(log.InfoLevel)
 	}
+
+	startEventPublishers()
+
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{config.AppUrl},
@@ -193,7 +454,7 @@ func main() {
 		api.GET("/orders/stream", verifyToken(), streamOrders)
 	}
 	if err := r.Run(":" + config.AppPort); err != nil {
-	    log.Fatalf("Failed to start server: %v", err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 
@@ -239,15 +500,116 @@ func verifyToken() gin.HandlerFunc {
 	}
 }
 
+func getProductsSince(since time.Time) ([]Product, error) {
+	log.Debug("Starting: Fetching product data since", since)
+	products := []Product{}
+	stmt, err := db.Prepare("SELECT name, description, price, stock, image, allergens, created_at FROM products WHERE updated_at > ?")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return products, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(since)
+	if err != nil {
+		log.Errorf("Database error in getProductsSince: %v", err)
+		return products, err
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var p Product
+		var allergensStr sql.NullString
+		err := rows.Scan(&p.Name, &p.Description, &p.Price, &p.Stock, &p.Image, &allergensStr, &p.CreatedAt)
+		if err != nil {
+			log.Errorf("Error scanning product row: %v", err)
+			continue
+		}
+		count++
+		log.Debugf("Product data read #%d: Name: %s, Price: %.2f, Stock: %d", count, p.Name.String, p.Price, p.Stock)
+
+		if allergensStr.Valid {
+			p.Allergens = json.RawMessage(allergensStr.String)
+		}
+		products = append(products, p)
+	}
+
+	return products, nil
+}
+
+func getOrdersSince(since time.Time) ([]Order, error) {
+	log.Debug("Starting: Fetching order data since", since)
+	orders := []Order{}
+	stmt, err := db.Prepare("SELECT uuid, product_id, quantity, image, options, created_at FROM orders WHERE updated_at > ?")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return orders, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query(since)
+	if err != nil {
+		log.Errorf("Database error in getOrdersSince: %v", err)
+		return orders, err
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		var o Order
+		var optionsStr sql.NullString
+		err := rows.Scan(&o.UUID, &o.ProductID, &o.Quantity, &o.Image, &optionsStr, &o.CreatedAt)
+		if err != nil {
+			log.Errorf("Error scanning order row: %v", err)
+			continue
+		}
+		count++
+		log.Debugf("Order data read #%d: UUID: %s, Product ID: %d, Quantity: %d", count, o.UUID, o.ProductID, o.Quantity)
+
+		if optionsStr.Valid {
+			o.Options = json.RawMessage(optionsStr.String)
+		}
+		orders = append(orders, o)
+	}
+
+	return orders, nil
+}
+
+func getLastUpdateTime(tableName string) (time.Time, error) {
+	var lastUpdate time.Time
+	validTables := map[string]bool{
+		"products": true,
+		"orders":   true,
+	}
+	if !validTables[tableName] {
+		return time.Time{}, fmt.Errorf("invalid table name: %s", tableName)
+	}
+	query := fmt.Sprintf("SELECT MAX(updated_at) FROM %s", tableName)
+	err := db.QueryRow(query).Scan(&lastUpdate)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return time.Time{}, nil
+		}
+		return time.Time{}, err
+	}
+	return lastUpdate, nil
+}
+
 // getProducts retrieves all product records from the database.
 // It executes a SQL query on the products table and scans each row into a Product struct.
 // Rows that fail during scanning are logged and skipped, while a query execution error is returned.
 func getProducts() ([]Product, error) {
 	log.Debug("Starting: Fetching product data")
 	products := []Product{}
-	query := "SELECT name, description, price, stock, image, allergens, created_at FROM products"
-	log.Debugf("Executing query: %s", query)
-	rows, err := db.Query(query)
+	stmt, err := db.Prepare("SELECT name, description, price, stock, image, allergens, created_at FROM products")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return products, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
 	if err != nil {
 		log.Errorf("Database error in getProducts: %v", err)
 		return products, err
@@ -282,9 +644,15 @@ func getProducts() ([]Product, error) {
 func getOrders() ([]Order, error) {
 	log.Debug("Starting: Fetching order data")
 	orders := []Order{}
-	query := "SELECT uuid, product_id, quantity, image, options, created_at FROM orders"
-	log.Debugf("Executing query: %s", query)
-	rows, err := db.Query(query)
+	stmt, err := db.Prepare("SELECT uuid, product_id, quantity, image, options, created_at FROM orders")
+	if err != nil {
+		log.Errorf("Error preparing statement: %v", err)
+		return orders, err
+	}
+	defer stmt.Close()
+
+	log.Debug("Executing prepared statement for orders")
+	rows, err := stmt.Query()
 	if err != nil {
 		log.Errorf("Database error in getOrders: %v", err)
 		return orders, err
@@ -312,16 +680,13 @@ func getOrders() ([]Order, error) {
 	return orders, nil
 }
 
-// StreamProducts initiates a server-sent events stream to broadcast product data.
-// It configures the response for SSE and, if requested, enables Gzip compression.
-// Upon establishing the connection, it sends an initial "connected" event and then
-// periodically (every three seconds) retrieves and broadcasts product data.
-// Prior to closing the connection—either after a 5-minute maximum duration or when
-// nearing this limit—it emits a "disconnect_warning" event before ultimately closing the stream.
-func streamProducts(c *gin.Context) {
-	log.Debug("Starting: Product stream broadcast")
+func createStream(c *gin.Context, streamType string, dataFetcher func() (any, error), eventChan chan any) {
+	log.Debugf("Starting: %s stream broadcast", streamType)
 	acceptEncoding := c.GetHeader("Accept-Encoding")
 	useGzip := strings.Contains(acceptEncoding, "gzip")
+
+	cleanup := make(chan struct{})
+	defer close(cleanup)
 
 	if useGzip {
 		log.Debug("Using Gzip compression")
@@ -338,23 +703,49 @@ func streamProducts(c *gin.Context) {
 	c.Writer.Header().Set("Transfer-Encoding", "chunked")
 	c.Writer.Flush()
 
-	data, _ := json.Marshal(gin.H{"message": "Connected to products stream"})
+	data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connected to %s stream", streamType)})
 	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
 	c.Writer.Flush()
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
 	defer cancel()
 
+	initialData, err := dataFetcher()
+	if err == nil {
+		data, _ := json.Marshal(initialData)
+		fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", streamType, data)
+		c.Writer.Flush()
+	}
+
 	startTime := time.Now()
 	maxDuration := 5 * time.Minute
 	disconnectWarningTime := 4 * time.Minute
+	var warningSentMu sync.Mutex
+	warningSent := false
 
-	ticker := time.NewTicker(3 * time.Second)
-	defer ticker.Stop()
+	eventTicker := time.NewTicker(100 * time.Millisecond)
+	defer eventTicker.Stop()
 
 	for {
 		select {
-		case <-ticker.C:
+		case eventData := <-eventChan:
+			data, err := json.Marshal(eventData)
+			if err != nil {
+				log.Errorf("Error marshaling %s data: %v", streamType, err)
+				continue
+			}
+			fmt.Fprintf(c.Writer, "event: %s\ndata: %s\n\n", streamType, data)
+			c.Writer.Flush()
+
+		case <-ctx.Done():
+			log.Debug("Context cancelled or timeout reached")
+			return
+
+		case <-cleanup:
+			log.Debug("Cleanup requested")
+			return
+
+		case <-eventTicker.C:
 			elapsedTime := time.Since(startTime)
 			if elapsedTime >= maxDuration {
 				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection closed after %v seconds", maxDuration.Seconds())})
@@ -363,106 +754,84 @@ func streamProducts(c *gin.Context) {
 				return
 			}
 
-			if elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration {
-				remaining := int(maxDuration.Seconds() - elapsedTime.Seconds())
-				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection will close in %d seconds", remaining)})
-				fmt.Fprintf(c.Writer, "event: disconnect_warning\ndata: %s\n\n", data)
-				c.Writer.Flush()
+			warningSentMu.Lock()
+			shouldSendWarning := elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration && !warningSent
+			if shouldSendWarning {
+				warningSent = true
 			}
+			warningSentMu.Unlock()
+			if shouldSendWarning {
+				go func() {
+					countdown := 60
+					ticker := time.NewTicker(1 * time.Second)
+					defer ticker.Stop()
 
-			products, err := getProducts()
-			if err != nil {
-				continue
+					for countdown > 0 {
+						select {
+						case <-ticker.C:
+							data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection will close in %d seconds", countdown)})
+							fmt.Fprintf(c.Writer, "event: disconnect_warning\ndata: %s\n\n", data)
+							c.Writer.Flush()
+							countdown--
+						case <-ctx.Done():
+							return
+						case <-cleanup:
+							return
+						}
+					}
+
+					data, _ := json.Marshal(gin.H{"message": "Connection closed"})
+					fmt.Fprintf(c.Writer, "event: close\ndata: %s\n\n", data)
+					c.Writer.Flush()
+					cancel()
+				}()
 			}
-
-			data, err := json.Marshal(products)
-			if err != nil {
-				log.Errorf("Error marshaling products: %v", err)
-				continue
-			}
-
-			fmt.Fprintf(c.Writer, "event: products\ndata: %s\n\n", data)
-			c.Writer.Flush()
-
-		case <-ctx.Done():
-			return
 		}
 	}
 }
 
-// streamOrders initiates a server-sent events (SSE) stream to broadcast live order updates.
-// It configures SSE headers and, if requested by the client via the "Accept-Encoding" header, compresses responses using Gzip.
-// Upon connection, it sends a confirmation message, then periodically retrieves and streams order data every 5 seconds.
-// The stream issues a disconnect warning as it nears the 5-minute timeout, after which it sends a close event and terminates.
-func streamOrders(c *gin.Context) {
-	log.Debug("Starting: Order stream broadcast")
-	acceptEncoding := c.GetHeader("Accept-Encoding")
-	useGzip := strings.Contains(acceptEncoding, "gzip")
+func streamProducts(c *gin.Context) {
+	clientID := uuid.New().String()
+	productChan := eventManager.SubscribeProducts(clientID)
+	defer func() {
+		eventManager.UnsubscribeProducts(clientID)
+	}()
 
-	if useGzip {
-		log.Debug("Using Gzip compression")
-		c.Writer.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(c.Writer)
-		defer gz.Close()
-		c.Writer = &gzipResponseWriter{Writer: gz, ResponseWriter: c.Writer}
+	productFetcher := func() (any, error) {
+		return getProducts()
 	}
 
-	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	c.Writer.Header().Set("Cache-Control", "no-cache, no-transform")
-	c.Writer.Header().Set("Connection", "keep-alive")
-	c.Writer.Header().Set("X-Accel-Buffering", "no")
-	c.Writer.Header().Set("Transfer-Encoding", "chunked")
-	c.Writer.Flush()
-
-	data, _ := json.Marshal(gin.H{"message": "Connected to orders stream"})
-	fmt.Fprintf(c.Writer, "event: connected\ndata: %s\n\n", data)
-	c.Writer.Flush()
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
-	defer cancel()
-
-	startTime := time.Now()
-	maxDuration := 5 * time.Minute
-	disconnectWarningTime := 4 * time.Minute
-
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			elapsedTime := time.Since(startTime)
-			if elapsedTime >= maxDuration {
-				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection closed after %v seconds", maxDuration.Seconds())})
-				fmt.Fprintf(c.Writer, "event: close\ndata: %s\n\n", data)
-				c.Writer.Flush()
-				return
-			}
-
-			if elapsedTime >= disconnectWarningTime && elapsedTime < maxDuration {
-				remaining := int(maxDuration.Seconds() - elapsedTime.Seconds())
-				data, _ := json.Marshal(gin.H{"message": fmt.Sprintf("Connection will close in %d seconds", remaining)})
-				fmt.Fprintf(c.Writer, "event: disconnect_warning\ndata: %s\n\n", data)
-				c.Writer.Flush()
-			}
-
-			orders, err := getOrders()
-			if err != nil {
-				continue
-			}
-
-			data, err := json.Marshal(orders)
-			if err != nil {
-				log.Errorf("Error marshaling orders: %v", err)
-				continue
-			}
-
-			fmt.Fprintf(c.Writer, "event: orders\ndata: %s\n\n", data)
-			c.Writer.Flush()
-		case <-ctx.Done():
-			return
+	anyChan := make(chan any, eventManager.bufferSize)
+	go func() {
+		defer close(anyChan)
+		for p := range productChan {
+			anyChan <- p
 		}
+	}()
+
+	createStream(c, "products", productFetcher, anyChan)
+}
+
+func streamOrders(c *gin.Context) {
+	clientID := uuid.New().String()
+	orderChan := eventManager.SubscribeOrders(clientID)
+	defer func() {
+		eventManager.UnsubscribeOrders(clientID)
+	}()
+
+	orderFetcher := func() (any, error) {
+		return getOrders()
 	}
+
+	anyChan := make(chan any, eventManager.bufferSize)
+	go func() {
+		defer close(anyChan)
+		for o := range orderChan {
+			anyChan <- o
+		}
+	}()
+
+	createStream(c, "orders", orderFetcher, anyChan)
 }
 
 type gzipResponseWriter struct {
