@@ -60,58 +60,29 @@ func (em *EventManager) increaseBufferSize() bool {
 	return false
 }
 
-func (em *EventManager) tryPublishWithRetry(ch chan []Product, products []Product) bool {
+func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T) bool {
 	for attempts := 0; attempts < 2; attempts++ {
 		select {
-		case ch <- products:
+		case ch <- items:
 			if attempts > 0 {
-				log.Infof("Successfully delivered product updates after buffer resize")
+				log.Infof("Successfully delivered updates after buffer resize")
 			}
 			return true
 		default:
 			if attempts == 0 && em.increaseBufferSize() {
-				log.Warnf("Attempting to resize buffer and retry product delivery (current channel capacity: %d)", cap(ch))
-				newCh := make(chan []Product, em.bufferSize)
+				log.Warnf("Attempting to resize buffer and retry delivery (current channel capacity: %d)", cap(ch))
+				newCh := make(chan []T, em.bufferSize)
 				close(ch)
 				copied := 0
-				for p := range ch {
-					newCh <- p
+				for item := range ch {
+					newCh <- item
 					copied++
 				}
-				log.Warnf("Copied %d existing product messages to new channel (new capacity: %d)", copied, cap(newCh))
+				log.Warnf("Copied %d existing messages to new channel (new capacity: %d)", copied, cap(newCh))
 				ch = newCh
 				continue
 			}
-			log.Warnf("Product updates could not be delivered: buffer full (capacity: %d) and max size reached", cap(ch))
-			return false
-		}
-	}
-	return false
-}
-
-func (em *EventManager) tryPublishOrderWithRetry(ch chan []Order, orders []Order) bool {
-	for attempts := 0; attempts < 2; attempts++ {
-		select {
-		case ch <- orders:
-			if attempts > 0 {
-				log.Infof("Successfully delivered order updates after buffer resize")
-			}
-			return true
-		default:
-			if attempts == 0 && em.increaseBufferSize() {
-				log.Warnf("Attempting to resize buffer and retry order delivery (current channel capacity: %d)", cap(ch))
-				newCh := make(chan []Order, em.bufferSize)
-				close(ch)
-				copied := 0
-				for o := range ch {
-					newCh <- o
-					copied++
-				}
-				log.Warnf("Copied %d existing order messages to new channel (new capacity: %d)", copied, cap(newCh))
-				ch = newCh
-				continue
-			}
-			log.Warnf("Order updates could not be delivered: buffer full (capacity: %d) and max size reached", cap(ch))
+			log.Warnf("Updates could not be delivered: buffer full (capacity: %d) and max size reached", cap(ch))
 			return false
 		}
 	}
@@ -161,7 +132,7 @@ func (em *EventManager) PublishProducts(products []Product) {
 	defer em.mu.RUnlock()
 
 	for id, ch := range em.productSubscribers {
-		if !em.tryPublishWithRetry(ch, products) {
+		if !tryPublishWithRetry(em, ch, products) {
 			log.Errorf("Failed to deliver product updates to subscriber %s", id)
 		}
 	}
@@ -172,7 +143,7 @@ func (em *EventManager) PublishOrders(orders []Order) {
 	defer em.mu.RUnlock()
 
 	for id, ch := range em.orderSubscribers {
-		if !em.tryPublishOrderWithRetry(ch, orders) {
+		if !tryPublishWithRetry(em, ch, orders) {
 			log.Errorf("Failed to deliver order updates to subscriber %s", id)
 		}
 	}
