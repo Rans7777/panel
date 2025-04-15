@@ -20,12 +20,7 @@ updates:
     schedule:
       interval: "daily"
 
-  - package-ecosystem: "pip"
-    directory: "/API/python-src"
-    schedule:
-      interval: "daily"
-
   - package-ecosystem: "gomod"
-    directory: "/API/go-src"
+    directory: "/API"
     schedule:
       interval: "daily"
