@@ -44,11 +44,11 @@ final class ProductResource extends Resource
                         ]),
 
                     Forms\Components\Section::make('アレルギー情報')
-                        ->description('該当するアレルギー品目を選択してください')
+                        ->description('アレルギー品目を入力してください')
                         ->schema([
-                            Forms\Components\CheckboxList::make('allergens')
-                                ->label('特定原材料（7品目）')
-                                ->options([
+                            Forms\Components\TagsInput::make('allergens')
+                                ->label('')
+                                ->suggestions([
                                     '卵' => '卵',
                                     '乳' => '乳',
                                     '小麦' => '小麦',
@@ -56,9 +56,7 @@ final class ProductResource extends Resource
                                     'かに' => 'かに',
                                     '落花生' => '落花生',
                                     'そば' => 'そば',
-                                ])
-                                ->columns(3)
-                                ->gridDirection('row'),
+                                ]),
                         ])
                         ->columnSpan('full'),
 
