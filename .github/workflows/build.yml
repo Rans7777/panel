@@ -42,9 +42,9 @@ jobs:
         go-version: 1.24.1
     - name: Install dependencies
       run: |
-        cd API/go-src
+        cd API
         go mod download
     - name: Build test
       run: |
-        cd API/go-src
+        cd API
         go build -v ./...
