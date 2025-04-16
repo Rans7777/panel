@@ -69,6 +69,11 @@ func (em *EventManager) increaseBufferSize() bool {
 		em.bufferSize = newSize
 		em.lastResizeTime = time.Now()
 		log.Warnf("Buffer size increased from %d to %d (max: %d)", oldSize, newSize, em.maxBufferSize)
+		message := fmt.Sprintf("バッファサイズが増加しました\n- 旧サイズ: %d\n- 新サイズ: %d\n- 最大サイズ: %d", oldSize, newSize, em.maxBufferSize)
+		if err := sendDiscordNotification(message, "warning"); err != nil {
+			log.Errorf("Failed to send Discord notification: %v", err)
+		}
+
 		return true
 	}
 	log.Warnf("Cannot increase buffer size: already at maximum (%d)", em.maxBufferSize)
@@ -86,6 +91,10 @@ func (em *EventManager) startBufferSizeReducer() {
 				if newSize != oldSize {
 					em.bufferSize = newSize
 					log.Infof("Buffer size reduced from %d to %d (default: %d)", oldSize, newSize, em.defaultBufferSize)
+					message := fmt.Sprintf("バッファサイズが減少しました\n- 旧サイズ: %d\n- 新サイズ: %d\n- デフォルトサイズ: %d", oldSize, newSize, em.defaultBufferSize)
+					if err := sendDiscordNotification(message, "info"); err != nil {
+						log.Errorf("Failed to send Discord notification: %v", err)
+					}
 				}
 			}
 			em.mu.Unlock()
@@ -281,6 +290,7 @@ type Config struct {
 	ProductPollInterval int    `yaml:"PRODUCT_POLL_INTERVAL"`
 	OrderPollInterval   int    `yaml:"ORDER_POLL_INTERVAL"`
 	MaxBufferSize       int    `yaml:"MAX_BUFFER_SIZE"`
+	DiscordWebhookURL   string `yaml:"DISCORD_WEBHOOK_URL"`
 }
 
 type Product struct {
@@ -365,10 +375,6 @@ func OrdersEqual(a, b []Order) bool {
 	return true
 }
 
-// init initializes logging, loads configuration from config.yml, sets up the application timezone, and establishes the database connection.
-// It configures log output to both stdout and a file, parses the YAML configuration, and defaults to UTC if the APP_TIMEZONE is unset or invalid.
-// Depending on the configuration, it connects to either a SQLite or a MySQL database, setting appropriate connection limits and verifying connectivity.
-// Fatal errors during these initialization steps result in log termination and application exit.
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -454,9 +460,6 @@ func init() {
 	}
 }
 
-// main initializes and starts the web server. It configures the Gin framework based on the debug flag by setting
-// the appropriate mode and logging level, applies CORS middleware and trusted proxies, and registers secured API
-// routes for streaming product and order data. The server then listens on port 8000.
 func main() {
 	if config.Debug {
 		gin.SetMode(gin.DebugMode)
@@ -489,11 +492,6 @@ func main() {
 	}
 }
 
-// VerifyToken returns a Gin middleware that authenticates HTTP requests by validating an access token.
-// It retrieves the Authorization header, strips the "Bearer " prefix if present, and checks that the token
-// was created within the last 5 minutes by querying the database. If the token is missing, invalid, or expired,
-// the middleware aborts the request with an appropriate HTTP status, otherwise it attaches the token to the
-// request context and allows the request to proceed.
 func verifyToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log.Debug("Starting: Token verification")
@@ -627,9 +625,6 @@ func getLastUpdateTime(tableName string) (time.Time, error) {
 	return lastUpdate, nil
 }
 
-// getProducts retrieves all product records from the database.
-// It executes a SQL query on the products table and scans each row into a Product struct.
-// Rows that fail during scanning are logged and skipped, while a query execution error is returned.
 func getProducts() ([]Product, error) {
 	log.Debug("Starting: Fetching product data")
 	products := []Product{}
@@ -668,10 +663,6 @@ func getProducts() ([]Product, error) {
 	return products, nil
 }
 
-// getOrders retrieves orders from the database and returns them as a slice of Order.
-// It executes a SQL query to fetch the uuid, product_id, quantity, image, options, and created_at fields from the "orders" table.
-// In case of a query error, the function immediately returns the error. For each fetched row, any scan error is logged and that row is skipped.
-// When the options field is valid, it is converted from a SQL null string to a JSON raw message before being assigned.
 func getOrders() ([]Order, error) {
 	log.Debug("Starting: Fetching order data")
 	orders := []Order{}
@@ -883,4 +874,75 @@ func (w *gzipResponseWriter) Flush() {
 		f.Flush()
 	}
 	w.ResponseWriter.Flush()
+}
+
+type DiscordMessage struct {
+	Content string         `json:"content"`
+	Embeds  []DiscordEmbed `json:"embeds,omitempty"`
+}
+
+type DiscordEmbed struct {
+	Title       string         `json:"title,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Color       int            `json:"color,omitempty"`
+	Fields      []DiscordField `json:"fields,omitempty"`
+	Timestamp   string         `json:"timestamp,omitempty"`
+}
+
+type DiscordField struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Inline bool   `json:"inline,omitempty"`
+}
+
+func sendDiscordNotification(message string, level string) error {
+	if config.DiscordWebhookURL == "" {
+		log.Error("Discord webhook URL is not configured")
+		return fmt.Errorf("discord webhook URL is not configured")
+	}
+
+	var color int
+	switch level {
+		case "info":
+			color = 0x00ff00
+		case "warning":
+			color = 0xffff00
+		case "error":
+			color = 0xff0000
+		default:
+			color = 0x808080
+	}
+
+	embed := DiscordEmbed{
+		Title:       "システム通知",
+		Description: message,
+		Color:       color,
+		Timestamp:   time.Now().Format(time.RFC3339),
+	}
+
+	discordMsg := DiscordMessage{
+		Embeds: []DiscordEmbed{embed},
+	}
+
+	jsonData, err := json.Marshal(discordMsg)
+	if err != nil {
+		log.Errorf("Failed to marshal Discord message: %v", err)
+		return fmt.Errorf("failed to marshal discord message: %w", err)
+	}
+
+	resp, err := http.Post(config.DiscordWebhookURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Errorf("Failed to send Discord notification: %v", err)
+		return fmt.Errorf("failed to send discord notification: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		errMsg := fmt.Sprintf("Discord API returned error status %d: %s", resp.StatusCode, string(body))
+		log.Error(errMsg)
+		return fmt.Errorf("discord API error: %s", errMsg)
+	}
+
+	return nil
 }
