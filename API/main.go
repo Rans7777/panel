@@ -93,6 +93,9 @@ func (em *EventManager) startBufferSizeReducer() {
 	}()
 }
 
+// tryPublishWithRetry は、指定されたサブスクライバーチャンネルにアイテムを送信し、バッファが満杯の場合は一度だけバッファサイズの拡張と再送信を試みます。
+// バッファ拡張後も送信できない場合は false を返します。
+// 成功時は true を返します。
 func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T, subscriberId string, updateMapFunc func(string, chan []T)) bool {
 	for attempts := 0; attempts < 2; attempts++ {
 		select {
@@ -456,7 +459,8 @@ func init() {
 
 // main initializes and starts the web server. It configures the Gin framework based on the debug flag by setting
 // the appropriate mode and logging level, applies CORS middleware and trusted proxies, and registers secured API
-// routes for streaming product and order data. The server then listens on port 8000.
+// mainは、SSEによる商品および注文データのストリーミングサーバーを初期化し、HTTPサーバーを起動します。
+// 設定やデバッグモードの適用、イベントパブリッシャーとバッファサイズ管理の開始、CORSや認証ミドルウェアの設定、APIルートの登録を行い、指定ポートでリクエストを受け付けます。
 func main() {
 	if config.Debug {
 		gin.SetMode(gin.DebugMode)
