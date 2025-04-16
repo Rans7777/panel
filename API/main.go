@@ -360,6 +360,7 @@ func main() {
 	}
 
 	startEventPublishers()
+	startTokenCleanup()
 
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
@@ -831,4 +832,35 @@ func sendDiscordNotification(message string, level string) error {
 	}
 
 	return nil
+}
+
+func DeleteExpiredTokens() {
+	log.Debug("Starting: Delete expired tokens")
+	expiryTime := time.Now().In(timezone).Add(-5 * time.Minute)
+
+	query := "DELETE FROM access_tokens WHERE created_at < ?"
+	result, err := db.Exec(query, expiryTime)
+	if err != nil {
+		log.Errorf("Error deleting expired tokens: %v", err)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Errorf("Error getting rows affected: %v", err)
+		return
+	}
+
+	if rowsAffected > 0 {
+		log.Debugf("Deleted %d expired tokens", rowsAffected)
+	}
+}
+
+func startTokenCleanup() {
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for range ticker.C {
+			DeleteExpiredTokens()
+		}
+	}()
 }
