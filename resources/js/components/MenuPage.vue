@@ -125,7 +125,7 @@
               <div v-if="product.has_options" class="mt-4 pt-4" :class="{ 'border-t border-gray-700': isDarkMode, 'border-t border-gray-200': !isDarkMode }">
                 <h3 class="text-base font-bold mb-2 relative inline-block pb-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px]" :class="{ 'text-gray-400 after:bg-gray-700': isDarkMode, 'text-gray-600 after:bg-gray-200': !isDarkMode }">オプション</h3>
                 <div v-for="option in product.options" :key="option.id" class="flex justify-between mb-1 py-2 last:border-b-0" :class="{ 'border-b border-dashed border-gray-700': isDarkMode, 'border-b border-dashed border-gray-200': !isDarkMode }">
-                  <span :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }" class="text-[0.95rem]">{{ option.option_name }}</span>
+                  <span :class="{ 'text-gray-400': isDarkMode, 'text-gray-600': !isDarkMode }" class="text-[0.95rem]">{{ option.name.String }}</span>
                   <span :class="{ 'text-red-400': isDarkMode, 'text-red-600': !isDarkMode }" class="font-medium text-[0.95rem]">+{{ General.formatPrice(option.price) }}</span>
                 </div>
               </div>
