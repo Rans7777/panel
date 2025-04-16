@@ -32,111 +32,18 @@ type EventManager struct {
 	productSubscribers map[string]chan []Product
 	orderSubscribers   map[string]chan []Order
 	mu                 sync.RWMutex
-	bufferSize         int
-	maxBufferSize      int
-	defaultBufferSize  int
-	lastResizeTime     time.Time
-	resizeCooldown     time.Duration
 }
 
 var eventManager = &EventManager{
 	productSubscribers: make(map[string]chan []Product),
 	orderSubscribers:   make(map[string]chan []Order),
-	bufferSize:         100,
-	defaultBufferSize:  100,
-	maxBufferSize: func() int {
-		if config.MaxBufferSize > 0 {
-			return config.MaxBufferSize
-		}
-		return 500
-	}(),
-	lastResizeTime: time.Now(),
-	resizeCooldown: 5 * time.Minute,
-}
-
-func (em *EventManager) increaseBufferSize() bool {
-	em.mu.Lock()
-	defer em.mu.Unlock()
-
-	if time.Since(em.lastResizeTime) < em.resizeCooldown {
-		log.Debugf("Buffer resize skipped: cooldown period active (remaining: %v)", em.resizeCooldown-time.Since(em.lastResizeTime))
-		return false
-	}
-
-	if em.bufferSize < em.maxBufferSize {
-		oldSize := em.bufferSize
-		newSize := min(em.bufferSize*2, em.maxBufferSize)
-		em.bufferSize = newSize
-		em.lastResizeTime = time.Now()
-		log.Warnf("Buffer size increased from %d to %d (max: %d)", oldSize, newSize, em.maxBufferSize)
-		message := fmt.Sprintf("バッファサイズが増加しました\n- 旧サイズ: %d\n- 新サイズ: %d\n- 最大サイズ: %d", oldSize, newSize, em.maxBufferSize)
-		if err := sendDiscordNotification(message, "warning"); err != nil {
-			log.Errorf("Failed to send Discord notification: %v", err)
-		}
-
-		return true
-	}
-	log.Warnf("Cannot increase buffer size: already at maximum (%d)", em.maxBufferSize)
-	return false
-}
-
-func (em *EventManager) startBufferSizeReducer() {
-	ticker := time.NewTicker(1 * time.Hour)
-	go func() {
-		for range ticker.C {
-			em.mu.Lock()
-			if em.bufferSize > em.defaultBufferSize && time.Since(em.lastResizeTime) >= em.resizeCooldown {
-				oldSize := em.bufferSize
-				newSize := max(em.bufferSize/2, em.defaultBufferSize)
-				if newSize != oldSize {
-					em.bufferSize = newSize
-					log.Infof("Buffer size reduced from %d to %d (default: %d)", oldSize, newSize, em.defaultBufferSize)
-					message := fmt.Sprintf("バッファサイズが減少しました\n- 旧サイズ: %d\n- 新サイズ: %d\n- デフォルトサイズ: %d", oldSize, newSize, em.defaultBufferSize)
-					if err := sendDiscordNotification(message, "info"); err != nil {
-						log.Errorf("Failed to send Discord notification: %v", err)
-					}
-				}
-			}
-			em.mu.Unlock()
-		}
-	}()
-}
-
-func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T, subscriberId string, updateMapFunc func(string, chan []T)) bool {
-	for attempts := 0; attempts < 2; attempts++ {
-		select {
-		case ch <- items:
-			if attempts > 0 {
-				log.Infof("Successfully delivered updates after buffer resize")
-			}
-			return true
-		default:
-			if attempts == 0 && em.increaseBufferSize() {
-				log.Warnf("Attempting to resize buffer and retry delivery (current channel capacity: %d)", cap(ch))
-				newCh := make(chan []T, em.bufferSize)
-				close(ch)
-				copied := 0
-				for item := range ch {
-					newCh <- item
-					copied++
-				}
-				log.Warnf("Copied %d existing messages to new channel (new capacity: %d)", copied, cap(newCh))
-				ch = newCh
-				updateMapFunc(subscriberId, newCh)
-				continue
-			}
-			log.Warnf("Updates could not be delivered: buffer full (capacity: %d) and max size reached", cap(ch))
-			return false
-		}
-	}
-	return false
 }
 
 func (em *EventManager) SubscribeProducts(id string) chan []Product {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
-	ch := make(chan []Product, em.bufferSize)
+	ch := make(chan []Product)
 	em.productSubscribers[id] = ch
 	return ch
 }
@@ -145,29 +52,9 @@ func (em *EventManager) SubscribeOrders(id string) chan []Order {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
-	ch := make(chan []Order, em.bufferSize)
+	ch := make(chan []Order)
 	em.orderSubscribers[id] = ch
 	return ch
-}
-
-func (em *EventManager) UnsubscribeProducts(id string) {
-	em.mu.Lock()
-	defer em.mu.Unlock()
-
-	if ch, exists := em.productSubscribers[id]; exists {
-		close(ch)
-		delete(em.productSubscribers, id)
-	}
-}
-
-func (em *EventManager) UnsubscribeOrders(id string) {
-	em.mu.Lock()
-	defer em.mu.Unlock()
-
-	if ch, exists := em.orderSubscribers[id]; exists {
-		close(ch)
-		delete(em.orderSubscribers, id)
-	}
 }
 
 func (em *EventManager) PublishProducts(products []Product) {
@@ -175,12 +62,14 @@ func (em *EventManager) PublishProducts(products []Product) {
 	defer em.mu.RUnlock()
 
 	for id, ch := range em.productSubscribers {
-		if !tryPublishWithRetry(em, ch, products, id, func(id string, newCh chan []Product) {
-			em.mu.Lock()
-			defer em.mu.Unlock()
-			em.productSubscribers[id] = newCh
-		}) {
+		select {
+		case ch <- products:
+		default:
 			log.Errorf("Failed to deliver product updates to subscriber %s", id)
+			message := fmt.Sprintf("製品の更新の配信に失敗しました\n- サブスクライバーID: %s", id)
+			if err := sendDiscordNotification(message, "error"); err != nil {
+				log.Errorf("Failed to send Discord notification: %v", err)
+			}
 		}
 	}
 }
@@ -190,12 +79,14 @@ func (em *EventManager) PublishOrders(orders []Order) {
 	defer em.mu.RUnlock()
 
 	for id, ch := range em.orderSubscribers {
-		if !tryPublishWithRetry(em, ch, orders, id, func(id string, newCh chan []Order) {
-			em.mu.Lock()
-			defer em.mu.Unlock()
-			em.orderSubscribers[id] = newCh
-		}) {
+		select {
+		case ch <- orders:
+		default:
 			log.Errorf("Failed to deliver order updates to subscriber %s", id)
+			message := fmt.Sprintf("注文の更新の配信に失敗しました\n- サブスクライバーID: %s", id)
+			if err := sendDiscordNotification(message, "error"); err != nil {
+				log.Errorf("Failed to send Discord notification: %v", err)
+			}
 		}
 	}
 }
@@ -289,7 +180,6 @@ type Config struct {
 	AppPort             string `yaml:"APP_PORT"`
 	ProductPollInterval int    `yaml:"PRODUCT_POLL_INTERVAL"`
 	OrderPollInterval   int    `yaml:"ORDER_POLL_INTERVAL"`
-	MaxBufferSize       int    `yaml:"MAX_BUFFER_SIZE"`
 	DiscordWebhookURL   string `yaml:"DISCORD_WEBHOOK_URL"`
 }
 
@@ -470,7 +360,6 @@ func main() {
 	}
 
 	startEventPublishers()
-	eventManager.startBufferSizeReducer()
 
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
@@ -815,15 +704,12 @@ func createStream(c *gin.Context, streamType string, dataFetcher func() (any, er
 func streamProducts(c *gin.Context) {
 	clientID := uuid.New().String()
 	productChan := eventManager.SubscribeProducts(clientID)
-	defer func() {
-		eventManager.UnsubscribeProducts(clientID)
-	}()
 
 	productFetcher := func() (any, error) {
 		return getProducts()
 	}
 
-	anyChan := make(chan any, eventManager.bufferSize)
+	anyChan := make(chan any, 100)
 	go func() {
 		defer close(anyChan)
 		for p := range productChan {
@@ -837,15 +723,12 @@ func streamProducts(c *gin.Context) {
 func streamOrders(c *gin.Context) {
 	clientID := uuid.New().String()
 	orderChan := eventManager.SubscribeOrders(clientID)
-	defer func() {
-		eventManager.UnsubscribeOrders(clientID)
-	}()
 
 	orderFetcher := func() (any, error) {
 		return getOrders()
 	}
 
-	anyChan := make(chan any, eventManager.bufferSize)
+	anyChan := make(chan any, 100)
 	go func() {
 		defer close(anyChan)
 		for o := range orderChan {
@@ -903,14 +786,14 @@ func sendDiscordNotification(message string, level string) error {
 
 	var color int
 	switch level {
-		case "info":
-			color = 0x00ff00
-		case "warning":
-			color = 0xffff00
-		case "error":
-			color = 0xff0000
-		default:
-			color = 0x808080
+	case "info":
+		color = 0x00ff00
+	case "warning":
+		color = 0xffff00
+	case "error":
+		color = 0xff0000
+	default:
+		color = 0x808080
 	}
 
 	embed := DiscordEmbed{
@@ -933,7 +816,7 @@ func sendDiscordNotification(message string, level string) error {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
-	resp, err := client.Post(config.DiscordWebhookURL, "application/json", bytes.NewBuffer(jsonData))		
+	resp, err := client.Post(config.DiscordWebhookURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		log.Errorf("Failed to send Discord notification: %v", err)
 		return fmt.Errorf("failed to send discord notification: %w", err)
