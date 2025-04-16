@@ -34,13 +34,18 @@ final class ProductResource extends Resource
                                 ->required()
                                 ->maxLength(255)
                                 ->placeholder('例：チョコレートケーキ')
-                                ->columnSpan(2),
+                                ->live()
+                                ->afterStateUpdated(function (string $state, Forms\Set $set) {
+                                    $set('slug', $state);
+                                }),
 
                             Forms\Components\Textarea::make('description')
                                 ->label('商品概要')
                                 ->maxLength(500)
-                                ->placeholder('商品の説明を入力してください')
-                                ->columnSpan(2),
+                                ->placeholder('商品の説明を入力してください'),
+
+                            Forms\Components\Hidden::make('slug')
+                                ->reactive(),
                         ]),
 
                     Forms\Components\Section::make('アレルギー情報')
