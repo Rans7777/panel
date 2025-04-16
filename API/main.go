@@ -930,7 +930,10 @@ func sendDiscordNotification(message string, level string) error {
 		return fmt.Errorf("failed to marshal discord message: %w", err)
 	}
 
-	resp, err := http.Post(config.DiscordWebhookURL, "application/json", bytes.NewBuffer(jsonData))
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Post(config.DiscordWebhookURL, "application/json", bytes.NewBuffer(jsonData))		
 	if err != nil {
 		log.Errorf("Failed to send Discord notification: %v", err)
 		return fmt.Errorf("failed to send discord notification: %w", err)
