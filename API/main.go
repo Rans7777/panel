@@ -34,33 +34,63 @@ type EventManager struct {
 	mu                 sync.RWMutex
 	bufferSize         int
 	maxBufferSize      int
+	defaultBufferSize  int
+	lastResizeTime     time.Time
+	resizeCooldown     time.Duration
 }
 
 var eventManager = &EventManager{
 	productSubscribers: make(map[string]chan []Product),
 	orderSubscribers:   make(map[string]chan []Order),
 	bufferSize:         100,
+	defaultBufferSize:  100,
 	maxBufferSize: func() int {
 		if config.MaxBufferSize > 0 {
 			return config.MaxBufferSize
 		}
 		return 500
 	}(),
+	lastResizeTime: time.Now(),
+	resizeCooldown: 5 * time.Minute,
 }
 
 func (em *EventManager) increaseBufferSize() bool {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
+	if time.Since(em.lastResizeTime) < em.resizeCooldown {
+		log.Debugf("Buffer resize skipped: cooldown period active (remaining: %v)", em.resizeCooldown-time.Since(em.lastResizeTime))
+		return false
+	}
+
 	if em.bufferSize < em.maxBufferSize {
 		oldSize := em.bufferSize
 		newSize := min(em.bufferSize*2, em.maxBufferSize)
 		em.bufferSize = newSize
+		em.lastResizeTime = time.Now()
 		log.Warnf("Buffer size increased from %d to %d (max: %d)", oldSize, newSize, em.maxBufferSize)
 		return true
 	}
 	log.Warnf("Cannot increase buffer size: already at maximum (%d)", em.maxBufferSize)
 	return false
+}
+
+func (em *EventManager) startBufferSizeReducer() {
+	ticker := time.NewTicker(1 * time.Hour)
+	go func() {
+		for range ticker.C {
+			em.mu.Lock()
+			if em.bufferSize > em.defaultBufferSize && time.Since(em.lastResizeTime) >= em.resizeCooldown {
+				oldSize := em.bufferSize
+				newSize := max(em.bufferSize/2, em.defaultBufferSize)
+				if newSize != oldSize {
+					em.bufferSize = newSize
+					log.Infof("Buffer size reduced from %d to %d (default: %d)", oldSize, newSize, em.defaultBufferSize)
+				}
+			}
+			em.mu.Unlock()
+		}
+	}()
 }
 
 func tryPublishWithRetry[T any](em *EventManager, ch chan []T, items []T, subscriberId string, updateMapFunc func(string, chan []T)) bool {
@@ -437,6 +467,7 @@ func main() {
 	}
 
 	startEventPublishers()
+	eventManager.startBufferSizeReducer()
 
 	r := gin.New()
 	r.Use(cors.New(cors.Config{
