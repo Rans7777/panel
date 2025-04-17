@@ -29,14 +29,14 @@ jobs:
       - name: Create API release archive
         run: |
           cd API
-          tar -czvf api-release.tar.gz main
+          tar -czvf api-release.tar.gz main config-example.yml
           mv api-release.tar.gz ../
           cd ..
 
       - name: Create web release archive
         run: |
           rm -rf tests API
-          tar --exclude='api-release.tar.gz' -czvf web-release.tar.gz *
+          tar --exclude='api-release.tar.gz' -czvf web-release.tar.gz .env.example *
 
       - name: sumcheck
         run: |
