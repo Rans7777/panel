@@ -82,8 +82,13 @@ final class ProductResource extends Resource
                                 ->minValue(0)
                                 ->numeric()
                                 ->required(),
+
+                            Forms\Components\TextInput::make('limit_stock')
+                                ->label('限定数')
+                                ->suffix('個')
+                                ->numeric(),
                         ])
-                        ->columns(2),
+                        ->columns(3),
 
                     Forms\Components\Section::make('商品画像')
                         ->schema([
