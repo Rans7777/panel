@@ -29,7 +29,8 @@ final class UserResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('基本情報')
+                Forms\Components\Section::make('basic')
+                    ->heading('基本情報')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -48,9 +49,10 @@ final class UserResource extends Resource
                             ->required(fn ($livewire) => !isset($livewire->record) || auth()->id() !== $livewire->record->id)
                             ->label('パスワード'),
                     ])
-                    ->columns(2),
+                    ->columns(),
 
-                Forms\Components\Section::make('アカウント設定')
+                Forms\Components\Section::make('account_setting')
+                    ->heading('アカウント設定')
                     ->schema([
                         ToggleButtons::make('is_active')
                             ->label('アカウントの状態')
@@ -67,7 +69,7 @@ final class UserResource extends Resource
                             ->label('ロール')
                             ->required(),
                     ])
-                    ->columns(2),
+                    ->columns(),
             ]);
     }
 

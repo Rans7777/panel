@@ -184,14 +184,14 @@ type Config struct {
 }
 
 type Product struct {
-	Name        sql.NullString  `json:"name"`
-	Description sql.NullString  `json:"description"`
-	Price       float64         `json:"price"`
-	Stock       int             `json:"stock"`
-	Limit_stock sql.NullInt64   `json:"limit_stock"`
-	Image       sql.NullString  `json:"image"`
-	Allergens   json.RawMessage `json:"allergens"`
-	CreatedAt   time.Time       `json:"created_at"`
+	Name          sql.NullString  `json:"name"`
+	Description   sql.NullString  `json:"description"`
+	Price         float64         `json:"price"`
+	Stock         int             `json:"stock"`
+	LimitQuantity sql.NullInt64   `json:"limit_quantity"`
+	Image         sql.NullString  `json:"image"`
+	Allergens     json.RawMessage `json:"allergens"`
+	CreatedAt     time.Time       `json:"created_at"`
 }
 
 func (p Product) Equal(other Product) bool {
@@ -199,7 +199,7 @@ func (p Product) Equal(other Product) bool {
 		p.Description.String == other.Description.String &&
 		p.Price == other.Price &&
 		p.Stock == other.Stock &&
-		p.Limit_stock.Int64 == other.Limit_stock.Int64 &&
+		p.LimitQuantity.Int64 == other.LimitQuantity.Int64 &&
 		p.Image.String == other.Image.String &&
 		bytes.Equal(p.Allergens, other.Allergens) &&
 		p.CreatedAt.Equal(other.CreatedAt)
@@ -218,31 +218,31 @@ func ProductsEqual(a, b []Product) bool {
 }
 
 func (p Product) MarshalJSON() ([]byte, error) {
-	var limitStock any
-	if p.Limit_stock.Valid {
-		limitStock = p.Limit_stock.Int64
+	var LimitQuantity any
+	if p.LimitQuantity.Valid {
+		LimitQuantity = p.LimitQuantity.Int64
 	} else {
-		limitStock = nil
+		LimitQuantity = nil
 	}
 
 	return json.Marshal(&struct {
-		Name        string          `json:"name"`
-		Description string          `json:"description"`
-		Price       float64         `json:"price"`
-		Stock       int             `json:"stock"`
-		Limit_stock any             `json:"limit_stock"`
-		Image       string          `json:"image"`
-		Allergens   json.RawMessage `json:"allergens"`
-		CreatedAt   time.Time       `json:"created_at"`
+		Name          string          `json:"name"`
+		Description   string          `json:"description"`
+		Price         float64         `json:"price"`
+		Stock         int             `json:"stock"`
+		LimitQuantity any             `json:"limit_quantity"`
+		Image         string          `json:"image"`
+		Allergens     json.RawMessage `json:"allergens"`
+		CreatedAt     time.Time       `json:"created_at"`
 	}{
-		Name:        p.Name.String,
-		Description: p.Description.String,
-		Price:       p.Price,
-		Stock:       p.Stock,
-		Limit_stock: limitStock,
-		Image:       p.Image.String,
-		Allergens:   p.Allergens,
-		CreatedAt:   p.CreatedAt,
+		Name:          p.Name.String,
+		Description:   p.Description.String,
+		Price:         p.Price,
+		Stock:         p.Stock,
+		LimitQuantity: LimitQuantity,
+		Image:         p.Image.String,
+		Allergens:     p.Allergens,
+		CreatedAt:     p.CreatedAt,
 	})
 }
 
@@ -433,7 +433,7 @@ func verifyToken() gin.HandlerFunc {
 func getProductsSince(since time.Time) ([]Product, error) {
 	log.Debug("Starting: Fetching product data since", since)
 	products := []Product{}
-	stmt, err := db.Prepare("SELECT name, description, price, stock, limit_stock, image, allergens, created_at FROM products WHERE updated_at > ?")
+	stmt, err := db.Prepare("SELECT name, description, price, stock, limit_quantity, image, allergens, created_at FROM products WHERE updated_at > ?")
 	if err != nil {
 		log.Errorf("Error preparing statement: %v", err)
 		return products, err
@@ -451,7 +451,7 @@ func getProductsSince(since time.Time) ([]Product, error) {
 	for rows.Next() {
 		var p Product
 		var allergensStr sql.NullString
-		err := rows.Scan(&p.Name, &p.Description, &p.Price, &p.Stock, &p.Limit_stock, &p.Image, &allergensStr, &p.CreatedAt)
+		err := rows.Scan(&p.Name, &p.Description, &p.Price, &p.Stock, &p.LimitQuantity, &p.Image, &allergensStr, &p.CreatedAt)
 		if err != nil {
 			log.Errorf("Error scanning product row: %v", err)
 			continue
@@ -529,7 +529,7 @@ func getLastUpdateTime(tableName string) (time.Time, error) {
 func getProducts() ([]Product, error) {
 	log.Debug("Starting: Fetching product data")
 	products := []Product{}
-	stmt, err := db.Prepare("SELECT name, description, price, stock, limit_stock, image, allergens, created_at FROM products")
+	stmt, err := db.Prepare("SELECT name, description, price, stock, limit_quantity, image, allergens, created_at FROM products")
 	if err != nil {
 		log.Errorf("Error preparing statement: %v", err)
 		return products, err
@@ -547,7 +547,7 @@ func getProducts() ([]Product, error) {
 	for rows.Next() {
 		var p Product
 		var allergensStr sql.NullString
-		err := rows.Scan(&p.Name, &p.Description, &p.Price, &p.Stock, &p.Limit_stock, &p.Image, &allergensStr, &p.CreatedAt)
+		err := rows.Scan(&p.Name, &p.Description, &p.Price, &p.Stock, &p.LimitQuantity, &p.Image, &allergensStr, &p.CreatedAt)
 		if err != nil {
 			log.Errorf("Error scanning product row: %v", err)
 			continue
