@@ -35,9 +35,11 @@ final class ProductResource extends Resource
                                 ->required()
                                 ->maxLength(255)
                                 ->placeholder('例：チョコレートケーキ')
-                                ->live()
-                                ->afterStateUpdated(function (string $state, Forms\Set $set) {
-                                    $set('slug', $state);
+                                ->live(true)
+                                ->afterStateUpdated(function (?string $state, Forms\Set $set) {
+                                    if ($state) {
+                                        $set('slug', $state);
+                                    }
                                 }),
 
                             Forms\Components\Textarea::make('description')
