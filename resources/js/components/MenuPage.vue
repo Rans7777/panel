@@ -66,8 +66,8 @@
                 <div v-if="product.stock <= 0" class="absolute top-0 right-0 bg-red-600/80 text-white py-1 px-3 font-bold text-sm rounded-bl-lg">
                   <span>売り切れ</span>
                 </div>
-                <div v-else-if="product.limit_stock !== null" class="absolute top-0 right-0 bg-red-600/80 text-white py-1 px-3 font-bold text-sm rounded-bl-lg">
-                  <span>数量限定: {{ product.limit_stock }}</span>
+                <div v-else-if="product.limit_quantity !== null" class="absolute top-0 right-0 bg-red-600/80 text-white py-1 px-3 font-bold text-sm rounded-bl-lg">
+                  <span>数量限定: {{ product.limit_quantity }}</span>
                 </div>
               </div>
             </div>

@@ -24,7 +24,7 @@ final class Product extends Model
         'description',
         'price',
         'stock',
-        'limit_stock',
+        'limit_quantity',
         'image',
         'allergens',
         'slug',

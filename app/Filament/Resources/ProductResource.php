@@ -83,7 +83,7 @@ final class ProductResource extends Resource
                                 ->numeric()
                                 ->required(),
 
-                            Forms\Components\TextInput::make('limit_stock')
+                            Forms\Components\TextInput::make('limit_quantity')
                                 ->label('限定数')
                                 ->suffix('個')
                                 ->numeric(),
