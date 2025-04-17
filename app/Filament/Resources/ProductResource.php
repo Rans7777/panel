@@ -27,7 +27,8 @@ final class ProductResource extends Resource
         return $form->schema([
             Forms\Components\Card::make()
                 ->schema([
-                    Forms\Components\Section::make('基本情報')
+                    Forms\Components\Section::make('basic')
+                        ->heading('基本情報')
                         ->schema([
                             Forms\Components\TextInput::make('name')
                                 ->label('商品名')
@@ -48,7 +49,8 @@ final class ProductResource extends Resource
                                 ->reactive(),
                         ]),
 
-                    Forms\Components\Section::make('アレルギー情報')
+                    Forms\Components\Section::make('allergen')
+                        ->heading('アレルギー情報')
                         ->description('アレルギー品目を入力してください')
                         ->schema([
                             Forms\Components\TagsInput::make('allergens')
@@ -63,9 +65,10 @@ final class ProductResource extends Resource
                                     'そば' => 'そば',
                                 ]),
                         ])
-                        ->columnSpan('full'),
+                        ->columnSpanFull(),
 
-                    Forms\Components\Section::make('在庫・価格情報')
+                    Forms\Components\Section::make('Availability_and_Pricing')
+                        ->heading('在庫・価格情報')
                         ->schema([
                             Forms\Components\TextInput::make('price')
                                 ->label('価格')
@@ -90,10 +93,11 @@ final class ProductResource extends Resource
                         ])
                         ->columns(3),
 
-                    Forms\Components\Section::make('商品画像')
+                    Forms\Components\Section::make('product_image')
+                        ->heading('商品画像')
                         ->schema([
                             Forms\Components\FileUpload::make('image')
-                                ->label('商品画像')
+                                ->label('')
                                 ->helperText('WebP形式に最適化されます。')
                                 ->image()
                                 ->directory('products')
@@ -104,16 +108,16 @@ final class ProductResource extends Resource
                                 ->optimize('webp'),
                         ]),
 
-                    Forms\Components\Section::make('オプション設定')
+                    Forms\Components\Section::make('option_setting')
+                        ->heading('オプション設定')
                         ->schema([
                             Forms\Components\Repeater::make('options')
                                 ->relationship('options')
                                 ->default([])
-                                ->label('オプション')
+                                ->label('')
                                 ->collapsible()
                                 ->itemLabel(fn (?array $state = null): string => $state
-                                    ? (($state['option_name'] ?? 'オプション').' - ¥'.($state['price'] ?? ''))
-                                    : 'オプション'
+                                    ? (($state['option_name'] ?? 'オプション').' - ¥'.($state['price'] ?? '')) : 'オプション'
                                 )
                                 ->schema([
                                     Forms\Components\TextInput::make('option_name')
@@ -129,12 +133,11 @@ final class ProductResource extends Resource
                                         ->numeric(),
                                 ])
                                 ->live()
-                                ->columns(2)
+                                ->columns()
                                 ->minItems(0)
                                 ->createItemButtonLabel('オプションを追加'),
                         ]),
-                ])
-                ->columnSpan('full'),
+                ]),
         ]);
     }
 
