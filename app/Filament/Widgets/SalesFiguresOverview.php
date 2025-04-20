@@ -11,19 +11,12 @@ class SalesFiguresOverview extends BaseWidget
     protected function getStats(): array
     {
         $productSales = Order::join('products', 'orders.product_id', '=', 'products.id')
-            ->select('products.name')
+            ->selectRaw('products.name, SUM(orders.quantity) as total_quantity, COUNT(DISTINCT orders.id) as buyer_count')
             ->groupBy('products.name')
             ->get()
-            ->map(function ($product) {
-                $totalQuantity = Order::join('products', 'orders.product_id', '=', 'products.id')
-                    ->where('products.name', $product->name)
-                    ->sum('orders.quantity');
-                $buyerCount = Order::join('products', 'orders.product_id', '=', 'products.id')
-                    ->where('products.name', $product->name)
-                    ->count();
-                return Stat::make($product->name, "売上数: $totalQuantity")
-                    ->description("購入者数: $buyerCount 人");
-            })
+            /** @phpstan-ignore-next-line */
+            ->map(fn($product) => Stat::make($product->name, "売上数: {$product->total_quantity}")
+                ->description("購入者数: {$product->buyer_count} 人")) /** @phpstan-ignore-line */
             ->toArray();
 
         return $productSales;
