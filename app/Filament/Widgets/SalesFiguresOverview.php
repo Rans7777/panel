@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Widgets;
 
 use App\Models\Order;
@@ -15,7 +17,7 @@ class SalesFiguresOverview extends BaseWidget
             ->groupBy('products.name')
             ->get()
             /** @phpstan-ignore-next-line */
-            ->map(fn($product) => Stat::make($product->name, "売上数: {$product->total_quantity}")
+            ->map(fn ($product) => Stat::make($product->name, "売上数: {$product->total_quantity}")
                 ->description("購入者数: {$product->buyer_count} 人")) /** @phpstan-ignore-line */
             ->toArray();
 
