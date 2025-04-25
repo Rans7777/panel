@@ -6,18 +6,19 @@ namespace App\Filament\Pages\Auth;
 
 use App\Models\LoginAttempt;
 use App\Models\User;
-use Coderflex\FilamentTurnstile\Forms\Components\Turnstile;
+//use Coderflex\FilamentTurnstile\Forms\Components\Turnstile;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
-use Filament\Http\Responses\Auth\Contracts\LoginResponse;
-use Filament\Pages\Auth\Login as BaseLogin;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse;
+use Filament\Auth\Pages\Login as BaseLogin;
+use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 
 final class Login extends BaseLogin
 {
     public ?array $data = [];
 
-    protected static string $view = 'filament.pages.auth.login';
+    protected string $view = 'filament.pages.auth.login';
 
     public string $name = '';
 
@@ -27,30 +28,25 @@ final class Login extends BaseLogin
 
     public string $turnstileToken = '';
 
-    protected function getForms(): array
+    public function form(Schema $schema): Schema
     {
-        return [
-            'form' => $this->form(
-                $this->makeForm()
-                    ->schema([
-                        TextInput::make('name')
-                            ->label('ユーザー名')
-                            ->required()
-                            ->placeholder('ユーザー名を入力してください'),
-                        TextInput::make('password')
-                            ->label('パスワード')
-                            ->password()
-                            ->required()
-                            ->placeholder('パスワードを入力してください'),
-                        Checkbox::make('remember')
-                            ->label('Remember me'),
-                        Turnstile::make('turnstileToken')
-                            ->theme('auto')
-                            ->visible(config('services.turnstile.enable')),
-                    ])
-                    ->statePath('data'),
-            ),
-        ];
+        return $schema
+            ->components([
+                TextInput::make('name')
+                    ->label('ユーザー名')
+                    ->required()
+                    ->placeholder('ユーザー名を入力してください'),
+                TextInput::make('password')
+                    ->label('パスワード')
+                    ->password()
+                    ->required()
+                    ->placeholder('パスワードを入力してください'),
+                Checkbox::make('remember')
+                    ->label('Remember me'),
+                /*Turnstile::make('turnstileToken')
+                    ->theme('auto')
+                    ->visible(config('services.turnstile.enable')),*/
+        ]);
     }
 
     public function authenticate(): ?LoginResponse

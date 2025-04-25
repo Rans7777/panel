@@ -21,19 +21,19 @@ final class OrderHistoryResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $slug = 'old-order-history';
 
-    public static function form(Forms\Form $form): Forms\Form
+    public static function form(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
     {
-        return $form->schema([
-            Forms\Components\Tabs::make('注文情報')
+        return $schema->components([
+            \Filament\Schemas\Components\Tabs::make('注文情報')
                 ->tabs([
-                    Forms\Components\Tabs\Tab::make('basic')
+                    \Filament\Schemas\Components\Tabs\Tab::make('basic')
                         ->label('基本情報')
                         ->schema([
-                            Forms\Components\Card::make()->schema([
+                            \Filament\Schemas\Components\Section::make()->schema([
                                 Forms\Components\Select::make('product_id')
                                     ->label('商品名')
                                     ->relationship('product', 'name')
@@ -46,11 +46,11 @@ final class OrderHistoryResource extends Resource
                                     ->required(),
                             ]),
                         ]),
-                    Forms\Components\Tabs\Tab::make('order_details')
+                    \Filament\Schemas\Components\Tabs\Tab::make('order_details')
                         ->label('注文明細')
                         ->schema([
-                            Forms\Components\Card::make()->schema([
-                                Forms\Components\Grid::make(2)->schema([
+                            \Filament\Schemas\Components\Section::make()->schema([
+                                \Filament\Schemas\Components\Grid::make(2)->schema([
                                     Forms\Components\TextInput::make('quantity')
                                         ->label('個数')
                                         ->default(0)
@@ -66,10 +66,10 @@ final class OrderHistoryResource extends Resource
                                 ]),
                             ]),
                         ]),
-                    Forms\Components\Tabs\Tab::make('buying_options')
+                    \Filament\Schemas\Components\Tabs\Tab::make('buying_options')
                         ->label('注文オプション')
                         ->schema([
-                            Forms\Components\Card::make()->schema([
+                            \Filament\Schemas\Components\Section::make()->schema([
                                 Forms\Components\Textarea::make('options')
                                     ->label('')
                                     ->disabled()
@@ -123,7 +123,7 @@ final class OrderHistoryResource extends Resource
             ])
             ->filters([
                 Tables\Filters\Filter::make('name')
-                    ->form([
+                    ->schema([
                         Forms\Components\TextInput::make('name')
                             ->label('商品名'),
                     ])
@@ -135,7 +135,7 @@ final class OrderHistoryResource extends Resource
                     }),
 
                 Tables\Filters\Filter::make('created_at')
-                    ->form([
+                    ->schema([
                         DatePicker::make('from')
                             ->label('開始日'),
                         DatePicker::make('until')
@@ -153,11 +153,11 @@ final class OrderHistoryResource extends Resource
                     ),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\DeleteBulkAction::make(),
             ]);
     }
 

@@ -6,14 +6,14 @@ namespace App\Filament\Widgets;
 
 use App\Models\Order;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
-use Filament\Widgets\StatsOverviewWidget\Card;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\HtmlString;
 
 final class SalesOverview extends BaseWidget
 {
     protected static ?int $sort = 1;
 
-    protected static ?string $pollingInterval = '10s';
+    protected ?string $pollingInterval = '10s';
 
     public static function canView(): bool
     {
@@ -41,21 +41,21 @@ final class SalesOverview extends BaseWidget
         })->values();
 
         $cards = [
-            Card::make('今日の売上', new HtmlString('¥'.number_format($todayTotal)))
+            Stat::make('今日の売上', new HtmlString('¥'.number_format($todayTotal)))
                 ->description($yesterdayTotal === 0 ? ($todayTotal > 0 ? '+100.0%' : '±0.0%') : ($percentageChange >= 0 ? '+'.number_format($percentageChange, 1).'%' : number_format($percentageChange, 1).'%'))
                 ->descriptionIcon($yesterdayTotal === 0 ? ($todayTotal > 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-minus') : ($percentageChange >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down'))
                 ->color($yesterdayTotal === 0 ? ($todayTotal > 0 ? 'success' : 'gray') : ($percentageChange >= 0 ? 'success' : 'danger'))
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor($yesterdayTotal === 0 ? ($todayTotal > 0 ? 'success' : 'gray') : ($percentageChange >= 0 ? 'success' : 'danger')),
 
-            Card::make('総売上', new HtmlString('¥'.number_format((int) Order::sum('total_price'))))
+            Stat::make('総売上', new HtmlString('¥'.number_format((int) Order::sum('total_price'))))
                 ->chart($trend->pluck('total')->toArray())
                 ->chartColor(Order::sum('total_price') === 0 ? 'gray' : 'primary'),
         ];
 
         if ($yesterdayTotal > 0) {
             array_splice($cards, 1, 0, [
-                Card::make('昨日の売上', new HtmlString('¥'.number_format($yesterdayTotal))),
+                Stat::make('昨日の売上', new HtmlString('¥'.number_format($yesterdayTotal))),
             ]);
         }
 

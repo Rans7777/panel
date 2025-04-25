@@ -6,7 +6,6 @@ namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Filament\Resources\ProductResource;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +37,7 @@ final class ListProducts extends ListRecords
     protected function getActions(): array
     {
         return [
-            CreateAction::make()->label('新規商品追加'),
+            \Filament\Actions\CreateAction::make()->label('新規商品追加'),
         ];
     }
 }

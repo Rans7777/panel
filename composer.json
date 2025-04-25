@@ -9,8 +9,7 @@
         "php": "^8.2",
         "coderflex/filament-turnstile": "^2.3",
         "cviebrock/eloquent-sluggable": "^12.0",
-        "filament/filament": "^3.3.4",
-        "joshembling/image-optimizer": "^1.6",
+        "filament/filament": "v4.x-dev",
         "laravel/framework": "^12.2.0",
         "laravel/prompts": "^0.3.5",
         "laravel/sanctum": "^4.0",
@@ -80,6 +79,6 @@
             "php-http/discovery": true
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }

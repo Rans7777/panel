@@ -8,7 +8,7 @@ use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Components\ToggleButtons;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,17 +19,17 @@ final class UserResource extends Resource
 
     protected static ?string $navigationLabel = 'ユーザー管理';
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationGroup = 'パネル管理';
+    protected static string | \UnitEnum | null $navigationGroup = 'パネル管理';
 
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('basic')
+        return $schema
+            ->components([
+                \Filament\Schemas\Components\Section::make('basic')
                     ->heading('基本情報')
                     ->schema([
                         Forms\Components\TextInput::make('name')
@@ -51,7 +51,7 @@ final class UserResource extends Resource
                     ])
                     ->columns(),
 
-                Forms\Components\Section::make('account_setting')
+                \Filament\Schemas\Components\Section::make('account_setting')
                     ->heading('アカウント設定')
                     ->schema([
                         ToggleButtons::make('is_active')
@@ -84,17 +84,17 @@ final class UserResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')->dateTime('Y年m月d日 H:i:s')->sortable(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('toggleActive')
+                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\Action::make('toggleActive')
                     ->label(fn ($record) => $record->is_active ? '無効化' : '有効化')
                     ->action(function ($record) {
                         $record->update(['is_active' => !$record->is_active]);
                     })
                     ->color(fn ($record) => $record->is_active ? 'warning' : 'success'),
-                Tables\Actions\DeleteAction::make(),
+                \Filament\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('disable')
+                \Filament\Actions\BulkAction::make('disable')
                     ->label('選択を一括無効化')
                     ->action(function (\Illuminate\Support\Collection $records) {
                         foreach ($records as $record) {
@@ -102,7 +102,7 @@ final class UserResource extends Resource
                         }
                     })
                     ->requiresConfirmation(),
-                Tables\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\DeleteBulkAction::make(),
             ]);
     }
 

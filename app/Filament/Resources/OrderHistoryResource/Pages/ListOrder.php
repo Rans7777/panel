@@ -6,7 +6,6 @@ namespace App\Filament\Resources\OrderHistoryResource\Pages;
 
 use App\Filament\Resources\OrderHistoryResource;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +37,7 @@ final class ListOrder extends ListRecords
     protected function getActions(): array
     {
         return [
-            CreateAction::make()->label('新規注文追加'),
+            \Filament\Actions\CreateAction::make()->label('新規注文追加'),
         ];
     }
 }

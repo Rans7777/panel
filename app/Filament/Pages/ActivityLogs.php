@@ -17,17 +17,17 @@ final class ActivityLogs extends Page implements HasTable
 {
     use Tables\Concerns\InteractsWithTable;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
 
     protected static ?string $title = 'アクティビティログ';
 
     protected static ?string $navigationLabel = 'アクティビティログ';
 
-    protected static ?string $navigationGroup = 'パネル管理';
+    protected static string | \UnitEnum | null $navigationGroup = 'パネル管理';
 
     protected static ?int $navigationSort = 3;
 
-    protected static string $view = 'filament.pages.activity-logs';
+    protected string $view = 'filament.pages.activity-logs';
 
     public function mount(): void
     {
@@ -90,7 +90,7 @@ final class ActivityLogs extends Page implements HasTable
                 ]),
             Tables\Filters\Filter::make('created_at')
                 ->label('日時')
-                ->form([
+                ->schema([
                     DatePicker::make('created_from')
                         ->label('開始日時'),
                     DatePicker::make('created_until')

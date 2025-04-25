@@ -9,8 +9,6 @@ use App\Models\Product;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
@@ -20,14 +18,14 @@ final class ProductResource extends Resource
 
     protected static ?string $navigationLabel = '商品管理';
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shopping-cart';
 
-    public static function form(\Filament\Forms\Form $form): \Filament\Forms\Form
+    public static function form(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
     {
-        return $form->schema([
-            Forms\Components\Card::make()
+        return $schema->components([
+            \Filament\Schemas\Components\Section::make()
                 ->schema([
-                    Forms\Components\Section::make('basic')
+                    \Filament\Schemas\Components\Section::make('basic')
                         ->heading('基本情報')
                         ->schema([
                             Forms\Components\TextInput::make('name')
@@ -36,7 +34,7 @@ final class ProductResource extends Resource
                                 ->maxLength(255)
                                 ->placeholder('例：チョコレートケーキ')
                                 ->live(true)
-                                ->afterStateUpdated(function (?string $state, Forms\Set $set) {
+                                ->afterStateUpdated(function (?string $state, \Filament\Schemas\Components\Utilities\Set $set) {
                                     if ($state) {
                                         $set('slug', $state);
                                     }
@@ -51,7 +49,7 @@ final class ProductResource extends Resource
                                 ->reactive(),
                         ]),
 
-                    Forms\Components\Section::make('allergen')
+                    \Filament\Schemas\Components\Section::make('allergen')
                         ->heading('アレルギー情報')
                         ->description('アレルギー品目を入力してください')
                         ->schema([
@@ -69,7 +67,7 @@ final class ProductResource extends Resource
                         ])
                         ->columnSpanFull(),
 
-                    Forms\Components\Section::make('Availability_and_Pricing')
+                    \Filament\Schemas\Components\Section::make('Availability_and_Pricing')
                         ->heading('在庫・価格情報')
                         ->schema([
                             Forms\Components\TextInput::make('price')
@@ -95,7 +93,7 @@ final class ProductResource extends Resource
                         ])
                         ->columns(3),
 
-                    Forms\Components\Section::make('product_image')
+                    \Filament\Schemas\Components\Section::make('product_image')
                         ->heading('商品画像')
                         ->schema([
                             Forms\Components\FileUpload::make('image')
@@ -106,11 +104,11 @@ final class ProductResource extends Resource
                                 ->imageEditor()
                                 ->nullable()
                                 ->disk('public')
-                                ->preserveFilenames()
-                                ->optimize('webp'),
+                                ->preserveFilenames(),
+                                //->optimize('webp'),
                         ]),
 
-                    Forms\Components\Section::make('option_setting')
+                    \Filament\Schemas\Components\Section::make('option_setting')
                         ->heading('オプション設定')
                         ->schema([
                             Forms\Components\Repeater::make('options')
@@ -186,8 +184,8 @@ final class ProductResource extends Resource
                     ->extraAttributes(['class' => 'text-sm text-gray-500']),
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make()
+                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\DeleteAction::make()
                     ->before(function ($record) {
                         if ($record->image && Storage::disk('public')->exists($record->image)) {
                             Storage::disk('public')->delete($record->image);
@@ -195,7 +193,7 @@ final class ProductResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make()
+                \Filament\Actions\DeleteBulkAction::make()
                     ->before(function (Collection $records) {
                         foreach ($records as $record) {
                             if ($record->image && Storage::disk('public')->exists($record->image)) {

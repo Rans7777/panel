@@ -8,9 +8,9 @@ use Filament\Pages\Page;
 
 class menu extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string $view = 'filament.pages.menu';
+    protected string $view = 'filament.pages.menu';
 
     protected static ?string $navigationLabel = 'メニュー';
 
