@@ -13,8 +13,7 @@
               'text-gray-800 after:bg-red-600': !isDarkMode && !isRainbowMode,
               'rainbow-text': isRainbowMode,
               'raging-text': isRagingMode,
-              'fly-element': isFlyMode,
-              'rotate-3d': isRotate3dMode 
+              'fly-element': isFlyMode 
             }">メニュー</h1>
       </div>
 
@@ -56,8 +55,7 @@
                  'rainbow-border': isRainbowMode,
                  'rainbow-bg': isRainbowMode,
                  'raging-text': isRagingMode,
-                 'fly-element': isFlyMode,
-                 'rotate-3d': isRotate3dMode 
+                 'fly-element': isFlyMode 
                }">
             <div class="w-full">
               <div class="h-[200px] flex justify-center items-center overflow-hidden relative" :class="{ 'bg-gray-700': isDarkMode, 'bg-gray-100': !isDarkMode }">
@@ -145,8 +143,7 @@
           'bg-green-600 hover:bg-green-700': !isDarkMode && !isRainbowMode,
           'rainbow-bg': isRainbowMode,
           'raging-text': isRagingMode,
-          'fly-element': isFlyMode,
-          'rotate-3d': isRotate3dMode 
+          'fly-element': isFlyMode 
         }"
       >
         <i :class="isDarkMode ? 'pi pi-sun' : 'pi pi-moon'" class="mr-2"></i>
@@ -180,7 +177,6 @@ export default {
     const isRainbowMode = ref(false);
     const isRagingMode = ref(false);
     const isFlyMode = ref(false);
-    const isRotate3dMode = ref(false);
 
     const showWarning = (message, duration = 0) => {
       if (warningTimer) {
@@ -384,7 +380,6 @@ export default {
       isRainbowMode.value = hiddenParam === 'rainbow';
       isRagingMode.value = hiddenParam === 'raging';
       isFlyMode.value = hiddenParam === 'fly';
-      isRotate3dMode.value = hiddenParam === 'rotate3d';
     };
 
     onMounted(() => {
@@ -421,8 +416,7 @@ export default {
       isHiddenMode,
       isRainbowMode,
       isRagingMode,
-      isFlyMode,
-      isRotate3dMode
+      isFlyMode
     };
   }
 };
@@ -561,34 +555,6 @@ html, body {
 }
 
 .fly-element:hover {
-  animation-play-state: paused;
-}
-
-@keyframes rotate-3d {
-  0% {
-    transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
-  }
-  25% {
-    transform: perspective(1000px) rotateY(90deg) rotateX(45deg);
-  }
-  50% {
-    transform: perspective(1000px) rotateY(180deg) rotateX(0deg);
-  }
-  75% {
-    transform: perspective(1000px) rotateY(270deg) rotateX(-45deg);
-  }
-  100% {
-    transform: perspective(1000px) rotateY(360deg) rotateX(0deg);
-  }
-}
-
-.rotate-3d {
-  animation: rotate-3d 8s infinite linear;
-  transform-style: preserve-3d;
-  backface-visibility: visible;
-}
-
-.rotate-3d:hover {
   animation-play-state: paused;
 }
 </style>
