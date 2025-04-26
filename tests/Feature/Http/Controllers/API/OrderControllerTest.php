@@ -45,6 +45,7 @@ class OrderControllerTest extends TestCase
 
     public function test_can_create_a_new_order_successfully()
     {
+        $this->withoutMiddleware();
         $payload = [
             'cart' => [
                 [
@@ -65,6 +66,7 @@ class OrderControllerTest extends TestCase
 
     public function test_returns_error_when_product_stock_is_insufficient()
     {
+        $this->withoutMiddleware();
         $payload = [
             'cart' => [
                 [
@@ -85,12 +87,14 @@ class OrderControllerTest extends TestCase
 
     public function test_validates_required_fields()
     {
+        $this->withoutMiddleware();
         $response = $this->actingAs($this->user)->postJson('/api/orders', []);
         $response->assertStatus(422);
     }
 
     public function test_can_create_order_with_options()
     {
+        $this->withoutMiddleware();
         $payload = [
             'cart' => [
                 [
