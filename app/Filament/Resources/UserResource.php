@@ -57,10 +57,10 @@ final class UserResource extends Resource
                         ToggleButtons::make('is_active')
                             ->label('アカウントの状態')
                             ->options([
-                                'true' => '有効',
-                                'false' => '無効',
+                                true => '有効',
+                                false => '無効',
                             ])
-                            ->default('true')
+                            ->default(true)
                             ->inline(),
 
                         Forms\Components\Select::make('roles')

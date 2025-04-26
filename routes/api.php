@@ -6,7 +6,7 @@ use App\Http\Controllers\API\OrderController;
 use App\Http\Controllers\API\OrderHistoryController;
 use App\Http\Controllers\API\AccessTokenController;
 
-Route::middleware(['web', 'auth'])->group(function () {
+Route::middleware(['api', 'auth'])->group(function () {
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::post('/orders', [OrderController::class, 'store']);
