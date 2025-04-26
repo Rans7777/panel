@@ -1,13 +1,5 @@
 <template>
   <div class="min-h-screen p-5 transition-all duration-300" :class="{ 'bg-gray-900 text-gray-100': isDarkMode, 'bg-white text-gray-800': !isDarkMode }">
-    <!-- 雨のエフェクト -->
-    <div v-if="isRainMode" class="rain-container fixed inset-0 pointer-events-none z-50">
-      <div v-for="n in 100" :key="n" class="raindrop" :style="{ 
-        left: `${Math.random() * 100}%`,
-        animationDuration: `${Math.random() * 1 + 0.5}s`,
-        animationDelay: `${Math.random() * 2}s`
-      }"></div>
-    </div>
     <div class="max-w-7xl mx-auto">
       <h1 class="text-4xl font-bold text-center mb-8" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">注文ページ</h1>
 
@@ -34,43 +26,32 @@
       </div>
 
       <!-- 商品カード一覧 -->
-      <div class="conveyor-container" :class="{ 'conveyor-mode': isConveyorMode }">
-        <div class="conveyor-track">
-          <div
-            v-for="(product, index) in products.filter(p => p.stock > 0)"
-            :key="product.id"
-            @click="handleProductClick(product.id)"
-            class="conveyor-item cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
-            :class="{ 
-              'bg-gray-800 border border-gray-700': isDarkMode, 
-              'bg-white border border-gray-200': !isDarkMode,
-              'drop-mode': isDropMode && clickedProductId === product.id,
-              'rotate-mode': isRagingMode && clickedProductId === product.id
-            }"
-            :style="isConveyorMode ? {
-              '--item-index': index,
-              '--total-items': products.filter(p => p.stock > 0).length
-            } : {}"
-          >
-            <div class="p-4">
-              <div class="flex justify-center items-center h-24 mb-4">
-                <img 
-                  v-if="product.image" 
-                  :src="'/storage/' + product.image" 
-                  :alt="product.name"
-                  class="w-24 h-24 object-contain"
-                />
-                <div v-else class="w-12 h-12 flex items-center justify-center">
-                  <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
-                </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div
+          v-for="product in products.filter(p => p.stock > 0)"
+          :key="product.id"
+          @click="handleProductClick(product.id)"
+          class="cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-lg rounded-lg overflow-hidden"
+          :class="{ 'bg-gray-800 border border-gray-700': isDarkMode, 'bg-white border border-gray-200': !isDarkMode }"
+        >
+          <div class="p-4">
+            <div class="flex justify-center items-center h-24 mb-4">
+              <img 
+                v-if="product.image" 
+                :src="'/storage/' + product.image" 
+                :alt="product.name"
+                class="w-24 h-24 object-contain"
+              />
+              <div v-else class="w-12 h-12 flex items-center justify-center">
+                <i class="pi pi-image text-[5rem]" :class="{ 'text-gray-600': isDarkMode, 'text-gray-300': !isDarkMode }"></i>
               </div>
-              <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
-                {{ product.name }}
-              </h3>
-              <p class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
-                {{ General.formatPrice(product.price) }}
-              </p>
             </div>
+            <h3 class="font-bold text-lg mb-2 break-words" :class="{ 'text-gray-100': isDarkMode, 'text-gray-800': !isDarkMode }">
+              {{ product.name }}
+            </h3>
+            <p class="text-xl font-bold" :class="{ 'text-red-400': isDarkMode, 'text-red-500': !isDarkMode }">
+              {{ General.formatPrice(product.price) }}
+            </p>
           </div>
         </div>
       </div>
@@ -437,13 +418,6 @@ const showDeleteConfirmation = ref(false);
 const deleteTargetIndex = ref(null);
 const messageTimer = ref(null);
 const errorTimer = ref(null);
-const clickedProductId = ref(null);
-const dropTimer = ref(null);
-const hiddenModeType = ref('');
-const isRagingMode = ref(false);
-const isDropMode = ref(false);
-const isRainMode = ref(false);
-const isConveyorMode = ref(false);
 const selectedItems = ref([]);
 const selectAll = ref(false);
 const showBulkDeleteConfirmation = ref(false);
@@ -533,22 +507,6 @@ const watchSystemTheme = () => {
   }
 };
 
-// 隠しモードをチェック
-const checkHiddenMode = () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const hiddenParam = urlParams.get('hidden');
-  // 隠しモードの設定: URLパラメータ `hidden` の値によって異なるモードを有効化
-  // - 'drop': ドロップモード（要素がアニメーションで落下）
-  // - 'rotate': 回転モード（要素がアニメーションで回転）
-  // - 'rain': 雨モード（画面上に雨のアニメーションを表示）
-  // - 'conveyor': コンベアモード（商品をコンベアベルトのように表示）
-  isDropMode.value = hiddenParam === 'drop';
-  isRagingMode.value = hiddenParam === 'rotate';
-  isRainMode.value = hiddenParam === 'rain';
-  isConveyorMode.value = hiddenParam === 'conveyor';
-  hiddenModeType.value = hiddenParam || '';
-};
-
 // API から製品情報を取得
 const loadProducts = async () => {
   try {
@@ -568,17 +526,6 @@ const handleProductClick = async (productId) => {
     if (!product) {
       showError('商品情報が見つかりません');
       return;
-    }
-
-    // 隠しモードの処理
-    if (isDropMode.value || isRagingMode.value) {
-      clickedProductId.value = productId;
-      if (dropTimer.value) {
-        clearTimeout(dropTimer.value);
-      }
-      dropTimer.value = setTimeout(() => {
-        clickedProductId.value = null;
-      }, 1000);
     }
 
     if (product.options && product.options.length > 0) {
@@ -962,12 +909,14 @@ onMounted(() => {
   detectDarkMode();
   watchSystemTheme();
   applyDarkMode();
-  checkHiddenMode();
 });
 
 onUnmounted(() => {
-  if (dropTimer.value) {
-    clearTimeout(dropTimer.value);
+  if (messageTimer.value) {
+    clearTimeout(messageTimer.value);
+  }
+  if (errorTimer.value) {
+    clearTimeout(errorTimer.value);
   }
 });
 </script>
@@ -998,194 +947,5 @@ html, body {
 .dark-mode {
   background-color: #121827;
   color: #f3f4f6;
-}
-
-@keyframes drop {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(50vh) rotate(180deg);
-    opacity: 0.8;
-  }
-  100% {
-    transform: translateY(100vh) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-.drop-mode {
-  animation: drop 1s ease-in forwards;
-  pointer-events: none;
-  z-index: 10;
-  position: relative;
-}
-
-@keyframes rotate {
-  0% {
-    transform: rotate(0deg);
-    opacity: 1;
-  }
-  25% {
-    transform: rotate(900deg);
-  }
-  50% {
-    transform: rotate(1800deg);
-  }
-  75% {
-    transform: rotate(2700deg);
-  }
-  100% {
-    transform: rotate(3600deg);
-    opacity: 0;
-  }
-}
-
-.rotate-mode {
-  animation: rotate 2s ease-in-out forwards;
-  pointer-events: none;
-  z-index: 10;
-  position: relative;
-}
-
-:root {
-  overflow-x: hidden;
-}
-
-body {
-  overflow-x: hidden;
-}
-
-@keyframes rain {
-  0% {
-    transform: translateY(-100vh);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(100vh);
-    opacity: 0;
-  }
-}
-
-.rain-container {
-  overflow: hidden;
-}
-
-.raindrop {
-  position: absolute;
-  width: 2px;
-  height: 100px;
-  background: linear-gradient(transparent, #4a90e2);
-  animation: rain linear infinite;
-  will-change: transform, opacity;
-}
-
-.perspective-container {
-  perspective: 1000px;
-  transform-style: preserve-3d;
-}
-
-@keyframes conveyor {
-  0% {
-    transform: translateZ(0) rotateY(0deg) translateX(0);
-  }
-  25% {
-    transform: translateZ(100px) rotateY(90deg) translateX(100px);
-  }
-  50% {
-    transform: translateZ(200px) rotateY(180deg) translateX(0);
-  }
-  75% {
-    transform: translateZ(100px) rotateY(270deg) translateX(-100px);
-  }
-  100% {
-    transform: translateZ(0) rotateY(360deg) translateX(0);
-  }
-}
-
-.conveyor-mode {
-  animation: conveyor var(--conveyor-duration) linear infinite;
-  animation-delay: var(--conveyor-delay);
-  transform-style: preserve-3d;
-  backface-visibility: visible;
-}
-
-.conveyor-mode:hover {
-  animation-play-state: paused;
-}
-
-.conveyor-container {
-  position: relative;
-  width: 100%;
-  height: 300px;
-  overflow: hidden;
-  margin-bottom: 2rem;
-}
-
-.conveyor-track {
-  position: absolute;
-  display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  width: fit-content;
-  height: 100%;
-}
-
-.conveyor-item {
-  flex: 0 0 auto;
-  width: 250px;
-  position: relative;
-}
-
-.conveyor-mode .conveyor-item {
-  transform: translateX(100vw);
-  opacity: 0;
-  animation: moveItem 20s linear infinite;
-  animation-delay: calc(var(--item-index) * (15s / var(--total-items)));
-  opacity: 1;
-}
-
-.conveyor-item {
-  transform: none;
-  opacity: 1;
-  display: block;
-}
-
-@keyframes moveItem {
-  0% {
-    transform: translateX(100vw);
-    opacity: 1;
-  }
-  85% {
-    transform: translateX(-100vw);
-    opacity: 1;
-  }
-  86% {
-    transform: translateX(-100vw);
-    opacity: 0;
-  }
-  87% {
-    transform: translateX(100vw);
-    opacity: 0;
-  }
-  88% {
-    transform: translateX(100vw);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(100vw);
-    opacity: 1;
-  }
-}
-
-.conveyor-mode .conveyor-track {
-  animation: none;
 }
 </style>
