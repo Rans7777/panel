@@ -24,27 +24,3 @@ updates:
     directory: "/API"
     schedule:
       interval: "daily"
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    target-branch: filament-v4
-    schedule:
-      interval: "daily"
-
-  - package-ecosystem: "composer"
-    directory: "/"
-    target-branch: filament-v4
-    schedule:
-      interval: "daily"
-
-  - package-ecosystem: "npm"
-    directory: "/"
-    target-branch: filament-v4
-    schedule:
-      interval: "daily"
-
-  - package-ecosystem: "gomod"
-    directory: "/API"
-    target-branch: filament-v4
-    schedule:
-      interval: "daily"
