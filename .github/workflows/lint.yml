@@ -2,7 +2,7 @@ name: Lint
 
 on:
   pull_request:
-    branches: [ main, filament-v4 ]
+    branches: [ main ]
 
 jobs:
   larastan:
