@@ -427,16 +427,16 @@
         },
         {
             "name": "coderflex/filament-turnstile",
-            "version": "v2.3.1",
+            "version": "v2.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/coderflexx/filament-turnstile.git",
-                "reference": "a49cf626c7ba88457761b7594daf16c532f6adb1"
+                "reference": "cafdf3cc51300aa6d6e35c22df678d3652cb6af2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/coderflexx/filament-turnstile/zipball/a49cf626c7ba88457761b7594daf16c532f6adb1",
-                "reference": "a49cf626c7ba88457761b7594daf16c532f6adb1",
+                "url": "https://api.github.com/repos/coderflexx/filament-turnstile/zipball/cafdf3cc51300aa6d6e35c22df678d3652cb6af2",
+                "reference": "cafdf3cc51300aa6d6e35c22df678d3652cb6af2",
                 "shasum": ""
             },
             "require": {
@@ -500,9 +500,9 @@
             ],
             "support": {
                 "issues": "https://github.com/coderflexx/filament-turnstile/issues",
-                "source": "https://github.com/coderflexx/filament-turnstile/tree/v2.3.1"
+                "source": "https://github.com/coderflexx/filament-turnstile/tree/v2.4.0"
             },
-            "time": "2025-03-01T16:11:30+00:00"
+            "time": "2025-09-17T08:18:40+00:00"
         },
         {
             "name": "coderflex/laravel-turnstile",
