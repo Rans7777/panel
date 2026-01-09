@@ -9,7 +9,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/uuid v1.6.0
 	github.com/sirupsen/logrus v1.9.3
-	modernc.org/sqlite v1.42.2
+	modernc.org/sqlite v1.43.0
 )
 
 require (
