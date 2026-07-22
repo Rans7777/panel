@@ -9269,16 +9269,16 @@
         },
         {
             "name": "laravel/sail",
-            "version": "v1.54.0",
+            "version": "v1.64.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/sail.git",
-                "reference": "bcc5e06f1a79d806d880a4b027964d2aa5872b07"
+                "reference": "08cacd3e72d6798df3fa8bd4b5d55d0f7f920625"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/sail/zipball/bcc5e06f1a79d806d880a4b027964d2aa5872b07",
-                "reference": "bcc5e06f1a79d806d880a4b027964d2aa5872b07",
+                "url": "https://api.github.com/repos/laravel/sail/zipball/08cacd3e72d6798df3fa8bd4b5d55d0f7f920625",
+                "reference": "08cacd3e72d6798df3fa8bd4b5d55d0f7f920625",
                 "shasum": ""
             },
             "require": {
@@ -9328,7 +9328,7 @@
                 "issues": "https://github.com/laravel/sail/issues",
                 "source": "https://github.com/laravel/sail"
             },
-            "time": "2026-03-11T14:10:52+00:00"
+            "time": "2026-07-17T15:09:35+00:00"
         },
         {
             "name": "mockery/mockery",
@@ -12388,16 +12388,16 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v7.4.6",
+            "version": "v7.4.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/yaml.git",
-                "reference": "58751048de17bae71c5aa0d13cb19d79bca26391"
+                "reference": "f8f328665ace2370d1e10645b807ba1646dc7dcc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/58751048de17bae71c5aa0d13cb19d79bca26391",
-                "reference": "58751048de17bae71c5aa0d13cb19d79bca26391",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/f8f328665ace2370d1e10645b807ba1646dc7dcc",
+                "reference": "f8f328665ace2370d1e10645b807ba1646dc7dcc",
                 "shasum": ""
             },
             "require": {
@@ -12440,7 +12440,7 @@
             "description": "Loads and dumps YAML files",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/yaml/tree/v7.4.6"
+                "source": "https://github.com/symfony/yaml/tree/v7.4.14"
             },
             "funding": [
                 {
@@ -12460,7 +12460,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-02-09T09:33:46+00:00"
+            "time": "2026-06-08T20:24:16+00:00"
         },
         {
             "name": "ta-tikoma/phpunit-architecture-test",
