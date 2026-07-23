@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "221ccc9d3e4f6545b1fdad818a8a483c",
+    "content-hash": "a00a8cdd2975a4b3da89749c1830e9bb",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -427,37 +427,36 @@
         },
         {
             "name": "coderflex/filament-turnstile",
-            "version": "v2.4.1",
+            "version": "v4.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/coderflexx/filament-turnstile.git",
-                "reference": "f2e02ee6f6969019c0ff51068c6f58b4ccf7736c"
+                "reference": "ad3ba1256bb79ca4b243ad294a5de1f2802849cd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/coderflexx/filament-turnstile/zipball/f2e02ee6f6969019c0ff51068c6f58b4ccf7736c",
-                "reference": "f2e02ee6f6969019c0ff51068c6f58b4ccf7736c",
+                "url": "https://api.github.com/repos/coderflexx/filament-turnstile/zipball/ad3ba1256bb79ca4b243ad294a5de1f2802849cd",
+                "reference": "ad3ba1256bb79ca4b243ad294a5de1f2802849cd",
                 "shasum": ""
             },
             "require": {
-                "coderflex/laravel-turnstile": "^1.0|^2.0",
-                "illuminate/contracts": "^10.0|^11.0|^12.0",
-                "php": "^8.2|^8.3",
+                "coderflex/laravel-turnstile": "^2.0",
+                "illuminate/contracts": "^11.28|^12.0|^13.0",
+                "php": "^8.2",
                 "spatie/laravel-package-tools": "^1.14.0"
             },
             "require-dev": {
-                "filament/filament": "^3.0",
-                "larastan/larastan": "^2.8|^3.0",
+                "filament/filament": "^5.0",
                 "laravel/pint": "^1.0",
-                "nunomaduro/collision": "^7.0|^8.0",
-                "nunomaduro/larastan": "^2.8.0|^3.1.0",
-                "orchestra/testbench": "^8.0|^9.0|^10.0",
-                "pestphp/pest": "^2.0|^3.7",
-                "pestphp/pest-plugin-arch": "^2.0|^3.0",
-                "pestphp/pest-plugin-livewire": "^2.0|^3.0",
+                "nunomaduro/collision": "^8.0|^9.0",
+                "nunomaduro/larastan": "^3.0",
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "pestphp/pest": "^4.4",
+                "pestphp/pest-plugin-arch": "^4.0",
+                "pestphp/pest-plugin-livewire": "^4.0",
                 "phpstan/extension-installer": "^1.1",
-                "phpstan/phpstan-deprecation-rules": "^1.0|^2.0",
-                "phpstan/phpstan-phpunit": "^1.0|^2.0"
+                "phpstan/phpstan-deprecation-rules": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0"
             },
             "type": "library",
             "extra": {
@@ -500,37 +499,37 @@
             ],
             "support": {
                 "issues": "https://github.com/coderflexx/filament-turnstile/issues",
-                "source": "https://github.com/coderflexx/filament-turnstile/tree/v2.4.1"
+                "source": "https://github.com/coderflexx/filament-turnstile/tree/v4.0.1"
             },
-            "time": "2025-10-25T20:09:08+00:00"
+            "time": "2026-07-17T17:34:34+00:00"
         },
         {
             "name": "coderflex/laravel-turnstile",
-            "version": "2.1.1",
+            "version": "v2.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/coderflexx/laravel-turnstile.git",
-                "reference": "1c1d0c5829851efaa1febcde34733537780eb0a9"
+                "reference": "69c13df9ddd12999ac9cc700c31ff458f106b4aa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/coderflexx/laravel-turnstile/zipball/1c1d0c5829851efaa1febcde34733537780eb0a9",
-                "reference": "1c1d0c5829851efaa1febcde34733537780eb0a9",
+                "url": "https://api.github.com/repos/coderflexx/laravel-turnstile/zipball/69c13df9ddd12999ac9cc700c31ff458f106b4aa",
+                "reference": "69c13df9ddd12999ac9cc700c31ff458f106b4aa",
                 "shasum": ""
             },
             "require": {
                 "guzzlehttp/guzzle": "^7.7",
-                "illuminate/contracts": "^10.0|^11.0|^12.0",
-                "php": "^8.2|^8.3",
+                "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.2|^8.3|^8.4",
                 "spatie/laravel-package-tools": "^1.14.0"
             },
             "require-dev": {
                 "laravel/pint": "^1.0",
                 "nunomaduro/collision": "^7.0|^8.0",
                 "nunomaduro/larastan": "^2.8.0|^3.1.0",
-                "orchestra/testbench": "^8.0|^9.0|^10.0",
-                "pestphp/pest": "^2.0|^3.7",
-                "pestphp/pest-plugin-arch": "^2.0|^3.0",
+                "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+                "pestphp/pest": "^2.0|^3.7|^4.4",
+                "pestphp/pest-plugin-arch": "^2.0|^3.0|^4.0",
                 "phpstan/extension-installer": "^1.1",
                 "phpstan/phpstan-deprecation-rules": "^1.0|^2.0",
                 "phpstan/phpstan-phpunit": "^1.0|^2.0"
@@ -574,9 +573,9 @@
             ],
             "support": {
                 "issues": "https://github.com/coderflexx/laravel-turnstile/issues",
-                "source": "https://github.com/coderflexx/laravel-turnstile/tree/2.1.1"
+                "source": "https://github.com/coderflexx/laravel-turnstile/tree/v2.2.1"
             },
-            "time": "2025-03-01T13:04:55+00:00"
+            "time": "2026-07-17T17:30:35+00:00"
         },
         {
             "name": "cviebrock/eloquent-sluggable",
@@ -5460,16 +5459,16 @@
         },
         {
             "name": "spatie/laravel-package-tools",
-            "version": "1.93.0",
+            "version": "1.93.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/spatie/laravel-package-tools.git",
-                "reference": "0d097bce95b2bf6802fb1d83e1e753b0f5a948e7"
+                "reference": "d5552849801f2642aea710557463234b59ef65eb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-package-tools/zipball/0d097bce95b2bf6802fb1d83e1e753b0f5a948e7",
-                "reference": "0d097bce95b2bf6802fb1d83e1e753b0f5a948e7",
+                "url": "https://api.github.com/repos/spatie/laravel-package-tools/zipball/d5552849801f2642aea710557463234b59ef65eb",
+                "reference": "d5552849801f2642aea710557463234b59ef65eb",
                 "shasum": ""
             },
             "require": {
@@ -5509,7 +5508,7 @@
             ],
             "support": {
                 "issues": "https://github.com/spatie/laravel-package-tools/issues",
-                "source": "https://github.com/spatie/laravel-package-tools/tree/1.93.0"
+                "source": "https://github.com/spatie/laravel-package-tools/tree/1.93.1"
             },
             "funding": [
                 {
@@ -5517,7 +5516,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-02-21T12:49:54+00:00"
+            "time": "2026-05-19T14:06:37+00:00"
         },
         {
             "name": "spatie/laravel-permission",
