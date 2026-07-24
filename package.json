@@ -6,7 +6,7 @@
         "dev": "vite"
     },
     "devDependencies": {
-        "@vitejs/plugin-vue": "^5.2.4",
+        "@vitejs/plugin-vue": "^6.0.8",
         "autoprefixer": "^10.5.4",
         "axios": "^1.18.1",
         "concurrently": "^10.0.3",
