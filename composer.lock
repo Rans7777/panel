@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b3a5751daa174a3d87ecd9e595417f8a",
+    "content-hash": "59e3812d9e8a526ec82f95c7dc2484d5",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -6519,28 +6519,27 @@
         },
         {
             "name": "symfony/intl",
-            "version": "v7.3.5",
+            "version": "v8.1.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/intl.git",
-                "reference": "9eccaaa94ac6f9deb3620c9d47a057d965baeabf"
+                "reference": "19c82580068e56d126b3ef4e26c0fe9aa5b71ff7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/intl/zipball/9eccaaa94ac6f9deb3620c9d47a057d965baeabf",
-                "reference": "9eccaaa94ac6f9deb3620c9d47a057d965baeabf",
+                "url": "https://api.github.com/repos/symfony/intl/zipball/19c82580068e56d126b3ef4e26c0fe9aa5b71ff7",
+                "reference": "19c82580068e56d126b3ef4e26c0fe9aa5b71ff7",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.2",
-                "symfony/deprecation-contracts": "^2.5|^3"
+                "php": ">=8.4.1"
             },
             "conflict": {
-                "symfony/string": "<7.1"
+                "symfony/string": "<7.4"
             },
             "require-dev": {
-                "symfony/filesystem": "^6.4|^7.0",
-                "symfony/var-exporter": "^6.4|^7.0"
+                "symfony/filesystem": "^7.4|^8.0",
+                "symfony/var-exporter": "^7.4|^8.0"
             },
             "type": "library",
             "autoload": {
@@ -6585,7 +6584,7 @@
                 "localization"
             ],
             "support": {
-                "source": "https://github.com/symfony/intl/tree/v7.3.5"
+                "source": "https://github.com/symfony/intl/tree/v8.1.10"
             },
             "funding": [
                 {
@@ -6605,7 +6604,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-10-01T06:11:17+00:00"
+            "time": "2026-10-27T13:53:09+00:00"
         },
         {
             "name": "symfony/mailer",
